@@ -4,15 +4,16 @@ from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
 
 
-def show_num(id, useQT=False, do_plot=True):
+def show_num(id, useQT=False, do_plots=True):
     """
     Show  and return plot and data for id in current instrument.
     Args:
         id(number): id of instrument
+        do_plots: Default False: if false no plots are produced.
     Returns:
         plot, data : returns the plot and the dataset
     """
-    if not CURRENT_EXPERIMENT["init"]:
+    if not getattr(CURRENT_EXPERIMENT, "init", True):
         raise RuntimeError("Experiment not initalized. "
                            "use qc.Init(mainfolder, samplename)")
 
@@ -21,7 +22,7 @@ def show_num(id, useQT=False, do_plot=True):
     t = qc.DataSet.location_provider.fmt.format(counter=str_id)
     data = qc.load_data(t)
 
-    if do_plot:
+    if do_plots:
         plots = []
         for value in data.arrays.keys():
             if "set" not in value:

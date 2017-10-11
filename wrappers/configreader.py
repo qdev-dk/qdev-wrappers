@@ -2,7 +2,6 @@
 
 from configparser import ConfigParser
 
-
 class Config:
     """
     Object to be used for interacting with the config file.
@@ -86,4 +85,7 @@ class Config:
             self._cfg.write(configfile)
 
     def sections(self):
+        """
+        Gets the sections in the config file
+        """
         return self._cfg.sections()

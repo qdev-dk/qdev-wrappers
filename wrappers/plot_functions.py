@@ -89,65 +89,7 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
             else:
                 plot.subplots[j + k].setTitle("")
 
-            # Avoid SI rescaling if units are not standard units
-            standardunits = ['V', 's', 'J', 'W', 'm', 'eV', 'A', 'K', 'g',
-                             'Hz', 'rad', 'T', 'H', 'F', 'Pa', 'C', 'Ω', 'Ohm',
-                             'S']
-            # make a dict mapping axis labels to axis positions
-            # TODO: will the labels for two axes ever be identical?
-            whatwhere = {}
-            for pos in ('bottom', 'left', 'right'):
-                whatwhere.update({plot.subplots[j + k].getAxis(pos).labelText:
-                                  pos})
-            tdict = {'bottom': 'setXRange', 'left': 'setYRange'}
-            # now find the data (not setpoint)
-            checkstring = '{}_{}'.format(i._instrument.name, name)
-
-            thedata = [data.arrays[d] for d in data.arrays.keys()
-                       if d == checkstring][0]
-
-            # Disable autoscale for the measured data
-            if thedata.unit not in standardunits:
-                subplot = plot.subplots[j + k]
-                try:
-                    # 1D measurement
-                    ax = subplot.getAxis(whatwhere[thedata.label])
-                    ax.enableAutoSIPrefix(False)
-                except KeyError:
-                    # 2D measurement
-                    # Then we should fetch the colorbar
-                    ax = plot.traces[j + k]['plot_object']['hist'].axis
-                    ax.enableAutoSIPrefix(False)
-                    ax.setLabel(text=thedata.label, unit=thedata.unit,
-                                unitPrefix='')
-
-            # Set up axis scaling
-            for setarr in thedata.set_arrays:
-                subplot = plot.subplots[j + k]
-                ax = subplot.getAxis(whatwhere[setarr.label])
-                # check for autoscaling
-                if setarr.unit not in standardunits:
-                    ax.enableAutoSIPrefix(False)
-                    # At this point, it has already been decided that
-                    # the scale is milli whatever
-                    # (the default empty plot is from -0.5 to 0.5)
-                    # so we must undo that
-                    ax.setScale(1e-3)
-                    ax.setLabel(text=setarr.label, unit=setarr.unit,
-                                unitPrefix='')
-                # set the axis ranges
-                if not(np.all(np.isnan(setarr))):
-                    # In this case the setpoints are "baked" into the param
-                    rangesetter = getattr(subplot.getViewBox(),
-                                          tdict[whatwhere[setarr.label]])
-                    rangesetter(setarr.min(), setarr.max())
-                else:
-                    # in this case someone must tell _create_plot what the
-                    # range should be. We get it from startranges
-                    rangesetter = getattr(subplot.getViewBox(),
-                                          tdict[whatwhere[setarr.label]])
-                    (rmin, rmax) = startranges[setarr.label]
-                    rangesetter(rmin, rmax)
+            plot.fixUnitScaling(startranges)
             QtPlot.qc_helpers.foreground_qt_window(plot.win)
 
         else:
@@ -226,7 +168,7 @@ def _save_individual_plots(data, inst_meas, display_plot=True):
         title_list = plot.get_default_title().split(sep)
         title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
         title = sep.join(title_list)
-        _rescale_mpl_axes(plot)
+        plot.rescale_axis()
         plot.tight_layout()
         plot.save("{}_{:03d}.pdf".format(title,
                                          counter_two))
