@@ -24,3 +24,8 @@ var/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+
+# Temporary files
+*.md~
+*.py~
+tmp/
