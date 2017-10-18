@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-from matplotlib import ticker
 from os.path import sep
 from typing import Optional, Tuple
 
@@ -11,8 +10,8 @@ from qcodes.loops import Loop
 from wrappers.file_setup import CURRENT_EXPERIMENT
 from wrappers.file_setup import pdfdisplay
 from wrappers.plot_functions import _plot_setup, \
-    _rescale_mpl_axes, _save_individual_plots
-from wrappers.device_image import save_device_image
+    _save_individual_plots
+from wrappers.device_annotator.device_image import save_device_image
 
 
 import logging
