@@ -1,4 +1,3 @@
-import numpy as np
 from os.path import sep
 from copy import deepcopy
 import functools
