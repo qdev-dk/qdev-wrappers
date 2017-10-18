@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name='qcodes-wrappers',
+    name='qcodes_wrappers',
     version='0.1',
     description='wrappers for helping to run an experiment with QCoDeS',
     url='https://github.com/qdev-dk/qdev-wrappers',
