@@ -189,12 +189,18 @@ def get_calibration_val(key, qubit_index=None):
                 ' for key "{}"  has length 1, will get this value'.format(key))
         val = values_array[0]
     else:
-        qubit_index = (get_current_qubit() if qubit_index is None else qubit_index)
+        qubit_index = (get_current_qubit()
+                       if qubit_index is None else qubit_index)
         if qubit_index is None:
             raise RuntimeError(
                 'qubit_index not specified but values list for '
                 'key "{}"  has length {}'.format(key, len(values_array)))
-        val = values_array[qubit_index]
+        try:
+            val = values_array[qubit_index]
+        except IndexError:
+            raise IndexError(
+                'qubit_index {} out of range of values list, check '
+                'calib.config {} list length'.format(qubit_index, key))
     return _cast_to_float_or_None(val)
 
 
@@ -252,7 +258,7 @@ def get_metadata_list():
     try:
         metadata_list = pickle.load(open(filename, "rb"))
     except FileNotFoundError:
-        print('metadata list not found, making one at {}'.format(filename))
+        log.warning('metadata list not found, making one at {}'.format(filename))
         metadata_list = _make_metadata_list(filename)
     return metadata_list
 

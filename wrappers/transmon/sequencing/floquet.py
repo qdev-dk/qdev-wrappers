@@ -84,6 +84,33 @@ def make_i_waveform(**kwargs):
             segment_list=[compensating_x_wait_segment, before_gate,
                           wait_for_z_ramp, floquet_drive, wait_for_z_ramp,
                           after_gate, end_wait_x_segment])
+    elif all([i in kwargs for i in
+            ['pi_half_before', 'pi_half_after', 'pi_half_after_neg']]):
+        if kwargs['pi_half_before']:
+            before_gate = kwargs['q_pulse_dict']['X/2_I']
+        else:
+            before_gate = kwargs['q_pulse_dict']['identity']
+        if kwargs['pi_half_after']:
+            after_gate = kwargs['q_pulse_dict']['X/2_I']
+        elif kwargs['pi_half_after_neg']:
+            after_gate = kwargs['q_pulse_dict']['-X/2_I']
+        else:
+            after_gate = kwargs['q_pulse_dict']['identity']
+        return Waveform(
+            channel=kwargs['channel'],
+            segment_list=[compensating_x_wait_segment, before_gate,
+                          floquet_drive,
+                          after_gate, end_wait_x_segment])
+    elif 'z_ramp_dur' in kwargs:
+        wait_for_z_ramp = Segment(
+            name='wait', gen_func=flat_array,
+            func_args={'amp': 0, 'dur': kwargs['z_ramp_dur']},
+            time_markers=kwargs['pulse_mod_markers'])
+        return Waveform(
+            channel=kwargs['channel'],
+            segment_list=[compensating_x_wait_segment,
+                          wait_for_z_ramp, floquet_drive, wait_for_z_ramp,
+                          end_wait_x_segment])
     else:
         return Waveform(
             channel=kwargs['channel'],
@@ -267,6 +294,7 @@ def make_floquet_dur_sequence(
         floquet_element.add_waveform(readout_wf)
         r_ch = channels[-1]
 
+    floquet_element.print_segment_lists()
     # make sequence
     marker_points = int(get_calibration_val('marker_time') *
                         get_calibration_val('sample_rate'))
@@ -329,17 +357,6 @@ def make_floquet_dur_seq_gated(
         raise Exception(
             'pi_half_after_neg list length {} is not the same '
             'as the qubit_num {}'.format(len(pi_half_after_neg), qubit_num))
-
-    if qubit_num == 1:
-        if pi_half_amps is None:
-            pi_half_amps = get_calibration_val('pi_half_pulse_amp',
-                                               qubit_index=qubit_indices[0])
-    else:
-        pi_half_amps = (pi_half_amps or
-                        get_calibration_array('pi_half_pulse_amp'))
-    if len(pi_half_amps) != qubit_num:
-        raise Exception('qubit num is {} but {} pi_half_amps provided'.format(
-            qubit_num, len(pi_half_amps)))
 
     if qubit_SSBfreqs is None and qubit_num > 1:
         raise RuntimeError('more than one qubit but no SSB freqs given,'
@@ -461,9 +478,11 @@ def make_floquet_dur_seq_gated(
     # make sequence
     marker_points = int(get_calibration_val('marker_time') *
                         get_calibration_val('sample_rate'))
+
+    floquet_element.print_segment_lists()
     if qubit_num == 1:
         floquet_sequence = make_time_varying_sequence(
-            floquet_element, channels[0], 3, 'dur',
+            floquet_element, channels[0], 2, 'dur',
             start, stop, step,
             0, get_calibration_val('cycle_time'),
             name='floquet_seq',
