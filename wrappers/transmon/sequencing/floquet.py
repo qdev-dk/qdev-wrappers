@@ -1,7 +1,7 @@
 from . import make_readout_wf, get_calibration_val, ramp_array, \
     cos_array, sin_array, flat_array, gaussian_array, \
     make_time_varying_sequence, make_readout_ssb_wf_I, make_readout_ssb_wf_Q, \
-    make_time_multi_varying_sequence, get_calibration_array, \
+    get_calibration_array, \
     cos_gaussian_array, sin_gaussian_array, get_qubit_count, make_pulse_dict
 from . import Segment, Waveform, Element
 
@@ -306,7 +306,7 @@ def make_floquet_dur_sequence(
             variable_name='floquet_drive_dur', variable_unit='s',
             readout_ch=r_ch, marker_points=marker_points)
     else:
-        floquet_sequence = make_time_multi_varying_sequence(
+        floquet_sequence = make_time_varying_sequence(
             floquet_element, vary_args_list, vary_settings_list,
             get_calibration_val('cycle_time'),
             name='floquet_seq',
@@ -489,7 +489,7 @@ def make_floquet_dur_seq_gated(
             variable_name='floquet_drive_dur', variable_unit='s',
             readout_ch=r_ch, marker_points=marker_points)
     else:
-        floquet_sequence = make_time_multi_varying_sequence(
+        floquet_sequence = make_time_varying_sequence(
             floquet_element, vary_args_list, vary_settings_list,
             get_calibration_val('cycle_time'),
             name='floquet_seq',

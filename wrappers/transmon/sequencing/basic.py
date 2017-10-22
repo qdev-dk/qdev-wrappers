@@ -1,6 +1,5 @@
 from . import make_readout_wf, get_calibration_val, \
-    make_time_varying_sequence, make_multi_varying_sequence, \
-    make_time_multi_varying_sequence, \
+    make_time_varying_sequence, make_varying_sequence, \
     cos_array, sin_array, flat_array, gaussian_array, cos_gaussian_array, \
     sin_gaussian_array, make_readout_ssb_wf_I, make_readout_ssb_wf_Q
 from . import Segment, Waveform, Element, Sequence
@@ -71,7 +70,7 @@ def make_readout_SSB_sequence(start, stop, step, channels=[3, 4]):
     element.add_waveform(readout_wf_I)
     element.add_waveform(readout_wf_Q)
     marker_points = int(get_calibration_val('marker_time') * sr)
-    seq = make_multi_varying_sequence(
+    seq = make_varying_sequence(
         element, channels[0], 1, 'freq', start, stop, step,
         channels[1], 1, 'freq', start, stop, step, name="reabout_SSB_sequence",
         variable_name='LSB_drive_detuning', variable_unit='Hz',
@@ -149,9 +148,10 @@ def make_spectroscopy_SSB_sequence(start, stop, step, channels=[1, 2, 4],
 
     marker_time = get_calibration_val('marker_time')
     marker_points = int(marker_time * sr)
-    ssb_seq = make_multi_varying_sequence(
-        ssb_element, channels[0], 1, 'freq', start, stop, step,
-        channels[1], 1, 'freq', start, stop, step, name="ssb_sequence",
+    vary_args_list = [(channels[0], 1, 'freq'), (channels[1], 1, 'freq')]
+    vary_settings_list = [(start, stop, step)] * 2
+    ssb_seq = make_varying_sequence(
+        ssb_element, vary_args_list, vary_settings_list, name="ssb_sequence",
         variable_name='LSB_drive_detuning', variable_unit='Hz',
         readout_ch=channels[-1], marker_points=marker_points)
     ssb_seq.labels = {'seq_type': 'spectroscopy', 'pulse_mod': pulse_mod}
@@ -221,9 +221,12 @@ def _make_rabi_carrier_sequence(start, stop, step, pi_amp=None,
         readout_wf = make_readout_wf(channel=channels[-1])
         rabi_element.add_waveform(readout_wf)
 
+    vary_args_list = [(channels[0], 1, variable_arg, 0)]
+    vary_settings_list = [(start, stop, step)]
+
     marker_points = int(get_calibration_val('marker_time') * sr)
     rabi_sequence = make_time_varying_sequence(
-        rabi_element, channels[0], 1, variable_arg, start, stop, step, 0,
+        rabi_element, vary_args_list, vary_settings_list,
         get_calibration_val('cycle_time'), name='rabi_seq',
         variable_name='pi_pulse_' + variable_arg, variable_unit='s',
         readout_ch=channels[-1], marker_points=marker_points)
@@ -303,12 +306,15 @@ def _make_rabi_SSB_sequence(start, stop, step, SSBfreq, channels=[1, 2, 4],
         readout_wf = make_readout_wf(channel=channels[-1])
         rabi_element.add_waveform(readout_wf)
 
+    vary_args_list = [(channels[0], 1, variable_arg, 0),
+                      (channels[1], 1, variable_arg, 0)]
+    vary_settings_list = [(start, stop, step)] * 2
+
     marker_points = int(get_calibration_val('marker_time') *
                         get_calibration_val('sample_rate'))
-    rabi_sequence = make_time_multi_varying_sequence(
-        rabi_element, channels[0], 1, variable_arg, start, stop, step,
-        channels[1], 1, variable_arg, start, stop, step,
-        0, 0, get_calibration_val('cycle_time'), name='rabi_ssb_seq',
+    rabi_sequence = make_time_varying_sequence(
+        rabi_element, vary_args_list, vary_settings_list,
+        get_calibration_val('cycle_time'), name='rabi_ssb_seq',
         variable_name='pi_pulse_' + variable_arg, variable_unit='s',
         readout_ch=channels[-1], marker_points=marker_points)
     return rabi_sequence
@@ -401,15 +407,19 @@ def _make_t1_carrier_sequence(start, stop, step, pi_dur=None, pi_amp=None,
 
     marker_points = int(get_calibration_val('marker_time') *
                         get_calibration_val('sample_rate'))
+
+    vary_args_list = [(channels[0], 2, 'dur', 0)]
+    vary_settings_list = [(start, stop, step)]
+
     t1_sequence = make_time_varying_sequence(
-        t1_element, channels[0], 2, 'dur', start, stop, step, 0,
+        t1_element, vary_args_list, vary_settings_list,
         get_calibration_val('cycle_time'), name='t1_seq',
         variable_name='pi_pulse_readout_delay', variable_unit='s',
         readout_ch=channels[-1], marker_points=marker_points)
     return t1_sequence
 
 
-def _make_t1_SSB_sequence(start, stop, step, SSBfreq,
+def _make_t1_SSB_sequence(start, stop, step, SSBfreq, pi_dur=None,
                           pi_amp=None, channels=[1, 2, 4], gaussian=True,
                           pulse_mod=False, readout_SSBfreqs=None):
     pi_amp = pi_amp or get_calibration_val('pi_pulse_amp')
@@ -430,7 +440,7 @@ def _make_t1_SSB_sequence(start, stop, step, SSBfreq,
         name='compensating_wait', gen_func=flat_array, func_args={'amp': 0})
 
     if gaussian:
-        pi_sigma = get_calibration_val('pi_pulse_sigma')
+        pi_sigma = pi_dur or get_calibration_val('pi_pulse_sigma')
         pi_I_segment = Segment(
             name='gaussian_SSB_pi_I_pulse', gen_func=cos_gaussian_array,
             func_args={
@@ -443,7 +453,7 @@ def _make_t1_SSB_sequence(start, stop, step, SSBfreq,
                 'amp': pi_amp,
                 'SSBfreq': SSBfreq, 'sigma': pi_sigma, 'positive': False})
     else:
-        pi_dur = get_calibration_val('pi_pulse_dur')
+        pi_dur = pi_dur or get_calibration_val('pi_pulse_dur')
         pi_I_segment = Segment(
             name='square_SSB_pi_I_pulse', gen_func=cos_array,
             func_args={'amp': pi_amp, 'freq': SSBfreq, 'dur': pi_dur})
@@ -489,10 +499,14 @@ def _make_t1_SSB_sequence(start, stop, step, SSBfreq,
 
     marker_points = int(get_calibration_val('marker_time') *
                         get_calibration_val('sample_rate'))
-    t1_sequence = make_time_multi_varying_sequence(
-        t1_element, channels[0], 2, 'dur', start, stop, step,
-        channels[1], 2, 'dur', start, stop, step,
-        0, 0, get_calibration_val('cycle_time'), name='t1_ssb_seq',
+
+    vary_args_list = [(channels[0], 2, 'dur', 0),
+                      (channels[1], 2, 'dur', 0)]
+    vary_settings_list = [(start, stop, step)] * 2
+
+    t1_sequence = make_time_varying_sequence(
+        t1_element, vary_args_list, vary_settings_list,
+        get_calibration_val('cycle_time'), name='t1_ssb_seq',
         variable_name='pi_pulse_readout_delay', variable_unit='s',
         readout_ch=channels[-1], marker_points=marker_points)
     return t1_sequence
@@ -592,8 +606,12 @@ def _make_ramsey_carrier_sequence(start, stop, step, pi_half_amp=None,
 
     marker_points = int(get_calibration_val('marker_time') *
                         get_calibration_val('sample_rate'))
+
+    vary_args_list = [(channels[0], 2, 'dur', 0)]
+    vary_settings_list = [(start, stop, step)]
+
     ramsey_sequence = make_time_varying_sequence(
-        ramsey_element, channels[0], 2, 'dur', start, stop, step, 0,
+        ramsey_element, vary_args_list, vary_settings_list,
         get_calibration_val('cycle_time'), name='ramsey_seq',
         variable_name='pi_half_pulse_pi_half_pulse_delay', variable_unit='s',
         readout_ch=channels[-1], marker_points=marker_points)
@@ -681,10 +699,14 @@ def _make_ramsey_SSB_sequence(start, stop, step, SSBfreq, pi_half_amp=None,
 
     marker_points = int(get_calibration_val('marker_time') *
                         get_calibration_val('sample_rate'))
-    ramsey_sequence = make_time_multi_varying_sequence(
-        ramsey_element, channels[0], 2, 'dur', start, stop, step,
-        channels[1], 2, 'dur', start, stop, step,
-        0, 0, get_calibration_val('cycle_time'), name='ramsey_ssb_seq',
+
+    vary_args_list = [(channels[0], 2, 'dur', 0),
+                      (channels[1], 2, 'dur', 0)]
+    vary_settings_list = [(start, stop, step)] * 2
+
+    ramsey_sequence = make_time_varying_sequence(
+        ramsey_element, vary_args_list, vary_settings_list,
+        get_calibration_val('cycle_time'), name='ramsey_ssb_seq',
         variable_name='pi_half_pulse_pi_half_pulse_delay', variable_unit='s',
         readout_ch=channels[-1], marker_points=marker_points)
     return ramsey_sequence
