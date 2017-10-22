@@ -27,74 +27,12 @@ def save_sequence(sequence, file_name):
 # Sequence building functions (vary param over sequence)
 ####################################################################
 
-def make_varying_sequence(element_template, vary_ch, vary_seg,
-                          vary_arg, start, stop, step, name=None,
-                          variable_name=None,
-                          variable_label=None, variable_unit=None,
+def make_varying_sequence(element_template, vary_args_list,
+                          vary_settings_list,
+                          name=None, variable_name=None,
+                          variable_label=None,
+                          variable_unit=None,
                           readout_ch=4, marker_points=100):
-    s = make_multi_varying_sequence(
-        element_template, [(vary_ch, vary_seg, vary_arg)],
-        [(start, stop, step)], name=name,
-        variable_name=variable_name,
-        variable_label=variable_label, variable_unit=variable_unit,
-        readout_ch=readout_ch, marker_points=marker_points)
-    return s
-    """
-    var_name = variable_name or vary_arg
-    seq_name = name or vary_arg + '_varying_seq'
-    sequence = Sequence(
-        name=seq_name, variable=var_name, start=start, stop=stop, step=step,
-        variable_label=variable_label, variable_unit=variable_unit)
-    for i, val in enumerate(sequence.variable_array):
-        elem = element_template.copy()
-        elem[vary_ch].segment_list[vary_seg].func_args[vary_arg] = val
-        if i == 0:
-            elem[readout_ch].add_marker(2, 0, marker_points)
-        sequence.add_element(elem)
-    sequence.check()
-    return sequence
-    """
-
-
-def make_time_varying_sequence(element_template, vary_ch, vary_seg,
-                               vary_arg, start, stop, step,
-                               compensate_seg, total_time, name=None,
-                               variable_name=None,
-                               variable_label=None, variable_unit=None,
-                               readout_ch=4,
-                               marker_points=100):
-    s = make_time_multi_varying_sequence(
-        element_template, [(vary_ch, vary_seg, vary_arg, compensate_seg)],
-        [(start, stop, step)], total_time, name=name,
-        variable_name=variable_name,
-        variable_label=variable_label, variable_unit=variable_unit,
-        readout_ch=readout_ch, marker_points=marker_points)
-    return s
-    """
-    var_name = variable_name or vary_arg
-    seq_name = name or vary_arg + '_varying_seq'
-    sequence = Sequence(
-        name=seq_name, variable=var_name, start=start, stop=stop, step=step,
-        variable_label=variable_label, variable_unit=variable_unit)
-    for i, val in enumerate(sequence.variable_array):
-        elem = element_template.copy()
-        elem[vary_ch].segment_list[vary_seg].func_args[vary_arg] = val
-        c_dur = total_time - elem[vary_ch].duration
-        elem[vary_ch].segment_list[compensate_seg].func_args["dur"] = c_dur
-        if i == 0:
-            elem[readout_ch].add_marker(2, 0, marker_points)
-        sequence.add_element(elem)
-    sequence.check()
-    return sequence
-    """
-
-
-def make_multi_varying_sequence(element_template, vary_args_list,
-                                vary_settings_list,
-                                name=None, variable_name=None,
-                                variable_label=None,
-                                variable_unit=None,
-                                readout_ch=4, marker_points=100):
     """
     vary_args list goes like
         [(vary_ch_1, vary_seg_1, vary_arg_1), (vary_ch_2...)...]
@@ -107,16 +45,16 @@ def make_multi_varying_sequence(element_template, vary_args_list,
         name=seq_name, variable=var_name, start=vary_settings_list[0][0],
         stop=vary_settings_list[0][1], step=vary_settings_list[0][2],
         variable_label=variable_label, variable_unit=variable_unit)
-    variable_arrays = [[]] * len(vary_args_list)
+    variable_arrays = []
     elemnums = []
     for ch_i, v in enumerate(vary_args_list):
         elemnum = int(round(
             abs(vary_settings_list[ch_i][1] - vary_settings_list[ch_i][0]) /
             vary_settings_list[ch_i][2] + 1))
-        elemnums[ch_i] = elemnum
-        variable_arrays[ch_i] = np.linspace(
+        elemnums.append(elemnum)
+        variable_arrays.append(np.linspace(
             vary_settings_list[ch_i][0], vary_settings_list[ch_i][1],
-            num=elemnum)
+            num=elemnum))
     if len(set(elemnums)) != 1:
         raise Exception('variable arrays do not all have same length: {}'
                         ''.format(elemnums))
@@ -132,12 +70,12 @@ def make_multi_varying_sequence(element_template, vary_args_list,
     return sequence
 
 
-def make_time_multi_varying_sequence(element_template, vary_args_list,
-                                     vary_settings_list,
-                                     total_time, name=None,
-                                     variable_name=None,
-                                     variable_label=None, variable_unit=None,
-                                     readout_ch=4, marker_points=100):
+def make_time_varying_sequence(element_template, vary_args_list,
+                               vary_settings_list,
+                               total_time, name=None,
+                               variable_name=None,
+                               variable_label=None, variable_unit=None,
+                               readout_ch=4, marker_points=100):
     """
     vary_args list goes like
         [(vary_ch_1, vary_seg_1, vary_arg_1, compensate_seg_1), ...]
@@ -271,7 +209,7 @@ def make_x_y_carrier_flat_pulses(params, SR=None):
         name='XY_wait', gen_func=flat_array,
         func_args={
             'amp': 0,
-            'dur': 2 * params['pi_pulse_sigma'] * params['sigma_cutoff']})
+            'dur': params['pi_pulse_dur']})
 
     x_y_pi = Segment(
         name='pi', gen_func=flat_array,
@@ -555,12 +493,12 @@ def make_pulse_dict(pulse_params=None, qubit_indices=None,
     Args:
         pulse_params (dict) (default {}): values for the pulse params to
             override those in the calibration dictionary
-        qubit_indices (list) (default None): the indicates the qubits for which
-            to make pulses, if None then current_qubit is used
-        SSBfreq (float) (default None): sideband frequency if the carrier
-            is not being used to drive the qubit. Lower sideband by default
+        qubit_indices (list of ints) (default None): the indicates the qubits
+            for which to make pulses, if None then current_qubit is used
+        SSBfreqs (list of floats) (default None): sideband frequencies of the
+            qubit drive pulses. Lower sideband by default
         gaussian (bool) (default True): whether pulses should be gaussian shape
-        drag (bool) (default False): whether drag puls should be applied to
+        drag (bool) (default False): whether drag pulses should be applied to
             other qubit control channel during pulse
         z_gates (bool) (default False): whether z gates should be generated
         SR (float) (default None): optional sample rate to be provided to
@@ -586,9 +524,9 @@ def make_pulse_dict(pulse_params=None, qubit_indices=None,
         raise RuntimeError('{} qubit indeices provided but {} SSB freqs'
                            ''.format(len(qubit_indices), len(SSBfreqs)))
     pulse_dict = {}
-    for qubit_index in qubit_indices:
+    for i, qubit_index in enumerate(qubit_indices):
         params = {}
-        SSBfreq = SSBfreqs[qubit_index]
+        SSBfreq = SSBfreqs[i]
         pulse_keys = get_allowed_keys('calib', section='Pulse')
         for k in pulse_keys:
             if k in pulse_params:
@@ -753,7 +691,7 @@ def wait(element, q_pulse_dict, dur, channels=[1, 2, 3, 4]):
 def prepend_compensating_wait_to_element(element, q_pulse_dict, total_time):
     identity = q_pulse_dict['wait_template'].copy()
     identity.func_args['dur'] = total_time - element.duration
-    for w in element:
+    for w in element.keys():
         element[w].add_segment(identity, position=0)
 
 
@@ -791,7 +729,7 @@ def execute_gates(element, q_pulse_dict, gate_list,
 # Sequence building function (with gates)
 ###########################################################
 
-def make_element_from_gate_lists(
+def make_element_from_gate_list(
         gate_list, SSBfreq=None, drag=False, gaussian=True,
         channels=[1, 2, 3, 4], spacing=None, calib_dict=None,
         qubit_index=None, q_pulse_dict=None):
@@ -825,24 +763,26 @@ def make_element_from_gate_lists(
 
 
 def make_sequence_from_gate_lists(
-        gate_list, SSBfreq=None, drag=False, gaussian=True,
+        gate_lists, SSBfreq=None, drag=False, gaussian=True,
         channels=[1, 2, 3, 4], name=None, variable_label=None, spacing=None,
         qubit_index=None):
     qubit_index = qubit_index or get_current_qubit()
     calib_dict = get_calibration_dict()
+    SSBfreqs = None if SSBfreq is None else [SSBfreq]
     q_pulse_dict = make_pulse_dict(
-        SSBfreq=SSBfreq, drag=drag, gaussian=gaussian)
+        SSBfreqs=SSBfreqs, drag=drag, gaussian=gaussian)[qubit_index]
     seq = Sequence(name=name or 'seq_from_gates',
                    variable_label=variable_label)
 
-    for i, gate_list in enumerate(gate_list):
-        element = make_element_from_gate_lists(
+    for i, gate_list in enumerate(gate_lists):
+        element = make_element_from_gate_list(
             gate_list, SSBfreq=SSBfreq, drag=drag, gaussian=gaussian,
             channels=channels, spacing=spacing, q_pulse_dict=q_pulse_dict,
-            calib_dict=calib_dict, qubit_indices=[qubit_index])
+            calib_dict=calib_dict, qubit_index=qubit_index)
         if i == 0:
             marker_points = int(get_calibration_val('marker_time') *
                                 get_calibration_val('sample_rate'))
             element[channels[3]].add_marker(2, 0, marker_points)
         seq.add_element(element)
+    seq.check()
     return seq
