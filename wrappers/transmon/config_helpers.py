@@ -154,14 +154,6 @@ def set_calibration_val(key, qubit_value, qubit_index: int=None):
                 'local config calib in use and values list for key "{}" has '
                 'length {} but qubit_count is {}'.format(
                     key, val_ar_l, qubit_count))
-        if (val_ar_l == 1) and (qubit_index not in [None, 0]):
-            log.warning('local config calib in use and qubit_index is not '
-                        'None but values list for key "{}" has length 1 so '
-                        'single value will be replaced by a list of '
-                        'length qubit_count = {}'.format(key, qubit_count))
-            values_array = [None] * qubit_count
-            values_array[qubit_index] = str(qubit_value)
-            str_value = " ".join(values_array)
         elif val_ar_l == 1:
             str_value = str(qubit_value)
         elif qubit_index is None:
@@ -173,8 +165,8 @@ def set_calibration_val(key, qubit_value, qubit_index: int=None):
             values_array[qubit_index] = str(qubit_value)
             str_value = " ".join(values_array)
     if CURRENT_EXPERIMENT['calib_config'] == 'general':
-        log.warning('changing general config file value for '
-                    '"{}" to "{}"'.format(key, str_value))
+        log.info('changing general config file value for '
+                 '"{}" to "{}"'.format(key, str_value))
     cfg.set(section, key, str_value)
 
 
@@ -184,7 +176,7 @@ def get_calibration_val(key, qubit_index=None):
     values_array = cfg.get(section, key).split(" ")
     if len(values_array) == 1:
         if qubit_index is not None:
-            log.warning(
+            log.info(
                 'qubit_index specified in get_calibration_val but values list'
                 ' for key "{}"  has length 1, will get this value'.format(key))
         val = values_array[0]
@@ -258,7 +250,8 @@ def get_metadata_list():
     try:
         metadata_list = pickle.load(open(filename, "rb"))
     except FileNotFoundError:
-        log.warning('metadata list not found, making one at {}'.format(filename))
+        log.warning(
+            'metadata list not found, making one at {}'.format(filename))
         metadata_list = _make_metadata_list(filename)
     return metadata_list
 
