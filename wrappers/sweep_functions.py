@@ -7,6 +7,7 @@ from qcodes.instrument.visa import VisaInstrument
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.data.data_set import DataSet
 from qcodes.loops import Loop
+from qcodes.measure import Measure
 from wrappers.file_setup import CURRENT_EXPERIMENT
 from wrappers.file_setup import pdfdisplay
 from wrappers.plot_functions import _plot_setup, \
@@ -61,6 +62,57 @@ def _select_plottables(tasks):
     return tuple(plottables)
 
 
+def _do_measurement_single(measurement: Measure, meas_params: tuple,
+                           do_plots: Optional[bool]=True,
+                           use_threads: bool=True) -> Tuple[QtPlot, DataSet]:
+    parameters = list(meas_params)
+    _flush_buffers(*parameters)
+    interrupted = False
+
+    try:
+        data = measurement.run(use_threads=use_threads)
+    except KeyboardInterrupt:
+        interrupted = True
+        print("Measurement Interrupted")
+
+    if do_plots:
+        plot, _ = _plot_setup(data, meas_params)
+        # Ensure the correct scaling before saving
+        plot.autorange()
+        plot.save()
+        if 'pdf_subfolder' in CURRENT_EXPERIMENT:
+            plt.ioff()
+            pdfplot, num_subplots = _plot_setup(data, meas_params, useQT=False)
+            # pad a bit more to prevent overlap between
+            # suptitle and title
+            pdfplot.rescale_axis()
+            pdfplot.fig.tight_layout(pad=3)
+            title_list = plot.get_default_title().split(sep)
+            title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
+            title = sep.join(title_list)
+
+            pdfplot.save("{}.pdf".format(title))
+            if (pdfdisplay['combined'] or
+                    (num_subplots == 1 and pdfdisplay['individual'])):
+                pdfplot.fig.canvas.draw()
+                plt.show()
+            else:
+                plt.close(pdfplot.fig)
+            if num_subplots > 1:
+                _save_individual_plots(data, meas_params,
+                                       pdfdisplay['individual'])
+    else:
+        plot = None
+
+    # add the measurement ID to the logfile
+    with open(CURRENT_EXPERIMENT['logfile'], 'a') as fid:
+        print("#[QCoDeS]# Saved dataset to: {}".format(data.location),
+              file=fid)
+    if interrupted:
+        raise KeyboardInterrupt
+    return plot, data
+
+
 def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
                     do_plots: Optional[bool]=True,
                     use_threads: bool=True) -> Tuple[QtPlot, DataSet]:
@@ -85,13 +137,13 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
     _flush_buffers(*parameters)
 
     # startranges for _plot_setup
-    if any(set_params):
+    try:
         startranges = {}
         for sp in set_params:
             minval = min(sp[1], sp[2])
             maxval = max(sp[1], sp[2])
             startranges[sp[0].full_name] = {'max': maxval, 'min': minval}
-    else:
+    except Exception:
         startranges = None
 
     interrupted = False
@@ -216,7 +268,8 @@ def do1dDiagonal(inst_set, inst2_set, start, stop, num_points,
     set_params = ((inst_set, start, stop),)
     meas_params = _select_plottables(inst_meas)
 
-    slope_task = qc.Task(inst2_set, (inst_set)*slope+(slope*start-start2))
+    slope_task = qc.Task(inst2_set, (inst_set) *
+                         slope + (slope * start - start2))
 
     loop = qc.Loop(inst_set.sweep(start, stop, num=num_points),
                    delay).each(slope_task, *inst_meas, inst2_set)
@@ -289,8 +342,7 @@ def do0d(*inst_meas, do_plots=True, use_threads=True):
         plot, data : returns the plot and the dataset
     """
     measurement = qc.Measure(*inst_meas)
-    set_params = ()
     meas_params = _select_plottables(inst_meas)
-    plot, data = _do_measurement(measurement, set_params, meas_params,
-                                 do_plots=do_plots, use_threads=use_threads)
+    plot, data = _do_measurement_single(
+        measurement, meas_params, do_plots=do_plots, use_threads=use_threads)
     return plot, data

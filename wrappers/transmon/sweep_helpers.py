@@ -1,5 +1,5 @@
 import qcodes as qc
-from wrappers.sweep_functions import _do_measurement, \
+from wrappers.sweep_functions import _do_measurement, _do_measurement_single, \
     _select_plottables
 
 
@@ -18,10 +18,9 @@ def measure(meas_param, do_plots=True):
         plot: QT plot
     """
     measurement = qc.Measure(meas_param)
-    set_params = ((None, None, None),)
     meas_params = _select_plottables(meas_param)
-    plot, data = _do_measurement(measurement, set_params, meas_params,
-                                 do_plots=do_plots)
+    plot, data = _do_measurement_single(
+        measurement, meas_params, do_plots=do_plots)
 
     return data, plot
 

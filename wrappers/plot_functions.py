@@ -77,7 +77,8 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
         """
         color = 'C' + str(counter_two)
         counter_two += 1
-        inst_meas_name = "{}_{}".format(i._instrument.name, name)
+        parent_instr_name = (i._instrument.name + '_') if i._instrument else ''
+        inst_meas_name = "{}{}".format(parent_instr_name, name)
         inst_meas_data = getattr(data, inst_meas_name)
         inst_meta_data = __get_plot_type(inst_meas_data, plot)
         if useQT:
