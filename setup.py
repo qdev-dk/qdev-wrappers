@@ -15,8 +15,7 @@ setup(
     ],
     license='MIT',
     packages=['wrappers'],
-    package_data={'qcodes': ['monitor/dist/*', 'monitor/dist/js/*',
-                             'monitor/dist/css/*', 'config/*.json']},
+    package_data={'qcodes': ['config/*.json']},
     install_requires=[
         'matplotlib>=2.0.2',
         'pyqtgraph>=0.10.0',
