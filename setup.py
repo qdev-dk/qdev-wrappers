@@ -1,7 +1,7 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
-    name='qcodes_wrappers',
+    name='qdev_wrappers',
     version='0.1',
     description='wrappers for helping to run an experiment with QCoDeS',
     url='https://github.com/qdev-dk/qdev-wrappers',
@@ -15,7 +15,7 @@ setup(
         'Topic :: Scientific/Engineering'
     ],
     license='MIT',
-    packages=['wrappers'],
+    packages=find_packages(),
     package_data={'qcodes': ['config/*.json']},
     install_requires=[
         'matplotlib>=2.0.2',
