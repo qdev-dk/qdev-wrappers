@@ -63,8 +63,7 @@ def calibrate_cavity(cavity, localos, acq_ctrl, alazar, centre_freq=None,
     good_demod_freq = demod_freq or get_demod_freq(cavity, localos, acq_ctrl)
     data, plot = do_cavity_freq_sweep(cavity, localos, centre_freq, acq_ctrl,
                                       cavity_pm=3e6, freq_step=0.1e6,
-                                      demod_freq=good_demod_freq,
-                                      live_plot=True, key="mag", save=True)
+                                      demod_freq=good_demod_freq)
     cavity_res, mag = find_extreme(
         data, x_key="frequency_set", y_key="mag", extr="min")
     good_cavity_freq = cavity_res + detuning
@@ -118,7 +117,7 @@ def find_qubit(awg, alazar, acq_ctrl, qubit, start_freq=4e9, stop_freq=6e9,
         start=0, stop=200e-6, step=1e-6)
     if not seq_uploaded:
         ssb_seq = make_spectroscopy_SSB_sequence(
-            0, 200e-6, 1e-6, channels=channels, pulse_mod=pulse_mod)
+            0, 200e6, 1e6, channels=channels, pulse_mod=pulse_mod)
         set_up_sequence(awg, alazar, [acq_ctrl], ssb_seq, seq_mode='on')
     else:
         alazar.seq_mode('on')

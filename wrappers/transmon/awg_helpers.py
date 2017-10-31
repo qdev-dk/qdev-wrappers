@@ -39,7 +39,7 @@ def get_current_seq_multi_qubit(awg_list):
     return seq
 
 
-def make_save_send_load_awg_file(awg, unwrapped_sequence, file_name):
+def make_save_send_load_awg_file(awg, sequence, file_name):
     """
     WYSIYWYG
 
@@ -47,8 +47,9 @@ def make_save_send_load_awg_file(awg, unwrapped_sequence, file_name):
         awg instrument for upload
         unwrapped_sequence to be uploaded
     """
-    awg.make_and_save_awg_file(*unwrapped_sequence, filename=file_name)
-    awg.make_send_and_load_awg_file(*unwrapped_sequence)
+    unwrapped_seq = sequence.unwrap()[0]
+    awg.make_and_save_awg_file(*unwrapped_seq, filename=file_name)
+    awg.make_send_and_load_awg_file(*unwrapped_seq)
 
 
 def check_sample_rate(awg):

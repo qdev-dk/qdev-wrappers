@@ -311,7 +311,7 @@ def get_t2(data, x_name='delay', y_name='magnitude',
             fig.data_num = num
         ax.plot(x_data,
                 exp_decay_sin(x_data, *popt),
-                label='fit: T2 {}{}'.format(popt[1],
+                label='fit: T2 {:.3g}{}'.format(popt[1],
                                             x_units))
         ax.plot(x_data, y_data, label='data')
         ax.set_xlabel('{} ({})'.format(x_name, x_units))
@@ -370,7 +370,7 @@ def get_t1(data, x_name='delay', y_name='magnitude',
             fig.data_num = num
         ax.plot(x_data,
                 exp_decay(x_data, *popt),
-                label='fit: T1 {}{}'.format(popt[1],
+                label='fit: T1 {:.3g}{}'.format(popt[1],
                                             x_units))
         ax.plot(x_data, y_data, label='data')
         ax.set_xlabel('{} ({})'.format(x_name, x_units))

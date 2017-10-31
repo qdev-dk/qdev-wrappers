@@ -233,7 +233,51 @@ def do_cavity_freq_sweep(cavity, localos, cavity_freq, acq_ctrl,
                                  do_plots=do_plots)
 
     return data, plot
+   
+def do_cavity_freq_sweep2d(cavity, localos, other_param, cavity_freq, acq_ctrl,
+                           start, stop, step,
+                         cavity_pm=10e6, freq_step=1e6, demod_freq=None,
+                         delay=0.01, do_plots=True):
+    """
+    Function which sweeps the cavity frequency around central value by pm_range
+    and measures using given acq_ctr, also steps local os to keep same demod
+    freq.
 
+    Args:
+        cavity instrument (r&s SGS100)
+        localos instrument (r&s SGS100)
+        cavity_freq: central cavity drive freq
+        acq_ctrl instrument (alazar acq controller)
+        cavity_pm (float) (default 10e6): sweep range will be cavity_freq +-
+            this value
+        freq_step (float) (default 1e6)
+        demod_freq (float) (default None): default uses the current value
+        delay (default 0.01): mimimum time to spend on each point
+        do_plots: Default True: If False no plots are produced.
+            Data is still saved and can be displayed with show_num.
+
+    Returns:
+        data (qcodes dataset)
+        plot: QT plot
+    """
+    if demod_freq is None:
+        demod_freq = get_demod_freq(cavity, localos, acq_ctrl)
+    freq_start = cavity_freq - cavity_pm
+    freq_stop = cavity_freq + cavity_pm
+    loop = qc.Loop(
+            other_param.sweep(start, stop, step)).loop(
+                    cavity.frequency.sweep(freq_start, freq_stop, freq_step), delay).each(
+            qc.Task(localos.frequency.set,
+                    (cavity.frequency + demod_freq)),
+        acq_ctrl.acquisition)
+
+    set_params = ((other_param, start, stop), (cavity.frequency, freq_start, freq_stop))
+    meas_params = _select_plottables(acq_ctrl.acquisition)
+
+    plot, data = _do_measurement(loop, set_params, meas_params,
+                                 do_plots=do_plots)
+
+    return data, plot
 
 def set_cavity_from_calib_dict(cavity, localos, acq_ctrls, num_avg=1000):
     """
