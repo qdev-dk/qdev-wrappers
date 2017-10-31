@@ -1,5 +1,5 @@
 import qcodes as qc
-from wrappers.sweep_functions import _do_measurement, \
+from qdev_wrappers.sweep_functions import _do_measurement, \
     _select_plottables
 from . import sweep1d, measure, get_calibration_val
 

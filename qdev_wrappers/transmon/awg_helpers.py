@@ -1,7 +1,7 @@
 import qcodes as qc
 import pickle
 from os import listdir
-from wrappers.sweep_functions import _do_measurement, \
+from qdev_wrappers.sweep_functions import _do_measurement, \
     _select_plottables
 from . import get_calibration_val, get_pulse_location
 

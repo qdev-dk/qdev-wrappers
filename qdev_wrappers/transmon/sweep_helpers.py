@@ -1,5 +1,5 @@
 import qcodes as qc
-from wrappers.sweep_functions import _do_measurement, _do_measurement_single, \
+from qdev_wrappers.sweep_functions import _do_measurement, _do_measurement_single, \
     _select_plottables
 
 

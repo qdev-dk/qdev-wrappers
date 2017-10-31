@@ -6,8 +6,8 @@ import logging
 import qcodes as qc
 import sys
 
-from wrappers.device_annotator.qcodes_device_annotator import DeviceImage
-from wrappers.configreader import Config
+from qdev_wrappers.device_annotator.qcodes_device_annotator import DeviceImage
+from qdev_wrappers.configreader import Config
 
 log = logging.getLogger(__name__)
 CURRENT_EXPERIMENT = {}

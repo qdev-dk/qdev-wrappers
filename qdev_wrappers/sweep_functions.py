@@ -9,11 +9,11 @@ from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.data.data_set import DataSet
 from qcodes.loops import Loop
 from qcodes.measure import Measure
-from wrappers.file_setup import CURRENT_EXPERIMENT
-from wrappers.file_setup import pdfdisplay
-from wrappers.plot_functions import _plot_setup, \
+from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
+from qdev_wrappers.file_setup import pdfdisplay
+from qdev_wrappers.plot_functions import _plot_setup, \
     _save_individual_plots
-from wrappers.device_annotator.device_image import save_device_image
+from qdev_wrappers.device_annotator.device_image import save_device_image
 
 
 import logging

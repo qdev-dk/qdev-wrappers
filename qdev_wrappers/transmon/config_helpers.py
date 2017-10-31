@@ -1,6 +1,6 @@
 import pprint
-from wrappers.file_setup import CURRENT_EXPERIMENT
-from wrappers.configreader import Config
+from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
+from qdev_wrappers.configreader import Config
 import os
 import pickle
 # import copy

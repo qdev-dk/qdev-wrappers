@@ -1,7 +1,7 @@
 import os
 from os.path import sep
 import re
-from wrappers.file_setup import CURRENT_EXPERIMENT
+from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 
 
 def get_qubit_count():
