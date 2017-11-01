@@ -181,11 +181,11 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
             # suptitle and title
             pdfplot.rescale_axis()
             pdfplot.fig.tight_layout(pad=3)
-            title_list = plot.get_default_title().split(sep)
-            title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
-            title = sep.join(title_list)
 
             if 'pdf_subfolder' in CURRENT_EXPERIMENT:
+                title_list = plot.get_default_title().split(sep)
+                title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
+                title = sep.join(title_list)
                 pdfplot.save("{}.pdf".format(title))
 
             if 'png_subfolder' in CURRENT_EXPERIMENT:
