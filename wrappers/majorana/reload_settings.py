@@ -249,3 +249,29 @@ def reload_Decadac_settings():
     labels = configs.get('Decadac Channel Labels')
     for chan, label in labels.items():
         deca.channels[int(chan)].volt.label = label
+
+    # Update variable names to channel number mapping
+    lcut = configs.get('Channel Parameters', 'left cutter')
+    deca.lcut = deca.channels[int(lcut)].volt
+
+    rcut = configs.get('Channel Parameters', 'right cutter')
+    deca.rcut = deca.channels[int(rcut)].volt
+
+    jj = configs.get('Channel Parameters', 'central cutter')
+    deca.jj = deca.channels[int(jj)].volt
+
+    rplg = configs.get('Channel Parameters', 'right plunger')
+    deca.rplg = deca.channels[int(rplg)].volt
+
+    lplg = configs.get('Channel Parameters', 'left plunger')
+    deca.lplg = deca.channels[int(lplg)].volt
+
+    # Update voltage divider of source drain
+    dcbias_i = int(configs.get('Channel Parameters',
+                               'source channel'))
+    dcbias = deca.channels[dcbias_i].volt
+    deca.dcbias = VoltageDivider(dcbias,
+                                 float(configs.get('Gain Settings',
+                                                   'dc factor')))
+    deca.dcbias.label = configs.get('Decadac Channel Labels', dcbias_i)
+
