@@ -1,5 +1,5 @@
 import qcodes as qc
-from wrappers.file_setup import CURRENT_EXPERIMENT
+from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
 

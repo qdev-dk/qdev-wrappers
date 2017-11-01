@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
-from wrappers.file_setup import CURRENT_EXPERIMENT
+from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 
 
 def _plot_setup(data, inst_meas, useQT=True, startranges=None):

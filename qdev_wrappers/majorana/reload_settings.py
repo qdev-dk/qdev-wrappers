@@ -3,7 +3,7 @@ import qcodes as qc
 from qcodes.utils.validators import Numbers
 from qcodes.instrument_drivers.devices import VoltageDivider
 
-from wrappers.configreader import Config
+from qdev_wrappers.configreader import Config
 
 log = logging.getLogger(__name__)
 

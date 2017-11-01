@@ -13,9 +13,9 @@ import logging
 import os
 import time
 
-from wrappers.plot_functions import _plot_setup, _save_individual_plots
-from wrappers.sweep_functions import  do1d, do2d
-from wrappers.show_num import show_num
+from qdev_wrappers.plot_functions import _plot_setup, _save_individual_plots
+from qdev_wrappers.sweep_functions import  do1d, do2d
+from qdev_wrappers.show_num import show_num
 from reload_settings import used_channels
 
 ##################################################
