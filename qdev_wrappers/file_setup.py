@@ -18,7 +18,7 @@ pdfdisplay = {}
 
 def close_station(station):
     for comp in station.components:
-        log.debug("Closing connection to {}".format(comp))
+        print("Closing connection to {}".format(comp))
         try:
             qc.Instrument.find_instrument(comp).close()
         except KeyError:
@@ -202,7 +202,7 @@ def your_init(mainfolder: str, sample_name: str, station, plot_x_position=0.66,
 
 
 def my_init(sample_name: str, station, qubit_count=None,
-            pdf_folder=True, analysis_folder=True,
+            pdf_folder=True, png_folder=True, analysis_folder=True,
             calib_config=False, instr_config=True,
             waveforms_folder=True,
             local_scripts_folder=True,
@@ -217,6 +217,9 @@ def my_init(sample_name: str, station, qubit_count=None,
     if pdf_folder:
         _set_up_pdf_preferences(display_pdf=display_pdf,
                                 display_individual_pdf=display_individual_pdf)
+    if png_folder:
+        _set_up_subfolder('png')
+        CURRENT_EXPERIMENT['png_subfolder'] = 'png'
     if analysis_folder:
         _set_up_subfolder('analysis')
     if waveforms_folder:
