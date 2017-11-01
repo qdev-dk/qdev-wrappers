@@ -152,7 +152,10 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
     data = loop.get_data_set()
 
     if do_plots:
-        plot, _ = _plot_setup(data, meas_params, startranges=startranges)
+        try:
+            plot, _ = _plot_setup(data, meas_params, startranges=startranges)
+        except (ClosedError, ConnectionError):
+            log.warning('Remote process crashed png will not be saved')
     else:
         plot = None
     try:
@@ -165,8 +168,12 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
         print("Measurement Interrupted")
     if do_plots:
         # Ensure the correct scaling before saving
-        plot.autorange()
-        plot.save()
+        try:
+            plot.autorange()
+            plot.save()
+        except (ClosedError, ConnectionError):
+            log.warning('Remote process crashed png will not be saved')
+
         if any(k in CURRENT_EXPERIMENT for k in ('pdf_subfolder', 'png_subfolder')):
             plt.ioff()
             pdfplot, num_subplots = _plot_setup(data, meas_params, useQT=False)

@@ -18,7 +18,7 @@ pdfdisplay = {}
 
 def close_station(station):
     for comp in station.components:
-        print("Closing connection to {}".format(comp))
+        log.debug("Closing connection to {}".format(comp))
         try:
             qc.Instrument.find_instrument(comp).close()
         except KeyError:
