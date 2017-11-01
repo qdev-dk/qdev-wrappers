@@ -152,10 +152,7 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
     data = loop.get_data_set()
 
     if do_plots:
-        try:
-            plot, _ = _plot_setup(data, meas_params, startranges=startranges)
-        except (ClosedError, ConnectionError):
-            log.warning('Remote process crashed png will not be saved')
+        plot, _ = _plot_setup(data, meas_params, startranges=startranges)
     else:
         plot = None
     try:
@@ -168,13 +165,9 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
         print("Measurement Interrupted")
     if do_plots:
         # Ensure the correct scaling before saving
-        try:
-            plot.autorange()
-            plot.save()
-        except (ClosedError, ConnectionError):
-            log.warning('Remote process crashed png will not be saved')
-
-        if 'pdf_subfolder' in CURRENT_EXPERIMENT:
+        plot.autorange()
+        plot.save()
+        if any(k in CURRENT_EXPERIMENT for k in ('pdf_subfolder', 'png_subfolder')):
             plt.ioff()
             pdfplot, num_subplots = _plot_setup(data, meas_params, useQT=False)
             # pad a bit more to prevent overlap between
@@ -185,7 +178,17 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
             title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
             title = sep.join(title_list)
 
-            pdfplot.save("{}.pdf".format(title))
+            if 'pdf_subfolder' in CURRENT_EXPERIMENT:
+                pdfplot.save("{}.pdf".format(title))
+
+            if 'png_subfolder' in CURRENT_EXPERIMENT:
+                # Hack to save PNG also
+                title_list_png = plot.get_default_title().split(sep)
+                title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
+                title_png = sep.join(title_list_png)
+
+                plt.savefig("{}.png".format(title_png),dpi=1000)
+
             if (pdfdisplay['combined'] or
                     (num_subplots == 1 and pdfdisplay['individual'])):
                 pdfplot.fig.canvas.draw()
