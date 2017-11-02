@@ -27,16 +27,16 @@ print('New voltage on channel {}: {}'.format(channel_to_test,
 
 
 ## Left cutter
-print('left cutter: {}'.format(deca.lcut())
+print('left cutter: {}'.format(deca.lcut()))
 
 ## right cutter
 print('left cutter: {}'.format(deca.rcut()))
 
 ## central cutter aka Josephson junction (jj)
-print('central cutter: {}'.format(deca.jj())
+print('central cutter: {}'.format(deca.jj()))
 
 ## right plunger
-print('right plunger: {}'.format(deca.rplg())
+print('right plunger: {}'.format(deca.rplg()))
 
 ## left plunger
-print('left plunger: {}'.format(deca.lplg())
+print('left plunger: {}'.format(deca.lplg()))
