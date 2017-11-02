@@ -10,25 +10,25 @@ mpl.rcParams['figure.figsize'] = (8, 3)
 mpl.rcParams['figure.subplot.bottom'] = 0.15
 mpl.rcParams['font.size'] = 8
 
-from wrappers.file_setup import CURRENT_EXPERIMENT
-from wrappers.configreader import Config
-from wrappers.file_setup import close_station, my_init
+from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
+from qdev_wrappers.configreader import Config
+from qdev_wrappers.file_setup import close_station, my_init
 from qcodes import ManualParameter
 
-from wrappers import *
-from majorana_wrappers import *
-from reload_settings import *
-from customised_instruments import SR830_T3, Decadac_T3, AWG5014_T3, \
+from qdev_wrappers import *
+from qdev_wrappers.majorana.majorana_wrappers import *
+from qdev_wrappers.majorana.reload_settings import *
+from qdev_wrappers.T3.customised_instruments import SR830_T3, Decadac_T3, AWG5014_T3, \
 ATS9360Controller_T3, AlazarTech_ATS9360_T3, VNA_T3
 helper_fns_folder = r'D:\Transmon\Qcodes-contrib'
 if helper_fns_folder not in sys.path:
     sys.path.insert(0, helper_fns_folder)
-from qdev_transmon_helpers import *
+from qdev_wrappers.transmon import *
 
 from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
 from qcodes.instrument_drivers.rohde_schwarz.SGS100A import RohdeSchwarz_SGS100A
 
-from conductance_measurements import do2Dconductance
+from qdev_wrappers.majorana.conductance_measurements import do2Dconductance
 
 if __name__ == '__main__':
 

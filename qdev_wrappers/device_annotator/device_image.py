@@ -1,4 +1,4 @@
-from wrappers.file_setup import CURRENT_EXPERIMENT
+from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 import os
 import logging
 
