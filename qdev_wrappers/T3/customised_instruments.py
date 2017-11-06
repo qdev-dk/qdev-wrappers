@@ -3,6 +3,8 @@
 Customised instruments with extra features such as voltage dividers and derived
 parameters for use with T3
 """
+from functools import partial
+import time
 import numpy as np
 
 from qcodes.instrument_drivers.QDev.QDac_channels import QDac
@@ -11,7 +13,7 @@ from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.AlazarTech.ATS9360 import AlazarTech_ATS9360
 from qcodes.instrument_drivers.AlazarTech.acq_controllers import ATS9360Controller
-from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB
+from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB, ZNBChannel
 from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
 from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 from qcodes.instrument_drivers.devices import VoltageDivider
@@ -215,10 +217,9 @@ class Decadac_T3(Decadac):
         deca_physical_max = int(self.config.get('Decadac Range', 'max_volt'))
         kwargs.update({'min_val': deca_physical_min,
                        'max_val': deca_physical_max})
-        super().__init__(name, address, **kwargs)
-
         # this is maybe not the prettiest solution:
-        DacSlot.SLOT_MODE_DEFAULT = "Fine"
+        self.SLOT_MODE_DEFAULT = "Fine"
+        super().__init__(name, address, **kwargs)
 
         # addtional parameters go here
         self.add_parameter("fine_volt",
@@ -519,8 +520,8 @@ class VNA_T3(ZNB):
         return self.channels.S21.trace_mag_phase()[0][0]
 
     def add_channel(self, vna_parameter: str):
-         n_channels = len(self.channels)
-         channel = ZNBChannel(self, vna_parameter, n_channels + 1)
+        n_channels = len(self.channels)
+        channel = ZNBChannel(self, vna_parameter, n_channels + 1)
         self.write(
             'SOUR{}:FREQ1:CONV:ARB:IFR 1, 1, 0, SWE'.format(n_channels + 1))
         self.write(
@@ -531,8 +532,8 @@ class VNA_T3(ZNB):
         self.write('SOUR{}:POW:GEN1:PERM OFF'.format(n_channels + 1))
         self.write('SOUR{}:POW:GEN1:STAT OFF'.format(n_channels + 1))
         self.write('SOUR{}:POW2:STAT ON'.format(n_channels + 1))
-         self.channels.append(channel)
-         if n_channels == 0:
+        self.channels.append(channel)
+        if n_channels == 0:
              self.display_single_window()
 
     def count_external_generators(self):
