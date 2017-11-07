@@ -43,7 +43,7 @@ if __name__ == '__main__':
     # Set up folders, settings and logging for the experiment
     my_init("AcQED_05_98_dev1", STATION,
             pdf_folder=True, analysis_folder=True,
-            waveforms_folder=True,
+            temp_dict_folder=True, waveforms_folder=True,
             annotate_image=False, mainfolder=None, display_pdf=True,
             display_individual_pdf=False, qubit_count=1,
             plot_x_position=0.66)

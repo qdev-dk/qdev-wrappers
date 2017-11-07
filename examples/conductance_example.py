@@ -1,4 +1,4 @@
-from conductance_measurements import do2Dconductance
+from qdev_wrappers.majorana.conductance_measurements import do2Dconductance
 import time
 
 # simple example of running a 2d conductance measurement

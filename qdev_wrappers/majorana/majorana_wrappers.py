@@ -16,7 +16,7 @@ import time
 from qdev_wrappers.plot_functions import _plot_setup, _save_individual_plots
 from qdev_wrappers.sweep_functions import  do1d, do2d
 from qdev_wrappers.show_num import show_num
-from reload_settings import used_channels
+from qdev_wrappers.majorana.reload_settings import used_channels
 
 ##################################################
 # Helper functions and wrappers

@@ -12,12 +12,12 @@ mpl.rcParams['figure.figsize'] = (8, 3)
 mpl.rcParams['figure.subplot.bottom'] = 0.15 
 mpl.rcParams['font.size'] = 8
 
-from qcodes.utils.configreader import Config
-from qcodes.utils.natalie_wrappers.file_setup import your_init
+from qdev_wrappers.configreader import Config
+from qdev_wrappers.file_setup import your_init
 
-from majorana_wrappers import *
-from reload_settings import *
-from customised_instruments import *
+from qdev_wrappers.majorana.majorana_wrappers import *
+from qdev_wrappers.majorana.reload_settings import *
+from qdev_wrappers.T3.customised_instruments import *
 
 
 from qcodes.instrument_drivers.Harvard.Decadac import Decadac
@@ -36,7 +36,6 @@ from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
 # import qcodes.instrument_drivers.HP .HP8133A as hpsg
 import qcodes.instrument_drivers.rohde_schwarz.ZNB as vna
 
-from qcodes.utils.natalie_wrapper.configreader import Config
 from qcodes.utils.validators import Numbers
 import logging
 import re
@@ -44,7 +43,7 @@ import time
 from functools import partial
 import atexit
 
-from conductance_measurements import do2Dconductance
+from qdev_wrappers.majorana.conductance_measurements import do2Dconductance
 
 if __name__ == '__main__':
 
