@@ -1,0 +1,15 @@
+{
+    "core":{
+        "loglevel": "DEBUG",
+        "default_fmt": "data/{date}/#{counter}_{name}_{time}"
+    },
+    "gui" :{
+        "notebook": true,
+        "plotlib": "all",
+        "pyqtmaxplots": 100
+    },
+    "user": {
+        "mainfolder": "C:\\Users\\Jens\\src\\data",
+        "scriptfolder": "C:\\Users\\Jens\\src\\user_scripts"
+    }
+}
