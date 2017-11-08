@@ -325,8 +325,7 @@ class Decadac_T3(Decadac):
             else:
                 rangemin = float(range_minmax[0])
                 rangemax = float(range_minmax[1])
-            vldtr = vals.Numbers(rangemin, rangemax)
-            self.channels[chan].volt.set_validator(vldtr)
+            self.channels[chan].volt.vals = vals.Numbers(rangemin, rangemax)
 
             try:
                 chan_ramp_settings = ramp_settings[str(chan)]
@@ -339,8 +338,8 @@ class Decadac_T3(Decadac):
             else:
                 step = float(ramp_stepdelay[0])
                 delay = float(ramp_stepdelay[1])
-            self.channels[chan].volt.set_step(step)
-            self.channels[chan].volt.set_delay(delay)
+            self.channels[chan].step = step
+            self.channels[chan].inter_delay = delay
 
 
     def set_all(self, voltage_value, set_dcbias=False):
@@ -410,9 +409,8 @@ class GS200_T3(GS200):
                 raise KeyError('Settings not found in config file. Check they '
                                'are specified correctly. {}'.format(e))
             self.voltage.set_step(int(ramp_stepdelay[0]))
-            self.voltage.set_delay(int(ramp_stepdelay[1]))
-            vldtr = vals.Numbers(int(ranges_minmax[0]), int(ranges_minmax[1]))
-            self.voltage.set_validator(vldtr)
+            self.voltage.set_delay(int(ramp_stepdelay[1])) 
+            self.voltage.vals = vals.Numbers(int(ranges_minmax[0]), int(ranges_minmax[1]))
 
 
 class AlazarTech_ATS9360_T3(AlazarTech_ATS9360):
