@@ -17,7 +17,7 @@ from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB, ZNBChannel
 from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
 from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 from qcodes.instrument_drivers.devices import VoltageDivider
-from qcodes.instrument_drivers.Harvard.Decadac import Decadac
+from qcodes.instrument_drivers.Harvard.Decadac import Decadac, DacChannel, DacSlot
 from qcodes.utils import validators as vals
 from qcodes import ManualParameter
 from qcodes import ArrayParameter
@@ -211,7 +211,7 @@ class DacChannel_T3(DacChannel):
     This alternative channel representation is chosen by setting the class
     variable DAC_CHANNEL_CLASS in the main Instrument
     """
-     def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
          super().__init__(*args, **kwargs)
          self.add_parameter("fine_volt",
                             get_cmd=self._get_fine_voltage,
@@ -250,13 +250,15 @@ class DacChannel_T3(DacChannel):
         self.volt.set(coarse_part)
         slot.channels[fine_chan].volt.set(fine_scaled)
 
+class DacSlot_T3(DacSlot):
+    SLOT_MODE_DEFAULT = "Fine"
 
 class Decadac_T3(Decadac):
     """
     A Decadac with one voltage dividers
     """
     DAC_CHANNEL_CLASS = DacChannel_T3
-    SLOT_MODE_DEFAULT = "Fine"
+    DAC_SLOT_CLASS = DacSlot_T3
 
     def __init__(self, name, address, config, **kwargs):
         self.config = config
