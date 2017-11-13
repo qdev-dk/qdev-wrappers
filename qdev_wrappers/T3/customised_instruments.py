@@ -227,78 +227,66 @@ class Decadac_T3(Decadac):
                            set_cmd=self._set_fine_voltage,
                            label="Voltage", unit="V"
                            )
-        # Define the named channels
 
-        # Assign labels:
-        labels = config.get('Decadac Channel Labels')
-        for chan, label in labels.items():
-            self.channels[int(chan)].volt.label = label
+        '''
+        config file redesigned to have all channels for overview. Indices in config_settings[] for each channel are:
+        0: Channels name for deca.{}
+        1: Channel label
+        2: Channels unit (included as we are using decadac to control the magnet)
+        3: Voltage division factor
+        4: step size
+        5: delay
+        6: max value
+        7: min value
+        8: Fine or coarse mode channel
+        '''
 
-        # Take voltage divider of source/drain into account:
-        dcbias_i = int(config.get('Channel Parameters',
-                                  'source channel'))
-        dcbias = self.channels[dcbias_i].volt
-        self.dcbias = VoltageDivider(dcbias,
-                                     float(config.get('Gain Settings',
-                                                      'dc factor')))
-        self.dcbias.label = config.get('Decadac Channel Labels', dcbias_i)
-
-        # Assign custom variable names
-        lcut = config.get('Channel Parameters', 'left cutter')
-        self.lcut = self.channels[int(lcut)].volt
-
-        rcut = config.get('Channel Parameters', 'right cutter')
-        self.rcut = self.channels[int(rcut)].volt
-
-        jj = config.get('Channel Parameters', 'central cutter')
-        self.jj = self.channels[int(jj)].volt
-
-        rplg = config.get('Channel Parameters', 'right plunger')
-        self.rplg = self.channels[int(rplg)].volt
-
-        lplg = config.get('Channel Parameters', 'left plunger')
-        self.lplg = self.channels[int(lplg)].volt
-
-        self.add_parameter('cutters',
-                           label='{} cutters'.format(self.name),
-                           # use lambda for late binding
-                           get_cmd=self.get_cutters,
-                           set_cmd=self.set_cutters,
-                           unit='V',
-                           get_parser=float)
-
-        # Set up voltage and ramp safetly limits in software
-        ranges = config.get('Decadac Channel Limits')
-        ramp_settings = config.get('Decadac Channel Ramp Setttings')
-
+        # Couldnt get this to work with normal parameters so ended quite ugly using 'exec' to define input strings as methods
+        config_file = config.get('Decadac')
+        
         for chan in range(20):
-            try:
-                chan_range = ranges[str(chan)]
-            except KeyError:
-                continue
-            range_minmax = chan_range.split(" ")
-            if len(range_minmax) != 2:
-                raise ValueError(
-                    "Expected: min max. Got {}".format(chan_range))
-            else:
-                rangemin = float(range_minmax[0])
-                rangemax = float(range_minmax[1])
-            vldtr = vals.Numbers(rangemin, rangemax)
-            self.channels[chan].volt.set_validator(vldtr)
-
-            try:
-                chan_ramp_settings = ramp_settings[str(chan)]
-            except KeyError:
-                continue
-            ramp_stepdelay = chan_ramp_settings.split(" ")
-            if len(ramp_stepdelay) != 2:
-                raise ValueError(
-                    "Expected: step delay. Got {}".format(chan_ramp_settings))
-            else:
-                step = float(ramp_stepdelay[0])
-                delay = float(ramp_stepdelay[1])
+            config_settings = config_file[str(chan)].split(",")
+            
+            step = float(config_settings[4])
+            delay = float(config_settings[5])
             self.channels[chan].volt.set_step(step)
             self.channels[chan].volt.set_delay(delay)
+            
+            
+            rangemin = float(config_settings[6])
+            rangemax = float(config_settings[7])
+            vldtr = vals.Numbers(rangemin, rangemax)
+            self.channels[chan].volt.set_validator(vldtr)
+            if config_settings[8] == 'fine':
+                if np.mod(chan,4)<3:
+                    self.channels[chan].fine_volt.label = config_settings[1]
+                    self.channels[chan].fine_volt.unit = config_settings[2]
+                    if config_settings[3] not in '1':
+                        exec('self.{} = VoltageDivider(self.channels[chan].fine_volt, {}, label=\'{}\')'.format(config_settings[0],config_settings[3],config_settings[1]))
+                        exec('self.{}.label = \'{}\''.format(config_settings[0],config_settings[1]))
+                        exec('self.{}.unit = \'{}\''.format(config_settings[0],config_settings[2]))
+                        self.channels[chan].fine_volt.division_value = float(config_settings[3])
+                        self.channels[chan].fine_volt._meta_attrs.extend(["division_value"])
+                    else:
+                        exec('self.{} = self.channels[chan].fine_volt'.format(config_settings[0]))
+                        exec('self.{}.label = \'{}\''.format(config_settings[0],config_settings[1]))
+                        exec('self.{}.unit = \'{}\''.format(config_settings[0],config_settings[2]))
+            if config_settings[8] == 'coarse':
+                if np.mod(chan,4)<3:
+                    self.channels[chan].volt.label = config_settings[1]
+                    self.channels[chan].volt.unit = config_settings[2]
+                    if config_settings[3] not in '1':
+                        exec('self.{} = VoltageDivider(self.channels[chan].volt, {}, label=\'{}\')'.format(config_settings[0],config_settings[3],config_settings[1]))
+                        exec('self.{}.label = \'{}\''.format(config_settings[0],config_settings[1]))
+                        exec('self.{}.unit = \'{}\''.format(config_settings[0],config_settings[2]))
+                        self.channels[chan].volt.division_value = float(config_settings[3])
+                        self.channels[chan].volt._meta_attrs.extend(["division_value"])
+                    else:
+                        exec('self.{} = self.channels[chan].volt'.format(config_settings[0]))
+                        exec('self.{}.label = \'{}\''.format(config_settings[0],config_settings[1]))
+                        exec('self.{}.unit = \'{}\''.format(config_settings[0],config_settings[2]))
+
+
 
     def _get_fine_voltage(self):
         slot = self._parent
@@ -332,31 +320,8 @@ class Decadac_T3(Decadac):
         self.volt.set(coarse_part)
         slot.channels[fine_chan].volt.set(fine_scaled)
 
-    def set_all(self, voltage_value, set_dcbias=False):
-        channels_in_use = self.config.get('Decadac Channel Labels').keys()
-        channels_in_use = [int(ch) for ch in channels_in_use]
 
-        for ch in channels_in_use:
-            self.channels[ch].volt.set(voltage_value)
 
-        if set_dcbias:
-            self.dcbias.set(voltage_value)
-
-    def set_cutters(self, voltage_value):
-        dic = self.config.get('Channel Parameters')
-
-        self.channels[int(dic['left cutter'])].volt.set(voltage_value)
-        self.channels[int(dic['right cutter'])].volt.set(voltage_value)
-
-    def get_cutters(self):
-        dic = self.config.get('Channel Parameters')
-
-        vleft = self.channels[int(dic['left cutter'])].volt.get()
-        vright = self.channels[int(dic['right cutter'])].volt.get()
-        if (abs(vleft - vright) > 0.05):
-            print('Error! Left and right cutter are not the same!')
-        else:
-            return vleft
 
 
 # Subclass the DMM
