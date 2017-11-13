@@ -194,7 +194,7 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
                 title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
                 title_png = sep.join(title_list_png)
 
-                plt.savefig("{}.png".format(title_png),dpi=1000)
+                plt.savefig("{}.png".format(title_png),dpi=500)
 
             if (pdfdisplay['combined'] or
                     (num_subplots == 1 and pdfdisplay['individual'])):
