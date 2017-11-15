@@ -243,49 +243,40 @@ class Decadac_T3(Decadac):
 
         # Couldnt get this to work with normal parameters so ended quite ugly using 'exec' to define input strings as methods
         config_file = config.get('Decadac')
-        
-        for chan in range(20):
-            config_settings = config_file[str(chan)].split(",")
-            
+
+        for channnel, channelNum in enumerate(self.channels):
+            config_settings = config_file[str(channelNum)].split(",")
+
+            name = config_settings[0]
+            label = config_settings[1]
+            unit = config_settings[2]
+            divisor = float(config_settings[3])
             step = float(config_settings[4])
             delay = float(config_settings[5])
-            self.channels[chan].volt.set_step(step)
-            self.channels[chan].volt.set_delay(delay)
-            
-            
             rangemin = float(config_settings[6])
             rangemax = float(config_settings[7])
-            vldtr = vals.Numbers(rangemin, rangemax)
-            self.channels[chan].volt.set_validator(vldtr)
-            if config_settings[8] == 'fine':
-                if np.mod(chan,4)<3:
-                    self.channels[chan].fine_volt.label = config_settings[1]
-                    self.channels[chan].fine_volt.unit = config_settings[2]
-                    if config_settings[3] not in '1':
-                        exec('self.{} = VoltageDivider(self.channels[chan].fine_volt, {}, label=\'{}\')'.format(config_settings[0],config_settings[3],config_settings[1]))
-                        exec('self.{}.label = \'{}\''.format(config_settings[0],config_settings[1]))
-                        exec('self.{}.unit = \'{}\''.format(config_settings[0],config_settings[2]))
-                        self.channels[chan].fine_volt.division_value = float(config_settings[3])
-                        self.channels[chan].fine_volt._meta_attrs.extend(["division_value"])
-                    else:
-                        exec('self.{} = self.channels[chan].fine_volt'.format(config_settings[0]))
-                        exec('self.{}.label = \'{}\''.format(config_settings[0],config_settings[1]))
-                        exec('self.{}.unit = \'{}\''.format(config_settings[0],config_settings[2]))
-            if config_settings[8] == 'coarse':
-                if np.mod(chan,4)<3:
-                    self.channels[chan].volt.label = config_settings[1]
-                    self.channels[chan].volt.unit = config_settings[2]
-                    if config_settings[3] not in '1':
-                        exec('self.{} = VoltageDivider(self.channels[chan].volt, {}, label=\'{}\')'.format(config_settings[0],config_settings[3],config_settings[1]))
-                        exec('self.{}.label = \'{}\''.format(config_settings[0],config_settings[1]))
-                        exec('self.{}.unit = \'{}\''.format(config_settings[0],config_settings[2]))
-                        self.channels[chan].volt.division_value = float(config_settings[3])
-                        self.channels[chan].volt._meta_attrs.extend(["division_value"])
-                    else:
-                        exec('self.{} = self.channels[chan].volt'.format(config_settings[0]))
-                        exec('self.{}.label = \'{}\''.format(config_settings[0],config_settings[1]))
-                        exec('self.{}.unit = \'{}\''.format(config_settings[0],config_settings[2]))
+            fine_mode = config_settings[8]
 
+            if  fine_mode == 'fine':
+                param = channel.fine_volt
+            elif fine_mode == 'coarse':
+                param = channel.fine_volt
+            else:
+                pass #  raise exception
+
+            param.label = label
+            param.unit = unit
+            param.set_step(step)
+            param.set_delay(delay)
+            param.set_validator(vals.Numbers(rangemin, rangemax))
+
+            if divisor != 1.:
+                # maybe we want a different label
+                setattr(self, name, VoltageDivider(param, divisor, label=label)
+                param.division_value = divisor
+                param._meta_attrs.extend(["division_value"])
+            else:
+                setattr(self,name, param)
 
 
     def _get_fine_voltage(self):
@@ -569,4 +560,3 @@ class VNA_T3(ZNB):
 
     def _get_readout_pow(self, chan_num):
         return self.ask('SOUR{}:POW:GEN1:OFFS?'.format(chan_num)).split(',')[0]
-
