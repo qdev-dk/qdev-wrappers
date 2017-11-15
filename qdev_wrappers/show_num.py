@@ -71,7 +71,7 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savep
             plots.append(plot)
     else:
         plots = None
-    return plots, data
+    return data, plots
 
 
 def show_meta(id,instruments,key_word=''):
