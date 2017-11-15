@@ -91,7 +91,7 @@ class ATS9360Controller(AcquisitionController):
             raise ValueError('int_time must be 0 <= value <= 1')
 
         alazar = self._get_alazar()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         max_demod_freq = 0
         for channel in self.channels:
             if channel._demod:
@@ -137,7 +137,7 @@ class ATS9360Controller(AcquisitionController):
                                                                                   int_delay_max,
                                                                                   value))
         alazar = self._get_alazar()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         samples_delay_min = (self.filter_settings['numtaps'] - 1)
         int_delay_min = samples_delay_min / sample_rate
         if value < int_delay_min:
@@ -156,7 +156,7 @@ class ATS9360Controller(AcquisitionController):
             minimum int_delay recommended for (numtaps - 1)
         """
         alazar = self._get_alazar()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         samp_delay = self.filter_settings['numtaps'] - 1
         return samp_delay / sample_rate
 
@@ -175,7 +175,7 @@ class ATS9360Controller(AcquisitionController):
                              'value for int_time and samples_per_record will '
                              'be set accordingly')
         alazar = self._get_alazar()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         total_time = ((samples_per_record / sample_rate) -
                       (self.int_delay() or 0))
         return total_time
@@ -200,7 +200,7 @@ class ATS9360Controller(AcquisitionController):
         alazar = self._get_alazar()
         acq_s_p_r = self.samples_per_record.get()
         inst_s_p_r = alazar.samples_per_record.get()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         if acq_s_p_r != inst_s_p_r:
             raise Exception('acq controller samples per record {} does not match'
                             ' instrument value {}, most likely need '
