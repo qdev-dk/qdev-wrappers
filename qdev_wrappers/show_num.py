@@ -1,4 +1,8 @@
 import qcodes as qc
+import numpy as np
+from os.path import sep
+import matplotlib.pyplot as plt
+
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
