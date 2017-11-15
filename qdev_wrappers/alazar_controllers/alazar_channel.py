@@ -2,7 +2,7 @@ import math
 from qcodes.instrument.channel import InstrumentChannel
 from qcodes.utils import validators as vals
 from .alazar_multidim_parameters import Alazar0DParameter, Alazar1DParameter, Alazar2DParameter
-from ..acquisition_parameters import AcqVariablesParam, NonSettableDerivedParameter
+from .acquisition_parameters import AcqVariablesParam, NonSettableDerivedParameter
 
 class AlazarChannel(InstrumentChannel):
     """
