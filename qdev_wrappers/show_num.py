@@ -3,8 +3,13 @@ from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
 
+def check_experiment_is_initialized():
+    if not getattr(CURRENT_EXPERIMENT, "init", True): 
+        raise RuntimeError("Experiment not initalized. "
+                           "use qc.Init(mainfolder, samplename)")
 
-def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plot=True, savepng=False):
+
+def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savepng=False, **kwargs):
     """
     Show  and return plot and data for id in current instrument.
     Args:
@@ -12,23 +17,22 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plot=True, savepn
         useQT (boolean): If true plots with QTplot instead of matplotlib
         ave_col (boolean): If true subtracts average from each collumn
         ave_row (boolean): If true subtracts average from each row
+        do_plots: Default False: if false no plots are produced.
         savepng (boolean): If true saves matplotlib figure as png
+        **kwargs: Are passed to plot function
 
     Returns:
-        plot, data : returns the plot and the dataset
+        data, plots : returns the plot and the dataset
 
     """
-    if not CURRENT_EXPERIMENT["init"]:
-        raise RuntimeError("Experiment not initalized. "
-                           "use qc.Init(mainfolder, samplename)")
-
+    check_experiment_is_initialized()
     str_id = '{0:03d}'.format(id)
 
     t = qc.DataSet.location_provider.fmt.format(counter=str_id)
     data = qc.load_data(t)
     keys = [key for key in data.arrays.keys() if "_set" not in key[-4:]]
 
-    if do_plot:
+    if do_plots:
         plots = []
         avestr = ''
         num = ''
@@ -47,7 +51,8 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plot=True, savepn
             if useQT:
                 plot = QtPlot(
                     getattr(data, value),
-                    fig_x_position=CURRENT_EXPERIMENT['plot_x_position'])
+                    fig_x_position=CURRENT_EXPERIMENT['plot_x_position'],
+                    **kwargs)
                 title = "{} #{}".format(CURRENT_EXPERIMENT["sample_name"],
                                         str_id)
                 plot.subplots[0].setTitle(title)
@@ -55,7 +60,7 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plot=True, savepn
                 if savepng:
                     print('Save plot only working for matplotlib figure. Set useQT=False to save png.')
             else:
-                plot = MatPlot(getattr(data, value))
+                plot = MatPlot(getattr(data, value), **kwargs)
                 if savepng:
                     title_list_png = plot.get_default_title().split(sep)
                     title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
@@ -66,7 +71,7 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plot=True, savepn
             plots.append(plot)
     else:
         plots = None
-    return data, plots
+    return plots, data
 
 
 def show_meta(id,instruments,key_word=''):
@@ -76,10 +81,7 @@ def show_meta(id,instruments,key_word=''):
     instruments (list): List of strings with instruments names for which metadata is printed.
     key_word (string): Optional - String in label of metadata if printed.
     '''
-
-    if not CURRENT_EXPERIMENT["init"]:
-        raise RuntimeError("Experiment not initalized. "
-                           "use qc.Init(mainfolder, samplename)")
+    check_experiment_is_initialized()
 
     str_id = '{0:03d}'.format(id)
 
@@ -95,7 +97,7 @@ def show_meta(id,instruments,key_word=''):
 
 def ParaPrint(dic_list,key_word):
     '''
-    Helper function for show_meta. Division value is assumed added as an extra metadata atribute to parameters using 'VoltageDivider' function.
+    Helper function for show_meta. Division value is assumed added as an extra metadata attribute to parameters using 'VoltageDivider' function.
     '''
     new_dic_list = []
     for dictionary in dic_list:
