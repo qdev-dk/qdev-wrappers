@@ -65,6 +65,8 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savep
                     print('Save plot only working for matplotlib figure. Set useQT=False to save png.')
             else:
                 plot = MatPlot(getattr(data, value), **kwargs)
+                plot.rescale_axis()
+                plot.fig.tight_layout(pad=3)
                 if savepng:
                     title_list_png = plot.get_default_title().split(sep)
                     title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
@@ -109,11 +111,12 @@ def ParaPrint(dic_list,key_word):
             if (name == 'parameters') and not (not dictionary['parameters']):
                 for p_name in dictionary['parameters'].keys():
                     p = dictionary['parameters'][p_name]
-                    if ((not (not p['value']) and not np.shape(p['value'])) or p['value']==0) and key_word in p['label']:
-                        if 'division_value' in dictionary['parameters'][p_name].keys():
-                            print('{}: {} = {} {}. Divider = {}'.format(p['instrument_name'],p['label'],p['value'],p['unit'],p['division_value']))
-                        else:
-                            print('{}: {} = {} {}'.format(p['instrument_name'],p['label'],p['value'],p['unit']))
+                    if 'value' in p.keys():
+                        if ((not (not p['value']) and not np.shape(p['value'])) or p['value']==0) and key_word in p['label']:
+                            if 'division_value' in dictionary['parameters'][p_name].keys():
+                                print('{}: {} = {} {}. Divider = {}'.format(p['instrument_name'],p['label'],p['value'],p['unit'],p['division_value']))
+                            else:
+                                print('{}: {} = {} {}'.format(p['instrument_name'],p['label'],p['value'],p['unit']))
             if isinstance(dictionary[name], dict):
                 new_dic_list.append(dictionary[name])
     return new_dic_list
