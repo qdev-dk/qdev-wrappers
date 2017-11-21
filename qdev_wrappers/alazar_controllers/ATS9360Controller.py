@@ -8,7 +8,7 @@ from .acquisition_parametersold import AcqVariablesParam, \
                                        DemodFreqParameter
 
 
-class ATS9360ControllerOld(AcquisitionController):
+class ATS9360Controller(AcquisitionController):
     """
     This is the Acquisition Controller class which works with the ATS9360,
     averaging over records and buffers and demodulating with software reference
