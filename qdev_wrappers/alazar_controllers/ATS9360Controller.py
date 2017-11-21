@@ -3,7 +3,7 @@ from typing import Union, Sequence, Tuple, List
 
 import numpy as np
 
-import qcodes.instrument_drivers.AlazarTech.acq_helpers as helpers
+import qdev_wrappers.alazar_controllers.acq_helpers as helpers
 from qcodes import ChannelList
 from .alazar_channel import AlazarChannel
 from .alazar_multidim_parameters import AlazarMultiChannelParameter
