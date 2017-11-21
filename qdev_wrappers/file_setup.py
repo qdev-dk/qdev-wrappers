@@ -203,7 +203,7 @@ def _set_up_script_folder(scriptfolder: str=None):
 
 
 def basic_init(sample_name: str, station, mainfolder: str= None):
-    atexit.register(close_station, station)
+    atexit.register(qc.Instrument.close_all)
     _set_up_exp_folder(sample_name, mainfolder)
     _set_up_station(station)
     _set_up_ipython_logging()
