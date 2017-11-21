@@ -110,6 +110,25 @@ def _set_up_ipython_logging():
         else:
             log.debug("Logging already started at {}".format(logfile))
 
+def init_python_logger() -> None:
+    """
+    This sets up logging to a time based logging.
+    This means that all logging messages on or above
+    filelogginglevel will be written to pythonlog.log
+    All logging messages on or above consolelogginglevel
+    will be written to stderr.
+    """
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    filelogginglevel = logging.INFO
+    consolelogginglevel = logging.WARNING
+    ch = logging.StreamHandler()
+    ch.setLevel(consolelogginglevel)
+    ch.setFormatter(formatter)
+    fh1 = logging.handlers.TimedRotatingFileHandler('pythonlog.log', when='D')
+    fh1.setLevel(filelogginglevel)
+    fh1.setFormatter(formatter)
+    logging.basicConfig(handlers=[ch, fh1], level=logging.DEBUG)
 
 def _set_up_pdf_preferences(subfolder_name: str = 'pdf', display_pdf=True,
                             display_individual_pdf=False):
@@ -184,7 +203,7 @@ def _set_up_script_folder(scriptfolder: str=None):
 
 
 def basic_init(sample_name: str, station, mainfolder: str= None):
-    atexit.register(close_station, station)
+    atexit.register(qc.Instrument.close_all)
     _set_up_exp_folder(sample_name, mainfolder)
     _set_up_station(station)
     _set_up_ipython_logging()
@@ -211,6 +230,7 @@ def my_init(sample_name: str, station, qubit_count=None,
             display_pdf=True,
             display_individual_pdf=False,
             plot_x_position=0.66):
+    init_python_logger()
     basic_init(sample_name, station, mainfolder)
     CURRENT_EXPERIMENT['plot_x_position'] = plot_x_position
     _set_up_script_folder()
