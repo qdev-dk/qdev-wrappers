@@ -13,7 +13,7 @@ def check_experiment_is_initialized():
                            "use qc.Init(mainfolder, samplename)")
 
 
-def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savepng=False, **kwargs):
+def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savepng=False, clim=None, **kwargs):
     """
     Show  and return plot and data for id in current instrument.
     Args:
@@ -23,6 +23,7 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savep
         ave_row (boolean): If true subtracts average from each row
         do_plots: Default False: if false no plots are produced.
         savepng (boolean): If true saves matplotlib figure as png
+        clim [cmin,cmax]: Set min and max of colorbar to cmin and cmax respectrively
         **kwargs: Are passed to plot function
 
     Returns:
@@ -67,6 +68,10 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savep
                 plot = MatPlot(getattr(data, value), **kwargs)
                 plot.rescale_axis()
                 plot.fig.tight_layout(pad=3)
+                if clim is not None:
+                    mesh = plot[0].get_children()[0]
+                    mesh.set_clim(clim[0],clim[1])
+                    plt.draw()
                 if savepng:
                     title_list_png = plot.get_default_title().split(sep)
                     title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
