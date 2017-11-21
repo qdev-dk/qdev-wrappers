@@ -13,11 +13,12 @@ from .demodulator import Demodulator
 
 logger = logging.getLogger(__name__)
 
-class ATS9360Controller(AcquisitionController):
+class ATSChannelController(AcquisitionController):
     """
-    This is the Acquisition Controller class which works with the ATS9360,
-    averaging over records and buffers and demodulating with software reference
-    signal(s). It may optionally integrate over the samples following the post processing
+    This is the Acquisition Controller class tested with the ATS9360,
+    It can optionally average over buffers and records and demodulate
+    with demodulating with software reference signal(s). It may optionally
+    integrate over the samples following the post processing
 
 
     Args:
