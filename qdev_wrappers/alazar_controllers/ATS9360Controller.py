@@ -1,7 +1,8 @@
 import logging
 from qcodes.instrument_drivers.AlazarTech.ATS import AcquisitionController
 import numpy as np
-import qcodes.instrument_drivers.AlazarTech.acq_helpers as helpers
+import qdev_wrappers.alazar_controllers.acq_helpers as helpers
+from qdev_wrappers.alazar_controllers.demodulator import filter_ls, filter_win
 from .acquisition_parametersold import AcqVariablesParam, \
                                        ExpandingAlazarArrayMultiParameter, \
                                        NonSettableDerivedParameter, \
@@ -117,7 +118,7 @@ class ATS9360Controller(AcquisitionController):
             raise ValueError('int_time must be 0 <= value <= 1')
 
         alazar = self._get_alazar()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         max_demod_freq = self.demod_freqs.get_max_demod_freq()
         if max_demod_freq is not None:
             self.demod_freqs._verify_demod_freq(max_demod_freq)
@@ -168,7 +169,7 @@ class ATS9360Controller(AcquisitionController):
                                                                                   int_delay_max,
                                                                                   value))
         alazar = self._get_alazar()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         samples_delay_min = (self.filter_settings['numtaps'] - 1)
         int_delay_min = samples_delay_min / sample_rate
         if value < int_delay_min:
@@ -201,7 +202,7 @@ class ATS9360Controller(AcquisitionController):
             samples to be discarded as recommended for filter
         """
         alazar = self._get_alazar()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         samp_delay = self.filter_settings['numtaps'] - 1
         return samp_delay / sample_rate
 
@@ -220,7 +221,7 @@ class ATS9360Controller(AcquisitionController):
                              'value for int_time and samples_per_record will '
                              'be set accordingly')
         alazar = self._get_alazar()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         total_time = ((samples_per_record / sample_rate) -
                       (self.int_delay() or 0))
         return total_time
@@ -266,7 +267,7 @@ class ATS9360Controller(AcquisitionController):
         alazar = self._get_alazar()
         acq_s_p_r = self.samples_per_record.get()
         inst_s_p_r = alazar.samples_per_record.get()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         if acq_s_p_r != inst_s_p_r:
             raise Exception('acq controller samples per record {} does not match'
                             ' instrument value {}, most likely need '
@@ -316,9 +317,10 @@ class ATS9360Controller(AcquisitionController):
     def pre_acquire(self):
         pass
 
-    def handle_buffer(self, data):
+    def handle_buffer(self, data, i=None):
         """
         Adds data from Alazar to buffer (effectively averaging)
+
         """
         self.buffer += data
 
@@ -413,7 +415,7 @@ class ATS9360Controller(AcquisitionController):
 
         # volt_rec to matrix and multiply with demodulation signal matrices
         alazar = self._get_alazar()
-        sample_rate = alazar.effective_sample_rate.get()
+        sample_rate = alazar.get_sample_rate()
         demod_length = self.demod_freqs.get_num_demods()
         volt_rec_mat = np.outer(np.ones(demod_length), volt_rec).reshape(self.mat_shape)
         re_mat = np.multiply(volt_rec_mat, self.cos_mat)
@@ -422,20 +424,20 @@ class ATS9360Controller(AcquisitionController):
         # filter out higher freq component
         cutoff = self.demod_freqs.get_max_demod_freq() / 10
         if self.filter_settings['filter'] == 0:
-            re_filtered = helpers.filter_win(re_mat, cutoff,
+            re_filtered = filter_win(re_mat, cutoff,
                                              sample_rate,
                                              self.filter_settings['numtaps'],
                                              axis=-1)
-            im_filtered = helpers.filter_win(im_mat, cutoff,
+            im_filtered = filter_win(im_mat, cutoff,
                                              sample_rate,
                                              self.filter_settings['numtaps'],
                                              axis=-1)
         elif self.filter_settings['filter'] == 1:
-            re_filtered = helpers.filter_ls(re_mat, cutoff,
+            re_filtered = filter_ls(re_mat, cutoff,
                                             sample_rate,
                                             self.filter_settings['numtaps'],
                                             axis=-1)
-            im_filtered = helpers.filter_ls(im_mat, cutoff,
+            im_filtered = filter_ls(im_mat, cutoff,
                                             sample_rate,
                                             self.filter_settings['numtaps'],
                                             axis=-1)
