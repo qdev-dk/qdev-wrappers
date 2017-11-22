@@ -17,7 +17,7 @@ from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB, ZNBChannel
 from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
 from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 from qcodes.instrument_drivers.devices import VoltageDivider
-from qcodes.instrument_drivers.Harvard.Decadac import Decadac
+from qcodes.instrument_drivers.Harvard.Decadac import Decadac, DacChannel, DacSlot
 from qcodes.utils import validators as vals
 from qcodes import ManualParameter
 from qcodes import ArrayParameter
@@ -205,28 +205,70 @@ class QDAC_T10(QDac):
                                         float(config.get('Gain Settings',
                                                          'dc factor topo')))
 
+class DacChannel_T3(DacChannel):
+    """
+    A Decadac Channel with a fine_volt parameter
+    This alternative channel representation is chosen by setting the class
+    variable DAC_CHANNEL_CLASS in the main Instrument
+    """
+    def __init__(self, *args, **kwargs):
+         super().__init__(*args, **kwargs)
+         self.add_parameter("fine_volt",
+                            get_cmd=self._get_fine_voltage,
+                            set_cmd=self._set_fine_voltage,
+                            label="Voltage", unit="V"
+         )
+
+    def _get_fine_voltage(self):
+        slot = self._parent
+        if slot.slot_mode.get_latest() not in ['Fine', 'FineCald']:
+            raise RuntimeError("Cannot get fine voltage unless slot in Fine mode")
+        if self._channel == 0:
+            fine_chan = 2
+        elif self._channel == 1:
+            fine_chan = 3
+        else:
+            raise RuntimeError("Fine mode only works for Chan 0 and 1")
+        return self.volt.get() + (slot.channels[fine_chan].volt.get()+10)/200
+
+    def _set_fine_voltage(self, voltage):
+        slot = self._parent
+        if slot.slot_mode.get_latest() not in ['Fine', 'FineCald']:
+            raise RuntimeError("Cannot get fine voltage unless slot in Fine mode")
+        if self._channel == 0:
+            fine_chan = 2
+        elif self._channel == 1:
+            fine_chan = 3
+        else:
+            raise RuntimeError("Fine mode only works for Chan 0 and 1")
+        coarse_part = self._dac_code_to_v(self._dac_v_to_code(voltage-0.001))
+
+        fine_part = voltage - coarse_part
+        fine_scaled = fine_part*200-10
+        print("trying to set to {}, by setting coarse {} and fine {} with total {}".format(voltage,
+              coarse_part, fine_scaled, coarse_part+fine_part))
+        self.volt.set(coarse_part)
+        slot.channels[fine_chan].volt.set(fine_scaled)
+
+class DacSlot_T3(DacSlot):
+    SLOT_MODE_DEFAULT = "Fine"
 
 class Decadac_T3(Decadac):
     """
     A Decadac with one voltage dividers
     """
+    DAC_CHANNEL_CLASS = DacChannel_T3
+    DAC_SLOT_CLASS = DacSlot_T3
 
     def __init__(self, name, address, config, **kwargs):
         self.config = config
-        deca_physical_min = int(self.config.get('Decadac Range', 'min_volt'))
-        deca_physical_max = int(self.config.get('Decadac Range', 'max_volt'))
+        deca_physical_min = -10
+        deca_physical_max = 10
         kwargs.update({'min_val': deca_physical_min,
                        'max_val': deca_physical_max})
-        # this is maybe not the prettiest solution:
-        self.SLOT_MODE_DEFAULT = "Fine"
+
         super().__init__(name, address, **kwargs)
 
-        # addtional parameters go here
-        self.add_parameter("fine_volt",
-                           get_cmd=self._get_fine_voltage,
-                           set_cmd=self._set_fine_voltage,
-                           label="Voltage", unit="V"
-                           )
         # Define the named channels
 
         # Assign labels:
@@ -283,8 +325,7 @@ class Decadac_T3(Decadac):
             else:
                 rangemin = float(range_minmax[0])
                 rangemax = float(range_minmax[1])
-            vldtr = vals.Numbers(rangemin, rangemax)
-            self.channels[chan].volt.set_validator(vldtr)
+            self.channels[chan].volt.vals = vals.Numbers(rangemin, rangemax)
 
             try:
                 chan_ramp_settings = ramp_settings[str(chan)]
@@ -297,40 +338,9 @@ class Decadac_T3(Decadac):
             else:
                 step = float(ramp_stepdelay[0])
                 delay = float(ramp_stepdelay[1])
-            self.channels[chan].volt.set_step(step)
-            self.channels[chan].volt.set_delay(delay)
+            self.channels[chan].step = step
+            self.channels[chan].inter_delay = delay
 
-    def _get_fine_voltage(self):
-        slot = self._parent
-        if slot.slot_mode.get_latest() not in ['Fine', 'FineCald']:
-            raise RuntimeError("Cannot get fine voltage unless slot in Fine mode")
-        if self._channel == 0:
-            fine_chan = 2
-        elif self._channel == 1:
-            fine_chan = 3
-        else:
-            raise RuntimeError("Fine mode only works for Chan 0 and 1")
-        return self.volt.get() + (slot.channels[fine_chan].volt.get()+10)/200
-
-    def _set_fine_voltage(self, voltage):
-        slot = self._parent
-        if slot.slot_mode.get_latest() not in ['Fine', 'FineCald']:
-            raise RuntimeError("Cannot get fine voltage unless slot in Fine mode")
-        if self._channel == 0:
-            fine_chan = 2
-        elif self._channel == 1:
-            fine_chan = 3
-        else:
-            raise RuntimeError("Fine mode only works for Chan 0 and 1")
-        coarse_part = self._dac_code_to_v(
-            self._dac_v_to_code(round(voltage,2)-0.01) )
-
-        fine_part = voltage - coarse_part
-        fine_scaled = fine_part*200-10
-        print("trying to set to {}, by setting coarse {} and fine {} with total {}".format(voltage,
-              coarse_part, fine_scaled, coarse_part+fine_part))
-        self.volt.set(coarse_part)
-        slot.channels[fine_chan].volt.set(fine_scaled)
 
     def set_all(self, voltage_value, set_dcbias=False):
         channels_in_use = self.config.get('Decadac Channel Labels').keys()
@@ -399,9 +409,8 @@ class GS200_T3(GS200):
                 raise KeyError('Settings not found in config file. Check they '
                                'are specified correctly. {}'.format(e))
             self.voltage.set_step(int(ramp_stepdelay[0]))
-            self.voltage.set_delay(int(ramp_stepdelay[1]))
-            vldtr = vals.Numbers(int(ranges_minmax[0]), int(ranges_minmax[1]))
-            self.voltage.set_validator(vldtr)
+            self.voltage.set_delay(int(ramp_stepdelay[1])) 
+            self.voltage.vals = vals.Numbers(int(ranges_minmax[0]), int(ranges_minmax[1]))
 
 
 class AlazarTech_ATS9360_T3(AlazarTech_ATS9360):
