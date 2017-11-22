@@ -304,7 +304,7 @@ class Decadac_T3(Decadac):
             elif fine_mode == 'coarse':
                 param = channel.volt
             else:
-                pass #  raise exception
+                raise RuntimeError('Invalid config file. Need to specify \'fine\' or \'coarse\' not {}'.format(fine_mode))
 
             channel.volt.set_step(step)
             channel.volt.set_delay(delay)
