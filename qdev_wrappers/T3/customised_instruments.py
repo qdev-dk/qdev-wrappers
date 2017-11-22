@@ -213,8 +213,8 @@ class Decadac_T3(Decadac):
 
     def __init__(self, name, address, config, **kwargs):
         self.config = config
-        deca_physical_min = int(self.config.get('Decadac Range', 'min_volt'))
-        deca_physical_max = int(self.config.get('Decadac Range', 'max_volt'))
+        deca_physical_min = -10
+        deca_physical_max = 10
         kwargs.update({'min_val': deca_physical_min,
                        'max_val': deca_physical_max})
         # this is maybe not the prettiest solution:
