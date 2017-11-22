@@ -244,7 +244,7 @@ class Decadac_T3(Decadac):
         # Couldnt get this to work with normal parameters so ended quite ugly using 'exec' to define input strings as methods
         config_file = config.get('Decadac')
 
-        for channnel, channelNum in enumerate(self.channels):
+        for channelNum, channnel  in enumerate(self.channels):
             config_settings = config_file[str(channelNum)].split(",")
 
             name = config_settings[0]
@@ -260,19 +260,20 @@ class Decadac_T3(Decadac):
             if  fine_mode == 'fine':
                 param = channel.fine_volt
             elif fine_mode == 'coarse':
-                param = channel.fine_volt
+                param = channel.volt
             else:
                 pass #  raise exception
 
+            channel.volt.set_step(step)
+            channel.volt.set_delay(delay)
+
             param.label = label
             param.unit = unit
-            param.set_step(step)
-            param.set_delay(delay)
             param.set_validator(vals.Numbers(rangemin, rangemax))
 
             if divisor != 1.:
                 # maybe we want a different label
-                setattr(self, name, VoltageDivider(param, divisor, label=label)
+                setattr(self, name, VoltageDivider(param, divisor, label=label))
                 param.division_value = divisor
                 param._meta_attrs.extend(["division_value"])
             else:
