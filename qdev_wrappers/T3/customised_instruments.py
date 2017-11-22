@@ -283,11 +283,9 @@ class Decadac_T3(Decadac):
         8: Fine or coarse mode channel
         '''
 
-        # Couldnt get this to work with normal parameters so ended quite ugly using 'exec' to define input strings as methods
-        config_file = config.get('Decadac')
-
-        for channelNum, channnel  in enumerate(self.channels):
-            config_settings = config_file[str(channelNum)].split(",")
+        for channelNum, settings in config.get('Decadac'):
+            channel = self.channels(int(channelNum))
+            config_settings = settings.split(',')
 
             name = config_settings[0]
             label = config_settings[1]
