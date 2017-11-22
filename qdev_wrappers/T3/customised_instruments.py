@@ -205,6 +205,38 @@ class QDAC_T10(QDac):
                                         float(config.get('Gain Settings',
                                                          'dc factor topo')))
 
+        # same as in decadac but without fine mode
+        config_file = config.get('QDAC')
+
+        for channelNum, channnel  in enumerate(self.channels):
+            config_settings = config_file[str(channelNum)].split(",")
+
+            name = config_settings[0]
+            label = config_settings[1]
+            unit = config_settings[2]
+            divisor = float(config_settings[3])
+            step = float(config_settings[4])
+            delay = float(config_settings[5])
+            rangemin = float(config_settings[6])
+            rangemax = float(config_settings[7])
+
+            param = channel.volt
+
+            param.set_step(step)
+            param.set_delay(delay)
+            param.label = label
+            param.unit = unit
+            param.set_validator(vals.Numbers(rangemin, rangemax))
+
+            if divisor != 1.:
+                # maybe we want a different label
+                setattr(self, name, VoltageDivider(param, divisor, label=label))
+                param.division_value = divisor
+                param._meta_attrs.extend(["division_value"])
+            else:
+                setattr(self,name, param)
+
+
 class DacChannel_T3(DacChannel):
     """
     A Decadac Channel with a fine_volt parameter
