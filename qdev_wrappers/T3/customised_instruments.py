@@ -284,7 +284,7 @@ class Decadac_T3(Decadac):
         '''
 
         for channelNum, settings in config.get('Decadac').items():
-            channel = self.channels(int(channelNum))
+            channel = self.channels[ int(channelNum) ]
             config_settings = settings.split(',')
 
             name = config_settings[0]
