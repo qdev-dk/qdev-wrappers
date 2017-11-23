@@ -200,7 +200,6 @@ class QDAC_T3(QDac):
             delay = float(config_settings[5])
             rangemin = float(config_settings[6])
             rangemax = float(config_settings[7])
-            fine_mode = config_settings[8]
 
             param = channel.volt
 
