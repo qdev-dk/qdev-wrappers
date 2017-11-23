@@ -241,7 +241,8 @@ class DacChannel_T3(DacChannel):
             fine_chan = 3
         else:
             raise RuntimeError("Fine mode only works for Chan 0 and 1")
-        coarse_part = self._dac_code_to_v(self._dac_v_to_code(voltage-0.001))
+        coarse_part = self._dac_code_to_v(
+            round(self._dac_v_to_code(voltage, 2)-0.01))
 
         fine_part = voltage - coarse_part
         fine_scaled = fine_part*200-10
@@ -249,6 +250,7 @@ class DacChannel_T3(DacChannel):
               coarse_part, fine_scaled, coarse_part+fine_part))
         self.volt.set(coarse_part)
         slot.channels[fine_chan].volt.set(fine_scaled)
+
 
 
 class DacSlot_T3(DacSlot):
@@ -318,10 +320,6 @@ class Decadac_T3(Decadac):
                 param._meta_attrs.extend(["division_value"])
             else:
                 setattr(self,name, param)
-
-
-
-
 
 
 # Subclass the DMM
