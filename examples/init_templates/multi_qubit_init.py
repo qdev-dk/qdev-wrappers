@@ -19,7 +19,7 @@ from qdev_wrappers import *
 from qdev_wrappers.transmon import *
 if qc.config.user.scriptfolder not in sys.path:
     sys.path.insert(0, qc.config.user.scriptfolder)
-from customised_instruments import Decadac_cQED, AWG5014_cQED, \
+from qdev_wrappers.cQED.customised_instruments import Decadac_cQED, AWG5014_cQED, \
     AlazarTech_ATS9360_cQED, ATS9360Controller_cQED, VNA_cQED
 
 from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
