@@ -17,7 +17,7 @@ from qdev_wrappers.file_setup import your_init
 
 from qdev_wrappers.majorana.majorana_wrappers import *
 from qdev_wrappers.majorana.reload_settings import *
-from qdev_wrappers.T3.customised_instruments import *
+from qdev_wrappers.cQED.customised_instruments import *
 
 
 from qcodes.instrument_drivers.Harvard.Decadac import Decadac
@@ -67,10 +67,10 @@ if __name__ == '__main__':
         close_station(qc.Station.default)
 
     # Initialisation of intruments
-    deca = Decadac_T3('Decadac', 'ASRL1::INSTR', config)
+    deca = Decadac_cQED('Decadac', 'ASRL1::INSTR', config)
 
     # lockin_1 = SR830_T10('lockin_1', 'GPIB0::1::INSTR')
-    lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', config)
+    lockin_2 = SR830_cQED('lockin_2', 'GPIB0::2::INSTR', config)
 
     # zi = ZIUHFLI_T10('ziuhfli', 'dev2189')
     # keysightgen_left = Keysight_33500B('keysight_gen_left', 'TCPIP0::192.168.15.101::inst0::INSTR')
