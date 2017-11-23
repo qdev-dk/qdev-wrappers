@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Customised instruments with extra features such as voltage dividers and derived
-parameters for use with T3
+parameters for use with cQED
 """
 from functools import partial
 import time
@@ -96,7 +96,7 @@ class ConductanceBuffer(ChannelBuffer):
 
 
 # Subclass the SR830
-class SR830_T3(SR830):
+class SR830_cQED(SR830):
     """
     An SR830 with the following super powers:
         - a Voltage divider
@@ -178,7 +178,7 @@ class SR830_T3(SR830):
 
 
 # Subclass the QDAC
-class QDAC_T3(QDac):
+class QDAC_cQED(QDac):
     """
     A QDac with three voltage dividers
     """
@@ -217,7 +217,7 @@ class QDAC_T3(QDac):
 
 
 
-class DacChannel_T3(DacChannel):
+class DacChannel_cQED(DacChannel):
     """
     A Decadac Channel with a fine_volt parameter
     This alternative channel representation is chosen by setting the class
@@ -263,16 +263,16 @@ class DacChannel_T3(DacChannel):
 
 
 
-class DacSlot_T3(DacSlot):
+class DacSlot_cQED(DacSlot):
     SLOT_MODE_DEFAULT = "Fine"
 
 
-class Decadac_T3(Decadac):
+class Decadac_cQED(Decadac):
     """
     A Decadac with one voltage dividers
     """
-    DAC_CHANNEL_CLASS = DacChannel_T3
-    DAC_SLOT_CLASS = DacSlot_T3
+    DAC_CHANNEL_CLASS = DacChannel_cQED
+    DAC_SLOT_CLASS = DacSlot_cQED
 
     def __init__(self, name, address, config, **kwargs):
         self.config = config
@@ -358,7 +358,7 @@ class Keysight_34465A_T10(Keysight_34465A):
         return self.volt() / self.iv_conv * 1E12
 
 
-class GS200_T3(GS200):
+class GS200_cQED(GS200):
     def __init__(self, name, address, config=None, **kwargs):
         super().__init__(name, address, **kwargs)
 
@@ -378,7 +378,7 @@ class GS200_T3(GS200):
             self.voltage.vals = vals.Numbers(int(ranges_minmax[0]), int(ranges_minmax[1]))
 
 
-class AlazarTech_ATS9360_T3(AlazarTech_ATS9360):
+class AlazarTech_ATS9360_cQED(AlazarTech_ATS9360):
     def __init__(self, name, seq_mode='off'):
         if seq_mode is 'on':
             io_mode = 'AUX_IN_TRIGGER_ENABLE'
@@ -447,7 +447,7 @@ class AlazarTech_ATS9360_T3(AlazarTech_ATS9360):
             raise ValueError('must set seq mode to "on" or "off"')
 
 
-class ATS9360Controller_T3(ATS9360Controller):
+class ATS9360Controller_cQED(ATS9360Controller):
     def __init__(self, name, alazar, ctrl_type='ave'):
         if ctrl_type is 'samp':
             integrate_samples = False
@@ -467,7 +467,7 @@ class ATS9360Controller_T3(ATS9360Controller):
                          average_records=average_records)
 
 
-class AWG5014_T3(Tektronix_AWG5014):
+class AWG5014_cQED(Tektronix_AWG5014):
     def __init__(self, name, visa_address, **kwargs):
         super().__init__(name, visa_address, **kwargs)
         self.add_parameter(name='current_seq',
@@ -479,7 +479,7 @@ class AWG5014_T3(Tektronix_AWG5014):
         self.clear_message_queue()
 
 
-class VNA_T3(ZNB):
+class VNA_cQED(ZNB):
     def __init__(self, name, visa_address, S21=True, spec_mode=False, gen_address=None,
                  timeout=40):
         super().__init__(name, visa_address, init_s_params=False, timeout=timeout)
