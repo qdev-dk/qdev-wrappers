@@ -1,0 +1,15 @@
+{
+    "gui": {
+        "pyqtmaxplots": 100,
+        "notebook": true,
+        "plotlib": "all"
+    },
+    "core": {
+        "default_fmt": "data/{date}/#{counter}_{name}_{time}",
+        "loglevel": "DEBUG"
+    },
+    "user": {
+        "scriptfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/ExperimentScripts",
+        "mainfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/Qcodes_test_data"
+    }
+}
