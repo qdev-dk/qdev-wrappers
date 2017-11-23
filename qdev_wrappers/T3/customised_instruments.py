@@ -178,32 +178,13 @@ class SR830_T3(SR830):
 
 
 # Subclass the QDAC
-class QDAC_T10(QDac):
+class QDAC_T3(QDac):
     """
     A QDac with three voltage dividers
     """
 
     def __init__(self, name, address, config, **kwargs):
         super().__init__(name, address, **kwargs)
-
-        # Define the named channels
-
-        topo_channel = int(config.get('Channel Parameters',
-                                      'topo bias channel'))
-        topo_channel = self.channels[topo_channel - 1].v
-
-        self.add_parameter('current_bias',
-                           label='{} conductance'.format(self.name),
-                           # use lambda for late binding
-                           get_cmd=lambda: self.channels.chan40.v.get() / 10E6 * 1E9,
-                           set_cmd=lambda value: self.channels.chan40.v.set(
-                               value * 1E-9 * 10E6),
-                           unit='nA',
-                           get_parser=float)
-
-        self.topo_bias = VoltageDivider(topo_channel,
-                                        float(config.get('Gain Settings',
-                                                         'dc factor topo')))
 
         # same as in decadac but without fine mode
         config_file = config.get('QDAC')
@@ -219,11 +200,10 @@ class QDAC_T10(QDac):
             delay = float(config_settings[5])
             rangemin = float(config_settings[6])
             rangemax = float(config_settings[7])
+            fine_mode = config_settings[8]
 
             param = channel.volt
 
-            param.set_step(step)
-            param.set_delay(delay)
             param.label = label
             param.unit = unit
             param.set_validator(vals.Numbers(rangemin, rangemax))
@@ -235,6 +215,7 @@ class QDAC_T10(QDac):
                 param._meta_attrs.extend(["division_value"])
             else:
                 setattr(self,name, param)
+
 
 
 class DacChannel_T3(DacChannel):
