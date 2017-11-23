@@ -241,17 +241,19 @@ class DacChannel_T3(DacChannel):
             fine_chan = 3
         else:
             raise RuntimeError("Fine mode only works for Chan 0 and 1")
-        coarse_part = self._dac_code_to_v(self._dac_v_to_code(voltage-0.001))
+        coarse_part = self._dac_code_to_v(
+            self._dac_v_to_code(round(voltage, 2)-0.01))
 
         fine_part = voltage - coarse_part
         fine_scaled = fine_part*200-10
-        print("trying to set to {}, by setting coarse {} and fine {} with total {}".format(voltage,
-              coarse_part, fine_scaled, coarse_part+fine_part))
         self.volt.set(coarse_part)
         slot.channels[fine_chan].volt.set(fine_scaled)
 
+
+
 class DacSlot_T3(DacSlot):
     SLOT_MODE_DEFAULT = "Fine"
+
 
 class Decadac_T3(Decadac):
     """
@@ -268,105 +270,56 @@ class Decadac_T3(Decadac):
                        'max_val': deca_physical_max})
 
         super().__init__(name, address, **kwargs)
+        '''
+        config file redesigned to have all channels for overview. Indices in config_settings[] for each channel are:
+        0: Channels name for deca.{}
+        1: Channel label
+        2: Channels unit (included as we are using decadac to control the magnet)
+        3: Voltage division factor
+        4: step size
+        5: delay
+        6: max value
+        7: min value
+        8: Fine or coarse mode channel
+        '''
 
-        # Define the named channels
+        for channelNum, settings in config.get('Decadac').items():
+            channel = self.channels[ int(channelNum) ]
+            config_settings = settings.split(',')
 
-        # Assign labels:
-        labels = config.get('Decadac Channel Labels')
-        for chan, label in labels.items():
-            self.channels[int(chan)].volt.label = label
+            name = config_settings[0]
+            label = config_settings[1]
+            unit = config_settings[2]
+            divisor = float(config_settings[3])
+            step = float(config_settings[4])
+            delay = float(config_settings[5])
+            rangemin = float(config_settings[6])
+            rangemax = float(config_settings[7])
+            fine_mode = config_settings[8]
 
-        # Take voltage divider of source/drain into account:
-        dcbias_i = int(config.get('Channel Parameters',
-                                  'source channel'))
-        dcbias = self.channels[dcbias_i].volt
-        self.dcbias = VoltageDivider(dcbias,
-                                     float(config.get('Gain Settings',
-                                                      'dc factor')))
-        self.dcbias.label = config.get('Decadac Channel Labels', dcbias_i)
-
-        # Assign custom variable names
-        lcut = config.get('Channel Parameters', 'left cutter')
-        self.lcut = self.channels[int(lcut)].volt
-
-        rcut = config.get('Channel Parameters', 'right cutter')
-        self.rcut = self.channels[int(rcut)].volt
-
-        jj = config.get('Channel Parameters', 'central cutter')
-        self.jj = self.channels[int(jj)].volt
-
-        rplg = config.get('Channel Parameters', 'right plunger')
-        self.rplg = self.channels[int(rplg)].volt
-
-        lplg = config.get('Channel Parameters', 'left plunger')
-        self.lplg = self.channels[int(lplg)].volt
-
-        self.add_parameter('cutters',
-                           label='{} cutters'.format(self.name),
-                           # use lambda for late binding
-                           get_cmd=self.get_cutters,
-                           set_cmd=self.set_cutters,
-                           unit='V',
-                           get_parser=float)
-
-        # Set up voltage and ramp safetly limits in software
-        ranges = config.get('Decadac Channel Limits')
-        ramp_settings = config.get('Decadac Channel Ramp Setttings')
-
-        for chan in range(20):
-            try:
-                chan_range = ranges[str(chan)]
-            except KeyError:
-                continue
-            range_minmax = chan_range.split(" ")
-            if len(range_minmax) != 2:
-                raise ValueError(
-                    "Expected: min max. Got {}".format(chan_range))
+            if  fine_mode == 'fine':
+                param = channel.fine_volt
+            elif fine_mode == 'coarse':
+                param = channel.volt
             else:
-                rangemin = float(range_minmax[0])
-                rangemax = float(range_minmax[1])
-            self.channels[chan].volt.vals = vals.Numbers(rangemin, rangemax)
+                raise RuntimeError('Invalid config file. Need to specify \'fine\' or \'coarse\' not {}'.format(fine_mode))
 
-            try:
-                chan_ramp_settings = ramp_settings[str(chan)]
-            except KeyError:
-                continue
-            ramp_stepdelay = chan_ramp_settings.split(" ")
-            if len(ramp_stepdelay) != 2:
-                raise ValueError(
-                    "Expected: step delay. Got {}".format(chan_ramp_settings))
+            channel.volt.set_step(step)
+            channel.volt.set_delay(delay)
+
+            param.label = label
+            param.unit = unit
+            param.set_validator(vals.Numbers(rangemin, rangemax))
+
+            if divisor != 1.:
+                # maybe we want a different label
+                setattr(self, name, VoltageDivider(param, divisor, label=label))
+                param.division_value = divisor
+                param._meta_attrs.extend(["division_value"])
             else:
-                step = float(ramp_stepdelay[0])
-                delay = float(ramp_stepdelay[1])
-            self.channels[chan].step = step
-            self.channels[chan].inter_delay = delay
+                setattr(self,name, param)
 
 
-    def set_all(self, voltage_value, set_dcbias=False):
-        channels_in_use = self.config.get('Decadac Channel Labels').keys()
-        channels_in_use = [int(ch) for ch in channels_in_use]
-
-        for ch in channels_in_use:
-            self.channels[ch].volt.set(voltage_value)
-
-        if set_dcbias:
-            self.dcbias.set(voltage_value)
-
-    def set_cutters(self, voltage_value):
-        dic = self.config.get('Channel Parameters')
-
-        self.channels[int(dic['left cutter'])].volt.set(voltage_value)
-        self.channels[int(dic['right cutter'])].volt.set(voltage_value)
-
-    def get_cutters(self):
-        dic = self.config.get('Channel Parameters')
-
-        vleft = self.channels[int(dic['left cutter'])].volt.get()
-        vright = self.channels[int(dic['right cutter'])].volt.get()
-        if (abs(vleft - vright) > 0.05):
-            print('Error! Left and right cutter are not the same!')
-        else:
-            return vleft
 
 
 # Subclass the DMM
@@ -613,4 +566,3 @@ class VNA_T3(ZNB):
 
     def _get_readout_pow(self, chan_num):
         return self.ask('SOUR{}:POW:GEN1:OFFS?'.format(chan_num)).split(',')[0]
-
