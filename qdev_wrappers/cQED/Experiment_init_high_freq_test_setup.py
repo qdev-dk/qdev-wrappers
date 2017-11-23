@@ -18,8 +18,8 @@ from qcodes import ManualParameter
 from qdev_wrappers import *
 from qdev_wrappers.majorana.majorana_wrappers import *
 from qdev_wrappers.majorana.reload_settings import *
-from qdev_wrappers.T3.customised_instruments import SR830_T3, Decadac_T3, AWG5014_T3, \
-ATS9360Controller_T3, AlazarTech_ATS9360_T3, VNA_T3
+from qdev_wrappers.cQED.customised_instruments import SR830_cQED, Decadac_T3, AWG5014_T3, \
+ATS9360Controller_cQED, AlazarTech_ATS9360_cQED, VNA_T3
 helper_fns_folder = r'D:\Transmon\Qcodes-contrib'
 if helper_fns_folder not in sys.path:
     sys.path.insert(0, helper_fns_folder)
@@ -57,22 +57,22 @@ if __name__ == '__main__':
         
 
     # Initialise intruments
-    deca = Decadac_T3('Decadac', 'ASRL1::INSTR', instr_config)
-#    lockin_2 = SR830_T3('lockin_2', 'GPIB0::2::INSTR', instr_config)
-    alazar = AlazarTech_ATS9360_T3('alazar', seq_mode='off')
-    ave_ctrl = ATS9360Controller_T3('ave_ctrl', alazar, ctrl_type='ave')
-    rec_ctrl = ATS9360Controller_T3('rec_ctrl', alazar, ctrl_type='rec')
-    samp_ctrl = ATS9360Controller_T3('samp_ctrl', alazar, ctrl_type='samp')
+    deca = Decadac_cQED('Decadac', 'ASRL1::INSTR', instr_config)
+#    lockin_2 = SR830_cQED('lockin_2', 'GPIB0::2::INSTR', instr_config)
+    alazar = AlazarTech_ATS9360_cQED('alazar', seq_mode='off')
+    ave_ctrl = ATS9360Controller_cQED('ave_ctrl', alazar, ctrl_type='ave')
+    rec_ctrl = ATS9360Controller_cQED('rec_ctrl', alazar, ctrl_type='rec')
+    samp_ctrl = ATS9360Controller_cQED('samp_ctrl', alazar, ctrl_type='samp')
     localos = RohdeSchwarz_SGS100A('localos_rs',
                                    'TCPIP0::192.168.15.104::inst0::INSTR')
     cavity = RohdeSchwarz_SGS100A('cavity_rs',
                                   'TCPIP0::192.168.15.105::inst0::INSTR')
-    awg = AWG5014_T3('awg', 'TCPIP0::192.168.15.101::inst0::INSTR', timeout=40)
+    awg = AWG5014_cQED('awg', 'TCPIP0::192.168.15.101::inst0::INSTR', timeout=40)
     mercury = MercuryiPS(name='mercury',
                          address='172.20.10.148',
                          port=7020,
                          axes=['X', 'Y', 'Z'])
-    vna = VNA_T3('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR')
+    vna = VNA_cQED('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR')
     dummy_time = ManualParameter('dummy_time')
 
     # Add instruments to station so that metadata for them is recorded at
