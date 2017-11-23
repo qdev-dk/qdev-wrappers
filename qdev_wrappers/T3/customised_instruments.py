@@ -242,7 +242,7 @@ class DacChannel_T3(DacChannel):
         else:
             raise RuntimeError("Fine mode only works for Chan 0 and 1")
         coarse_part = self._dac_code_to_v(
-            round(self._dac_v_to_code(voltage, 2)-0.01))
+            self._dac_v_to_code(round(voltage, 2)-0.01))
 
         fine_part = voltage - coarse_part
         fine_scaled = fine_part*200-10
