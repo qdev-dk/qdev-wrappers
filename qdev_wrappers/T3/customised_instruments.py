@@ -246,8 +246,6 @@ class DacChannel_T3(DacChannel):
 
         fine_part = voltage - coarse_part
         fine_scaled = fine_part*200-10
-        print("trying to set to {}, by setting coarse {} and fine {} with total {}".format(voltage,
-              coarse_part, fine_scaled, coarse_part+fine_part))
         self.volt.set(coarse_part)
         slot.channels[fine_chan].volt.set(fine_scaled)
 
@@ -285,7 +283,7 @@ class Decadac_T3(Decadac):
         8: Fine or coarse mode channel
         '''
 
-        for channelNum, settings in config.get('Decadac'):
+        for channelNum, settings in config.get('Decadac').items():
             channel = self.channels(int(channelNum))
             config_settings = settings.split(',')
 
