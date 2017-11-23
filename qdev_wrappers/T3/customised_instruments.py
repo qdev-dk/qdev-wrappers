@@ -178,7 +178,7 @@ class SR830_T3(SR830):
 
 
 # Subclass the QDAC
-class QDAC_T10(QDac):
+class QDAC_T3(QDac):
     """
     A QDac with three voltage dividers
     """
@@ -186,24 +186,36 @@ class QDAC_T10(QDac):
     def __init__(self, name, address, config, **kwargs):
         super().__init__(name, address, **kwargs)
 
-        # Define the named channels
+        # same as in decadac but without fine mode
+        config_file = config.get('QDAC')
 
-        topo_channel = int(config.get('Channel Parameters',
-                                      'topo bias channel'))
-        topo_channel = self.channels[topo_channel - 1].v
+        for channelNum, channnel  in enumerate(self.channels):
+            config_settings = config_file[str(channelNum)].split(",")
 
-        self.add_parameter('current_bias',
-                           label='{} conductance'.format(self.name),
-                           # use lambda for late binding
-                           get_cmd=lambda: self.channels.chan40.v.get() / 10E6 * 1E9,
-                           set_cmd=lambda value: self.channels.chan40.v.set(
-                               value * 1E-9 * 10E6),
-                           unit='nA',
-                           get_parser=float)
+            name = config_settings[0]
+            label = config_settings[1]
+            unit = config_settings[2]
+            divisor = float(config_settings[3])
+            step = float(config_settings[4])
+            delay = float(config_settings[5])
+            rangemin = float(config_settings[6])
+            rangemax = float(config_settings[7])
 
-        self.topo_bias = VoltageDivider(topo_channel,
-                                        float(config.get('Gain Settings',
-                                                         'dc factor topo')))
+            param = channel.volt
+
+            param.label = label
+            param.unit = unit
+            param.set_validator(vals.Numbers(rangemin, rangemax))
+
+            if divisor != 1.:
+                # maybe we want a different label
+                setattr(self, name, VoltageDivider(param, divisor, label=label))
+                param.division_value = divisor
+                param._meta_attrs.extend(["division_value"])
+            else:
+                setattr(self,name, param)
+
+
 
 class DacChannel_T3(DacChannel):
     """
