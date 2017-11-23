@@ -319,11 +319,6 @@ class Decadac_T3(Decadac):
             else:
                 setattr(self,name, param)
 
-    def set_all(self, voltage_value):
-        for channelNum, settings in config.get('Decadac'):
-            name = config_settings[0]
-            getattr(self, name).set(voltage_value)
-
 
 
 
