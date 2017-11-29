@@ -468,13 +468,18 @@ class ATS9360Controller_cQED(ATS9360Controller):
 
 
 class AWG5014_cQED(Tektronix_AWG5014):
-    def __init__(self, name, visa_address, **kwargs):
+    def __init__(self, name, visa_address, id_letter='A', **kwargs):
         super().__init__(name, visa_address, **kwargs)
         self.add_parameter(name='current_seq',
                            parameter_class=ManualParameter,
                            initial_value=None,
                            label='Uploaded sequence index',
                            vals=vals.Ints())
+        self.add_parameter(name='id_letter',
+                           parameter_class=ManualParameter,
+                           initial_value=id_letter,
+                           label='AWG id letter',
+                           vals=vals.Strings())
         self.ref_source('EXT')
         self.clear_message_queue()
 

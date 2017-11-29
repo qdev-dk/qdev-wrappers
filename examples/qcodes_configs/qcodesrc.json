@@ -1,6 +1,6 @@
 {
     "gui": {
-        "pyqtmaxplots": 100,
+        "pyqtmaxplots": 20,
         "notebook": true,
         "plotlib": "all"
     },
