@@ -31,7 +31,7 @@ class Scope_avg(ArrayParameter):
         self.has_setpoints = False
         self.zi = self._instrument
 
-        if not channel in [1, 2]:
+        if channel not in [1, 2]:
             raise ValueError('Channel must be 1 or 2')
 
         self.channel = channel
@@ -189,7 +189,7 @@ class QDAC_cQED(QDac):
         # same as in decadac but without fine mode
         config_file = config.get('QDAC')
 
-        for channelNum, channnel  in enumerate(self.channels):
+        for channelNum, channnel in enumerate(self.channels):
             config_settings = config_file[str(channelNum)].split(",")
 
             name = config_settings[0]
@@ -209,12 +209,12 @@ class QDAC_cQED(QDac):
 
             if divisor != 1.:
                 # maybe we want a different label
-                setattr(self, name, VoltageDivider(param, divisor, label=label))
+                setattr(self, name, VoltageDivider(
+                    param, divisor, label=label))
                 param.division_value = divisor
                 param._meta_attrs.extend(["division_value"])
             else:
-                setattr(self,name, param)
-
+                setattr(self, name, param)
 
 
 class DacChannel_cQED(DacChannel):
@@ -223,30 +223,33 @@ class DacChannel_cQED(DacChannel):
     This alternative channel representation is chosen by setting the class
     variable DAC_CHANNEL_CLASS in the main Instrument
     """
+
     def __init__(self, *args, **kwargs):
-         super().__init__(*args, **kwargs)
-         self.add_parameter("fine_volt",
-                            get_cmd=self._get_fine_voltage,
-                            set_cmd=self._set_fine_voltage,
-                            label="Voltage", unit="V"
-         )
+        super().__init__(*args, **kwargs)
+        self.add_parameter("fine_volt",
+                           get_cmd=self._get_fine_voltage,
+                           set_cmd=self._set_fine_voltage,
+                           label="Voltage", unit="V"
+                           )
 
     def _get_fine_voltage(self):
         slot = self._parent
         if slot.slot_mode.get_latest() not in ['Fine', 'FineCald']:
-            raise RuntimeError("Cannot get fine voltage unless slot in Fine mode")
+            raise RuntimeError(
+                "Cannot get fine voltage unless slot in Fine mode")
         if self._channel == 0:
             fine_chan = 2
         elif self._channel == 1:
             fine_chan = 3
         else:
             raise RuntimeError("Fine mode only works for Chan 0 and 1")
-        return self.volt.get() + (slot.channels[fine_chan].volt.get()+10)/200
+        return self.volt.get() + (slot.channels[fine_chan].volt.get() + 10) / 200
 
     def _set_fine_voltage(self, voltage):
         slot = self._parent
         if slot.slot_mode.get_latest() not in ['Fine', 'FineCald']:
-            raise RuntimeError("Cannot get fine voltage unless slot in Fine mode")
+            raise RuntimeError(
+                "Cannot get fine voltage unless slot in Fine mode")
         if self._channel == 0:
             fine_chan = 2
         elif self._channel == 1:
@@ -254,13 +257,12 @@ class DacChannel_cQED(DacChannel):
         else:
             raise RuntimeError("Fine mode only works for Chan 0 and 1")
         coarse_part = self._dac_code_to_v(
-            self._dac_v_to_code(round(voltage, 2)-0.01))
+            self._dac_v_to_code(round(voltage, 2) - 0.01))
 
         fine_part = voltage - coarse_part
-        fine_scaled = fine_part*200-10
+        fine_scaled = fine_part * 200 - 10
         self.volt.set(coarse_part)
         slot.channels[fine_chan].volt.set(fine_scaled)
-
 
 
 class DacSlot_cQED(DacSlot):
@@ -283,10 +285,12 @@ class Decadac_cQED(Decadac):
 
         super().__init__(name, address, **kwargs)
         '''
-        config file redesigned to have all channels for overview. Indices in config_settings[] for each channel are:
+        config file redesigned to have all channels for overview. Indices in
+        config_settings[] for each channel are:
         0: Channels name for deca.{}
         1: Channel label
-        2: Channels unit (included as we are using decadac to control the magnet)
+        2: Channels unit (included as we are using decadac to control
+            the magnet)
         3: Voltage division factor
         4: step size
         5: delay
@@ -296,7 +300,7 @@ class Decadac_cQED(Decadac):
         '''
 
         for channelNum, settings in config.get('Decadac').items():
-            channel = self.channels[ int(channelNum) ]
+            channel = self.channels[int(channelNum)]
             config_settings = settings.split(',')
 
             name = config_settings[0]
@@ -309,12 +313,14 @@ class Decadac_cQED(Decadac):
             rangemax = float(config_settings[7])
             fine_mode = config_settings[8]
 
-            if  fine_mode == 'fine':
+            if fine_mode == 'fine':
                 param = channel.fine_volt
             elif fine_mode == 'coarse':
                 param = channel.volt
             else:
-                raise RuntimeError('Invalid config file. Need to specify \'fine\' or \'coarse\' not {}'.format(fine_mode))
+                raise RuntimeError(
+                    'Invalid config file. Need to specify \'fine\' '
+                    'or \'coarse\' not {}'.format(fine_mode))
 
             channel.volt.set_step(step)
             channel.volt.set_delay(delay)
@@ -325,13 +331,12 @@ class Decadac_cQED(Decadac):
 
             if divisor != 1.:
                 # maybe we want a different label
-                setattr(self, name, VoltageDivider(param, divisor, label=label))
+                setattr(self, name, VoltageDivider(
+                    param, divisor, label=label))
                 param.division_value = divisor
                 param._meta_attrs.extend(["division_value"])
             else:
-                setattr(self,name, param)
-
-
+                setattr(self, name, param)
 
 
 # Subclass the DMM
@@ -374,8 +379,9 @@ class GS200_cQED(GS200):
                 raise KeyError('Settings not found in config file. Check they '
                                'are specified correctly. {}'.format(e))
             self.voltage.set_step(int(ramp_stepdelay[0]))
-            self.voltage.set_delay(int(ramp_stepdelay[1])) 
-            self.voltage.vals = vals.Numbers(int(ranges_minmax[0]), int(ranges_minmax[1]))
+            self.voltage.set_delay(int(ramp_stepdelay[1]))
+            self.voltage.vals = vals.Numbers(
+                int(ranges_minmax[0]), int(ranges_minmax[1]))
 
 
 class AlazarTech_ATS9360_cQED(AlazarTech_ATS9360):
@@ -433,16 +439,16 @@ class AlazarTech_ATS9360_cQED(AlazarTech_ATS9360):
     def _set_seq_mode(self, mode):
         if mode is 'on':
             self.config(sample_rate=self.sample_rate(),
-                          clock_edge=self.clock_edge(),
-                          clock_source=self.clock_source(),
-                          aux_io_mode='AUX_IN_TRIGGER_ENABLE',
-                          aux_io_param='TRIG_SLOPE_POSITIVE')
+                        clock_edge=self.clock_edge(),
+                        clock_source=self.clock_source(),
+                        aux_io_mode='AUX_IN_TRIGGER_ENABLE',
+                        aux_io_param='TRIG_SLOPE_POSITIVE')
         elif mode is 'off':
             self.config(sample_rate=self.sample_rate(),
-                          clock_edge=self.clock_edge(),
-                          clock_source=self.clock_source(),
-                          aux_io_mode='AUX_IN_AUXILIARY',
-                          aux_io_param='NONE')
+                        clock_edge=self.clock_edge(),
+                        clock_source=self.clock_source(),
+                        aux_io_mode='AUX_IN_AUXILIARY',
+                        aux_io_param='NONE')
         else:
             raise ValueError('must set seq mode to "on" or "off"')
 
@@ -480,9 +486,10 @@ class AWG5014_cQED(Tektronix_AWG5014):
 
 
 class VNA_cQED(ZNB):
-    def __init__(self, name, visa_address, S21=True, spec_mode=False, gen_address=None,
-                 timeout=40):
-        super().__init__(name, visa_address, init_s_params=False, timeout=timeout)
+    def __init__(self, name, visa_address, S21=True, spec_mode=False,
+                 gen_address=None, timeout=40):
+        super().__init__(name, visa_address, init_s_params=False,
+                         timeout=timeout)
         if S21:
             self.add_channel('S21')
             self.add_parameter(name='single_S21', get_cmd=self._get_single)
@@ -490,6 +497,7 @@ class VNA_cQED(ZNB):
             self.add_spectroscopy_channel(gen_address)
         elif spec_mode:
             print('spec mode not added as no generator ip address provided')
+
     def _get_single(self):
         return self.channels.S21.trace_mag_phase()[0][0]
 
@@ -508,7 +516,7 @@ class VNA_cQED(ZNB):
         self.write('SOUR{}:POW2:STAT ON'.format(n_channels + 1))
         self.channels.append(channel)
         if n_channels == 0:
-             self.display_single_window()
+            self.display_single_window()
 
     def count_external_generators(self):
         num = self.ask('SYST:COMM:RDEV:GEN:COUN?').strip()
@@ -516,8 +524,8 @@ class VNA_cQED(ZNB):
 
     def set_external_generator(self, address, gen=1, gen_name="ext gen 1",
                                driver="SGS100A", interface="VXI-11"):
-        self.write('SYST:COMM:RDEV:GEN{:.0f}:DEF "{}", "{}", "{}",  "{}", OFF, ON'.format(
-            gen, gen_name, driver, interface, address))
+        self.write('SYST:COMM:RDEV:GEN{:.0f}:DEF "{}", "{}", "{}",  "{}", '
+                   'OFF, ON'.format(gen, gen_name, driver, interface, address))
 
     def get_external_generator_setup(self, num=1):
         setup = self.ask(
@@ -562,12 +570,11 @@ class VNA_cQED(ZNB):
             get_parser=int,
             vals=vals.Numbers(-150, 25))
 
-
     def _set_readout_freq(self, chan_num, freq):
-        self.write(
-            'SOUR{}:FREQ:CONV:ARB:EFR1 ON, 0, 1, {:.6f}, CW'.format(chan_num, freq))
-        self.write(
-            'SOUR{}:FREQ2:CONV:ARB:IFR 0, 1, {:.6f}, CW'.format(chan_num, freq))
+        self.write('SOUR{}:FREQ:CONV:ARB:EFR1 ON, 0, 1, {:.6f}, '
+                   'CW'.format(chan_num, freq))
+        self.write('SOUR{}:FREQ2:CONV:ARB:IFR 0, 1, {:.6f},'
+                   'CW'.format(chan_num, freq))
 
     def _get_readout_freq(self, chan_num):
         return self.ask('SOUR:FREQ:CONV:ARB:EFR1?').split(',')[3]

@@ -1,0 +1,89 @@
+{
+    "type": "object",
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "properties": {
+        "gui": {
+            "type": "object",
+            "properties": {
+                "pyqtmaxplots": {
+                    "type": "integer",
+                    "default": 100,
+                    "description": "Maximum number of PyQtPlots to automatically keep in memory"
+                },
+                "notebook": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Use notebook frontend"
+                },
+                "plotlib": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "default": "all",
+                    "description": "Plotting library set to null to run without plotting",
+                    "enum": [
+                        "QT",
+                        "matplotlib",
+                        "all",
+                        null
+                    ]
+                }
+            },
+            "description": "controls gui of qcodes",
+            "required": [
+                "notebook",
+                "plotlib",
+                "pyqtmaxplots"
+            ]
+        },
+        "core": {
+            "type": "object",
+            "properties": {
+                "default_fmt": {
+                    "type": "string",
+                    "default": "data/{date}/#{counter}_{name}_{time}",
+                    "description": "default location formatter"
+                },
+                "loglevel": {
+                    "type": "string",
+                    "default": "DEBUG",
+                    "description": "control logging  level",
+                    "enum": [
+                        "CRITICAL",
+                        "ERROR",
+                        "WARNING",
+                        "INFO",
+                        "DEBUG"
+                    ]
+                }
+            },
+            "description": "controls core settings of qcodes",
+            "required": [
+                "loglevel"
+            ]
+        },
+        "user": {
+            "type": "object",
+            "properties": {
+                "scriptfolder": {
+                    "type": "string",
+                    "default": "/",
+                    "description": "Location of scripts for general experiments"
+                },
+                "mainfolder": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Location of experiments"
+                }
+            },
+            "description": "controls user settings of qcodes"
+        }
+    },
+    "description": "schema for a qcodes config file",
+    "required": [
+        "gui",
+        "core",
+        "user"
+    ]
+}
