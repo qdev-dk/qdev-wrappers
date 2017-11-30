@@ -1,3 +1,4 @@
+# import modules you might want to use
 import qcodes as qc
 import time
 import logging
@@ -5,28 +6,27 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-# import instrument drivers from qcodes
+# import the necessary instrument drivers from qcodes
 from qcodes.instrument_drivers.agilent.Agilent_34400A import Agilent_34400A
 from qcodes.instrument_drivers.QDev.QDac import QDac
 from qcodes.instrument_drivers.oxford.mercuryiPS import MercuryiPS
 from qcodes.instrument_drivers.rohde_schwarz.SGS100A import RohdeSchwarz_SGS100A
 from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 
-# import customised qdev instuments from qdev_wrappers
+# import customised qdev instuments from qdev_wrappers (if necessary)
 from qdev_wrappers.customised_instruments import SR830_cQED, Decadac_cQED, \
     AWG5014_cQED, ATS9360Controller_cQED, AlazarTech_ATS9360_cQED, \
     GS200_cQED, Keithley_2600_cQED, SphereCor
 
-# import locally customised instruments from local_instruments
+# import locally customised instruments from local_instruments (if necessary)
 from local_instruments import my_very_local_VNA
 
-# import wrappers
+# import necessary wrappers and measurement functions
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT, my_init, close_station
 from qdev_wrappers.configreader import Config
 from qdev_wrappers.show_num import show_num, show_meta
 from qdev_wrappers.sweep_functions import do1d, do2d, do0d
 from qdev_wrappers.transmon import *
-from chickpea import Segment, Waveform, Element, Sequence
 
 # set matplotlib default settings
 mpl.rcParams['figure.subplot.bottom'] = 0.15
@@ -55,12 +55,16 @@ if __name__ == '__main__':
             display_individual_pdf=False, qubit_count=1,
             plot_x_position=0.66)
 
-    # Load config from experiment file
+    # Load instument config files, attempts to load the experiment specific
+    # file, if none found then the default from the scripts_folder
+    # specified in qc.config is used
     instr_config = get_config('instr')
+    # make a locel version of the calibration config from the default and
+    # set it up for use.
     make_local_config_file('calib')
     calib_config = get_config('calib')
 
-    # Initialise intruments
+    # Initialise intruments and add them to the station
     qdac = QDAC_cQED('qDac', 'ASRL4::INSTR')
     STATION.add_component(qdac)
     dmm1 = Agilent_34400A(
@@ -112,7 +116,7 @@ if __name__ == '__main__':
     mag_sphere.theta.label = 'B theta'
     mag_sphere.phi.label = 'B phi'
 
-    # Specify which parameters are to be added to the monitir and printed in
+    # Specify which parameters are to be added to the monitor and printed in
     # metadata
     param_monitor_list = [
         qdac.ch01_v, qdac.ch02_v, qdac.ch03_v, qdac.ch04_v,
@@ -132,16 +136,14 @@ if __name__ == '__main__':
         mag_sphere.radius, mag_sphere.theta, mag_sphere.phi
     ]
 
-    # Get parameter values to populate monitor
+    # Get parameter values to populate monitor initially
     print('Querying all instrument parameters for metadata.'
           'This may take a while...')
     start = time.time()
-
     for param in param_monitor_list:
         param.get()
 
     end = time.time()
-
     print("done Querying all instruments took {}".format(end - start))
 
     # Put parameters into monitor
