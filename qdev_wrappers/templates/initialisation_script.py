@@ -16,10 +16,10 @@ from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 # import customised qdev instuments from qdev_wrappers (if necessary)
 from qdev_wrappers.customised_instruments import SR830_cQED, Decadac_cQED, \
     AWG5014_cQED, ATS9360Controller_cQED, AlazarTech_ATS9360_cQED, \
-    GS200_cQED, Keithley_2600_cQED, SphereCor
+    Keithley_2600_cQED, SphereCor, VNA_cQED
 
 # import locally customised instruments from local_instruments (if necessary)
-from local_instruments import my_very_local_VNA
+from local_instruments import GS200_special
 
 # import necessary wrappers and measurement functions
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT, my_init, close_station
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     STATION.add_component(lockin_2)
     keith = Keithley_2600_cQED('Keithley', 'GPIB0::9::INSTR', 'a')
     STATION.add_component(keith)
-    gs200 = GS200_cQED('gs200', 'GPIB0::10::INSTR')
+    gs200 = GS200_special('gs200', 'GPIB0::10::INSTR', initial_voltage=14)
     STATION.add_component(gs200)
     alazar = AlazarTech_ATS9360_cQED('alazar', seq_mode='off')
     STATION.add_component(alazar)
@@ -106,7 +106,7 @@ if __name__ == '__main__':
                          port=7020,
                          axes=['X', 'Y', 'Z'])
     STATION.add_component(mercury)
-    vna = my_very_local_VNA('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR')
+    vna = VNA_cQED('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR')
     STATION.add_component(vna)
     dummy_time = qc.ManualParameter('dummy_time')
     mag_sphere = SphereCor('Magnet', mercury.x_fld, keith.By, mercury.z_fld)
