@@ -21,7 +21,7 @@ def measure(meas_param, do_plots=True):
     meas_params = _select_plottables(meas_param)
     plot, data = _do_measurement_single(
         measurement, meas_params, do_plots=do_plots)
-
+    data.data_num = qc.data.data_set.DataSet.location_provider.counter
     return data, plot
 
 
@@ -52,7 +52,7 @@ def sweep1d(meas_param, sweep_param, start, stop, step, delay=0.01,
 
     plot, data = _do_measurement(loop, set_params, meas_params,
                                  do_plots=do_plots)
-
+    data.data_num = qc.data.data_set.DataSet.location_provider.counter
     return data, plot
 
 
@@ -93,5 +93,5 @@ def sweep2d(meas_param, sweep_param1, start1, stop1, step1,
 
     plot, data = _do_measurement(outerloop, set_params, meas_params,
                                  do_plots=do_plots)
-
+    data.data_num = qc.data.data_set.DataSet.location_provider.counter
     return data, plot

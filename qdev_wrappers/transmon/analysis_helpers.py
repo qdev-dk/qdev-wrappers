@@ -65,8 +65,8 @@ def find_peaks(dataset, fs, x_key="set", y_key="mag", cutoff=5e-6, order=2,
     try:
         num = dataset.data_num
     except AttributeError:
-        num = dataset.location_provider.counter
-        print('warning: check title, could be wrong datanum')
+        num = None
+        print('dataset has no data_num set, title may be non specific')
 
     # plot: unsmoothed data, smoothed data and add peak estimate values
     fig, subplot = plot_cf_data([unsmoothed_data, smoothed_data],
@@ -162,7 +162,7 @@ def get_resonator_push(dataset, x_key="freq", y_key="pow", z_key="mag"):
         fig.text(0, 0, 'bare res: {}, pushed res: {}, push: {}'.format(
             high_res, low_res, dif))
     except AttributeError as e:
-        fig.data_num = dataset.location_provider.counter
+        fig.data_num = None
         print('dataset has no data_num set: {}'.format(e))
 
     return low_res, high_res, fig
@@ -298,7 +298,12 @@ def get_t2(data, x_name='delay', y_name='magnitude',
         else:
             ax = subplot
             fig = ax.figure
-        num = data.data_num
+        try:
+            num = data.data_num
+        except AttributeError:
+            num = None
+            print('dataset has no data_num set, title may be non specific')
+
         try:
             qubit = get_calibration_dict()['current_qubit']
             title = '{}_{}_T2'.format(get_title(num), qubit)
@@ -307,12 +312,12 @@ def get_t2(data, x_name='delay', y_name='magnitude',
             title = '{}_T2'.format(get_title(num))
             name = '{}_T2'.format(num)
 
-        if not hasattr(fig, "data_num"):
+        if (not hasattr(fig, "data_num") or fig.data_num is None):
             fig.data_num = num
         ax.plot(x_data,
                 exp_decay_sin(x_data, *popt),
                 label='fit: T2 {:.3g}{}'.format(popt[1],
-                                            x_units))
+                                                x_units))
         ax.plot(x_data, y_data, label='data')
         ax.set_xlabel('{} ({})'.format(x_name, x_units))
         ax.set_ylabel('{} ({})'.format(y_name, y_units))
@@ -357,7 +362,11 @@ def get_t1(data, x_name='delay', y_name='magnitude',
         else:
             ax = subplot
             fig = ax.figure
-        num = data.data_num
+        try:
+            num = data.data_num
+        except AttributeError:
+            num = None
+            print('dataset has no data_num set, title may be non specific')
         try:
             qubit = get_calibration_dict()['current_qubit']
             title = '{}_{}_T1'.format(get_title(num), qubit)
@@ -366,12 +375,12 @@ def get_t1(data, x_name='delay', y_name='magnitude',
             title = '{}_T1'.format(get_title(num))
             name = '{}_T1'.format(num)
 
-        if not hasattr(fig, "data_num"):
+        if (not hasattr(fig, "data_num") or fig.data_num is None):
             fig.data_num = num
         ax.plot(x_data,
                 exp_decay(x_data, *popt),
                 label='fit: T1 {:.3g}{}'.format(popt[1],
-                                            x_units))
+                                                x_units))
         ax.plot(x_data, y_data, label='data')
         ax.set_xlabel('{} ({})'.format(x_name, x_units))
         ax.set_ylabel('{} ({})'.format(y_name, y_units))
