@@ -108,11 +108,11 @@ def get_latest_counter(path=None):
     if path is None:
         path = get_data_location()
     try:
-        file_names = [re.sub("[^0-9]", "", f) for f in os.listdir(path)]
+        file_strs = [re.match("^([0-9]+)", f) for f in os.listdir(path)]
+        file_ints = [int(i.groups()[0]) for i in file_strs if i]
     except OSError as e:
-        raise OSError('Error looking for numbered files in {}:'
+        raise OSError('Error looking for files in {}:'
                       ''.format(path, e))
-    file_ints = [int(f) for f in file_names if f]
     if not file_ints:
         raise OSError('No numbered files in ' + path)
     return max(file_ints)
