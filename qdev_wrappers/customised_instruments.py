@@ -12,7 +12,6 @@ from qcodes.instrument_drivers.stanford_research.SR830 import SR830
 from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
 from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 from qcodes.instrument_drivers.AlazarTech.ATS9360 import AlazarTech_ATS9360
-from qcodes.instrument_drivers.AlazarTech.acq_controllers import ATS9360Controller
 from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB, ZNBChannel
 from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
 from qcodes.instrument_drivers.yokogawa.GS200 import GS200
@@ -21,6 +20,7 @@ from qcodes.instrument_drivers.Harvard.Decadac import Decadac, DacChannel, DacSl
 from qcodes.utils import validators as vals
 from qcodes import ManualParameter
 from qcodes import ArrayParameter
+from qdev_wrappers.alazar_controllers.ATS9360Controller import ATS9360Controller
 
 
 class Scope_avg(ArrayParameter):
