@@ -14,12 +14,16 @@ from qcodes.instrument_drivers.rohde_schwarz.SGS100A import RohdeSchwarz_SGS100A
 from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 
 # import customised qdev instuments from qdev_wrappers (if necessary)
-from qdev_wrappers.customised_instruments import SR830_cQED, Decadac_cQED, \
-    AWG5014_cQED, ATS9360Controller_cQED, AlazarTech_ATS9360_cQED, \
-    Keithley_2600_cQED, SphereCor, VNA_cQED
+from qdev_wrappers.customised_instruments.SR830_cQED import SR830_cQED
+from qdev_wrappers.customised_instruments.Decadac_cQED import Decadac_cQED
+from qdev_wrappers.customised_instruments.AWG5014_cQED import AWG5014_cQED
+from qdev_wrappers.customised_instruments.AlazarTech_ATS9360_cQED import ATS9360Controller_cQED, AlazarTech_ATS9360_cQED
+from qdev_wrappers.customised_instruments.Keithley_2600_cQED import Keithley_2600_cQED
+from qdev_wrappers.customised_instruments.SphereCor import SphereCor
+from qdev_wrappers.customised_instruments.VNA_cQED import VNA_cQED
 
 # import locally customised instruments from local_instruments (if necessary)
-from local_instruments import GS200_special
+from local_instruments.GS200_special import GS200_special
 
 # import necessary wrappers and measurement functions
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT, my_init, close_station
