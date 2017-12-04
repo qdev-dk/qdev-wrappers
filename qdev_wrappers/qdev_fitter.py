@@ -68,7 +68,7 @@ def qdev_fitter(id, fitfunciton_in, samplefolder=None, dataname=None, p0=None,**
         title_list = plot.get_default_title().split(sep)
         title_list.insert(-1, CURRENT_EXPERIMENT['analysis'])
         title_png = sep.join(title_list_png)
-        plt.savefig("{}{}_{}.png".format(title_png,num,fitfunciton.__name__),dpi=500)
+        plt.savefig("{}_{}.png".format(title_png,fitfunciton.__name__),dpi=500)
         return popt, pcov, plot
 
 
