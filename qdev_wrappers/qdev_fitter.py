@@ -3,13 +3,12 @@ import numpy as np
 import types
 from os.path import sep
 import matplotlib.pyplot as plt
-
-from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
-from qcodes.plots.pyqtgraph import QtPlot
-from qcodes.plots.qcmatplotlib import MatPlot
-
 import scipy.fftpack as fftpack
 from scipy.optimize import curve_fit
+
+from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
+
+
 
 
 def qdev_fitter(id, fitfunciton_in, samplefolder=None, dataname=None, p0=None,**kwargs):
@@ -36,7 +35,8 @@ def qdev_fitter(id, fitfunciton_in, samplefolder=None, dataname=None, p0=None,**
         fitfunciton = globals()['{}'.format(fitfunciton_in)]
     elif isinstance(fitfunciton_in,types.FunctionType):
         fitfunciton = fitfunciton_in
-
+    else:
+        print('Invalid input. Only takes strings of predefined fucntions or function input.')
 
 
     # Get dataname to be fitted
@@ -89,20 +89,8 @@ def check_experiment_is_initialized():
                            "use qc.Init(mainfolder, samplename) "
                            "or provide path to sample folder.")
 
-
-def fitter(x,y,fitfunciton,p0,**kwargs):
-    # check if passed string is a known function
-    
-        popt, pcov = curve_fit(fitfunciton, x, y, p0=p0, **kwargs)
-        return popt, pcov
-    else:
-        print('Invalid input. Only takes strings of predefined fucntions or function input.')
-
-
-
-
 def plot_1D(data,fitfunction,popt):
-    plot = MatPlot(data)
+    plot = qc.MatPlot(data)
     keys_set = [key for key in data.arrays.keys() if "_set" in key[-4:]]
     xdata = getattr(getattr(data, keys_set), 'ndarray')
     x = np.linspace(xdata.min(),xdata.max(),len(xdata)*10)
@@ -116,7 +104,12 @@ def plot_1D(data,fitfunction,popt):
 
 
 
+
+
+
 #  Predefined fucntions
+
+
 def T1(x,a,T,c):
     val = a*np.exp(-x/T)+c
     return val
