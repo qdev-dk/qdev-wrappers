@@ -99,7 +99,6 @@ def plot_1D(qcxdata,qcydata,fitfunction,popt):
     plot[0].axes.plot(x,fitfunction(x,*popt),
         label='\n'.join(['p{} = {:.3g}'.format(n,m) for n, m in enumerate(popt)]))
     plot.rescale_axis()
-    ax.set_title(title)
     plot[0].axes.legend(loc='upper right', fontsize=10)
     plt.draw()
     return plot
@@ -134,7 +133,7 @@ def T2_guess(x,y):
     # guess T2 as point half way point in data
     T = x[round(len(x)/2)]
     # Get initial guess for frequency from a fourier transform
-    yhat = fftpack.rfft(y)
+    yhat = fftpack.rfft(y-y.mean())
     idx = (yhat**2).argmax()
     freqs = fftpack.rfftfreq(len(x), d = (x[1]-x[0])/(2*np.pi))
     w = freqs[idx]
