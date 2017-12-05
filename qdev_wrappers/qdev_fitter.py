@@ -12,7 +12,16 @@ from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 
 
 def qdev_fitter(id, fitfunction_in, do_plots=True, dataname=None, samplefolder=None, p0=None,**kwargs):
-
+    '''
+    Function to allow easy on the fly fitting of data. Only works for 1D datasets at the moment.
+    id (num): Id of dataset
+    fitfunction_in (str, function): Function data will be fitted to. Can be string for functions defined here or a function passed direclty defined elsewhere.
+    do_plots (bool): If plots are done. Will be saved in the analysis folder for the samplepath
+    dataname (str): String with dataname in the qcodes dataset
+    samplefolder (path): Path to samplefolder if not opening active measurements
+    p0 (tuple): Initial parameters for fit
+    kwargs: Passed to scipy.optimize.curve_fit when fitting.
+    '''
 
     # Load data from active samplefolder or input samplefolder.
     if samplefolder==None:
@@ -47,14 +56,19 @@ def qdev_fitter(id, fitfunction_in, do_plots=True, dataname=None, samplefolder=N
     else:
         print('Invalid input. Only takes strings of predefined fucntions or function input.')
 
+
     # Do fits separately for 1D and 2D datasets
     keys_set = [key for key in data.arrays.keys() if "_set" in key[-4:]]
+
+    # Do fit and plot for 1D data
     if len(keys_set) == 1:
         xdata = getattr(getattr(data, keys_set[0]), 'ndarray')
         ydata = getattr(getattr(data, key_data[0]), 'ndarray')
+        # Get initial guess on parameter is guess function is defined
         if (p0==None and '{}_guess'.format(fitfunction_in) in list(globals().keys())):
             p0 = globals()['{}_guess'.format(fitfunction_in)](xdata,ydata)
         popt, pcov = popt, pcov = curve_fit(fitfunction, xdata, ydata, p0=p0, **kwargs)
+
         if do_plots:
             plot = plot_1D(getattr(data, keys_set[0]),getattr(data, key_data[0]),fitfunction,popt)
             title_list = plot.get_default_title().split(sep)
@@ -65,6 +79,7 @@ def qdev_fitter(id, fitfunction_in, do_plots=True, dataname=None, samplefolder=N
         else:
             return popt, pcov
 
+    # Not implemented
     if len(keys_set) == 2:
         if xname==None:
             raise RuntimeError('Need fitting dimension for 2D datasets. Choose fit dimension from: {}.'.format(', '.join(keys_set)))
@@ -72,7 +87,7 @@ def qdev_fitter(id, fitfunction_in, do_plots=True, dataname=None, samplefolder=N
 
 
 def check_experiment_is_initialized():
-    if not getattr(CURRENT_EXPERIMENT, "init", True): 
+    if not getattr(CURRENT_EXPERIMENT, "init", True):
         raise RuntimeError("Experiment not initalized. "
                            "use qc.Init(mainfolder, samplename) "
                            "or provide path to sample folder.")
@@ -86,7 +101,7 @@ def plot_1D(qcxdata,qcydata,fitfunction,popt):
     plot.rescale_axis()
     ax.set_title(title)
     plot[0].axes.legend(loc='upper right', fontsize=10)
-    plot.draw()
+    plt.draw()
     return plot
 
 
