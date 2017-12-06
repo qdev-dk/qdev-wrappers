@@ -114,7 +114,7 @@ def get_latest_counter(path=None):
         raise OSError('Error looking for files in {}:'
                       ''.format(path, e))
     if not file_ints:
-        raise OSError('No numbered files in ' + path)
+        raise OSError('No files found in ' + path + ' that start with a number.)
     return max(file_ints)
 
 
