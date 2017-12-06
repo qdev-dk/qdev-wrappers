@@ -24,14 +24,14 @@ def qdev_fitter(id, fitfunction_in, do_plots=True, dataname=None, samplefolder=N
     '''
 
     # Load data from active samplefolder or input samplefolder.
+    str_id = '{0:03d}'.format(id)
     if samplefolder==None:
         check_experiment_is_initialized()
-        str_id = '{0:03d}'.format(id)
 
         path = qc.DataSet.location_provider.fmt.format(counter=str_id)
         data = qc.load_data(path)
     else:
-        path = '{}{0:03d}'.format(samplefolder,id)
+        path = '{}{}{}'.format(samplefolder,sep,str_id)
         data = qc.load_data(path)
 
     # Get dataname to be fitted
