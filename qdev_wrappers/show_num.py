@@ -13,7 +13,7 @@ def check_experiment_is_initialized():
                            "use qc.Init(mainfolder, samplename)")
 
 
-def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savepng=False, clim=None, **kwargs):
+def show_num(id, samplefolder=None, useQT=False, ave_col=False, ave_row=False, do_plots=True, savepng=False, clim=None, **kwargs):
     """
     Show  and return plot and data for id in current instrument.
     Args:
@@ -30,11 +30,16 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savep
         data, plots : returns the plot and the dataset
 
     """
-    check_experiment_is_initialized()
     str_id = '{0:03d}'.format(id)
+    if samplefolder==None:
+        check_experiment_is_initialized()
 
-    t = qc.DataSet.location_provider.fmt.format(counter=str_id)
-    data = qc.load_data(t)
+        path = qc.DataSet.location_provider.fmt.format(counter=str_id)
+        data = qc.load_data(path)
+    else:
+        path = '{}{}{}'.format(samplefolder,sep,str_id)
+        data = qc.load_data(path)
+
     keys = [key for key in data.arrays.keys() if "_set" not in key[-4:]]
 
     if do_plots:
@@ -85,19 +90,24 @@ def show_num(id, useQT=False, ave_col=False, ave_row=False, do_plots=True, savep
     return data, plots
 
 
-def show_meta(id,instruments,key_word=''):
+def show_meta(id,instruments,samplefolder=None,key_word=''):
     '''
     Print meta data in command line for datafile id.
     id (int): 
     instruments (list): List of strings with instruments names for which metadata is printed.
     key_word (string): Optional - String in label of metadata if printed.
     '''
-    check_experiment_is_initialized()
-
     str_id = '{0:03d}'.format(id)
+    if samplefolder==None:
+        check_experiment_is_initialized()
 
-    t = qc.DataSet.location_provider.fmt.format(counter=str_id)
-    data = qc.load_data(t)
+        path = qc.DataSet.location_provider.fmt.format(counter=str_id)
+        data = qc.load_data(path)
+    else:
+        path = '{}{}{}'.format(samplefolder,sep,str_id)
+        data = qc.load_data(path)
+
+
     for instr in instruments:
         new_dic = ParaPrint([data.metadata['station']['instruments'][instr]],key_word)
         for i in range(15):
