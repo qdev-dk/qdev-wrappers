@@ -3,7 +3,7 @@ from qcodes.instrument_drivers.devices import VoltageDivider
 from qcodes.utils import validators as vals
 
 
-class DacChannel_cQED(DacChannel):
+class DacChannel_ext(DacChannel):
     """
     A Decadac Channel with a fine_volt parameter
     This alternative channel representation is chosen by setting the class
@@ -51,16 +51,16 @@ class DacChannel_cQED(DacChannel):
         slot.channels[fine_chan].volt.set(fine_scaled)
 
 
-class DacSlot_cQED(DacSlot):
+class DacSlot_ext(DacSlot):
     SLOT_MODE_DEFAULT = "Fine"
 
 
-class Decadac_cQED(Decadac):
+class Decadac_ext(Decadac):
     """
     A Decadac with one voltage dividers
     """
-    DAC_CHANNEL_CLASS = DacChannel_cQED
-    DAC_SLOT_CLASS = DacSlot_cQED
+    DAC_CHANNEL_CLASS = DacChannel_ext
+    DAC_SLOT_CLASS = DacSlot_ext
 
     def __init__(self, name, address, config, **kwargs):
         self.config = config

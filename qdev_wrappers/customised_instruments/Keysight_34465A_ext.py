@@ -2,7 +2,7 @@ from qcodes.instrument_drivers.Keysight.Keysight_34465A import Keysight_34465A
 
 
 # Subclass the DMM
-class Keysight_34465A_T10(Keysight_34465A):
+class Keysight_34465A_ext(Keysight_34465A):
     """
     A Keysight DMM with an added I-V converter
     """

@@ -4,7 +4,7 @@ from functools import partial
 from qcodes.utils import validators as vals
 
 
-class VNA_cQED(ZNB):
+class VNA_ext(ZNB):
     def __init__(self, name, visa_address, S21=True, spec_mode=False,
                  gen_address=None, timeout=40):
         super().__init__(name, visa_address, init_s_params=False,

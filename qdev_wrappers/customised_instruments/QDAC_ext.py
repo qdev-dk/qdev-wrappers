@@ -4,7 +4,7 @@ from qcodes.utils import validators as vals
 
 
 # Subclass the QDAC
-class QDAC_cQED(QDac):
+class QDAC_ext(QDac):
     """
     A QDac with three voltage dividers
     """

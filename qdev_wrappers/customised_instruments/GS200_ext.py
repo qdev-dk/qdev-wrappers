@@ -2,7 +2,7 @@ from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 from qcodes.utils import validators as vals
 
 
-class GS200_cQED(GS200):
+class GS200_ext(GS200):
     def __init__(self, name, address, config=None, **kwargs):
         super().__init__(name, address, **kwargs)
 

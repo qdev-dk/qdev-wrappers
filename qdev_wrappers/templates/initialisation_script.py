@@ -14,13 +14,13 @@ from qcodes.instrument_drivers.rohde_schwarz.SGS100A import RohdeSchwarz_SGS100A
 from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 
 # import customised qdev instuments from qdev_wrappers (if necessary)
-from qdev_wrappers.customised_instruments.SR830_cQED import SR830_cQED
-from qdev_wrappers.customised_instruments.Decadac_cQED import Decadac_cQED
-from qdev_wrappers.customised_instruments.AWG5014_cQED import AWG5014_cQED
-from qdev_wrappers.customised_instruments.AlazarTech_ATS9360_cQED import ATS9360Controller_cQED, AlazarTech_ATS9360_cQED
-from qdev_wrappers.customised_instruments.Keithley_2600_cQED import Keithley_2600_cQED
+from qdev_wrappers.customised_instruments.SR830_ext import SR830_ext
+from qdev_wrappers.customised_instruments.Decadac_ext import Decadac_ext
+from qdev_wrappers.customised_instruments.AWG5014_ext import AWG5014_ext
+from qdev_wrappers.customised_instruments.AlazarTech_ATS9360_ext import ATS9360Controller_ext, AlazarTech_ATS9360_ext
+from qdev_wrappers.customised_instruments.Keithley_2600_ext import Keithley_2600_ext
 from qdev_wrappers.customised_instruments.SphereCor import SphereCor
-from qdev_wrappers.customised_instruments.VNA_cQED import VNA_cQED
+from qdev_wrappers.customised_instruments.VNA_ext import VNA_ext
 
 # import locally customised instruments from local_instruments (if necessary)
 from local_instruments.GS200_special import GS200_special
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     calib_config = get_config('calib')
 
     # Initialise intruments and add them to the station
-    qdac = QDAC_cQED('qDac', 'ASRL4::INSTR')
+    qdac = QDAC_ext('qDac', 'ASRL4::INSTR')
     STATION.add_component(qdac)
     dmm1 = Agilent_34400A(
         'DMM1', 'GPIB0::11::INSTR')
@@ -77,21 +77,21 @@ if __name__ == '__main__':
     dmm2 = Agilent_34400A(
         'DMM2', 'GPIB0::8::INSTR')
     STATION.add_component(dmm2)
-    deca = Decadac_cQED('Decadac', 'ASRL1::INSTR', instr_config)
+    deca = Decadac_ext('Decadac', 'ASRL1::INSTR', instr_config)
     STATION.add_component(deca)
-    lockin_2 = SR830_cQED('lockin_2', 'GPIB0::2::INSTR', instr_config)
+    lockin_2 = SR830_ext('lockin_2', 'GPIB0::2::INSTR', instr_config)
     STATION.add_component(lockin_2)
-    keith = Keithley_2600_cQED('Keithley', 'GPIB0::9::INSTR', 'a')
+    keith = Keithley_2600_ext('Keithley', 'GPIB0::9::INSTR', 'a')
     STATION.add_component(keith)
     gs200 = GS200_special('gs200', 'GPIB0::10::INSTR', initial_voltage=14)
     STATION.add_component(gs200)
-    alazar = AlazarTech_ATS9360_cQED('alazar', seq_mode='off')
+    alazar = AlazarTech_ATS9360_ext('alazar', seq_mode='off')
     STATION.add_component(alazar)
-    ave_ctrl = ATS9360Controller_cQED('ave_ctrl', alazar, ctrl_type='ave')
+    ave_ctrl = ATS9360Controller_ext('ave_ctrl', alazar, ctrl_type='ave')
     STATION.add_component(ave_ctrl)
-    rec_ctrl = ATS9360Controller_cQED('rec_ctrl', alazar, ctrl_type='rec')
+    rec_ctrl = ATS9360Controller_ext('rec_ctrl', alazar, ctrl_type='rec')
     STATION.add_component(rec_ctrl)
-    samp_ctrl = ATS9360Controller_cQED('samp_ctrl', alazar, ctrl_type='samp')
+    samp_ctrl = ATS9360Controller_ext('samp_ctrl', alazar, ctrl_type='samp')
     STATION.add_component(samp_ctrl)
     qubit = RohdeSchwarz_SGS100A(
         'qubit', 'TCPIP0::192.168.15.101::inst0::INSTR')
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     cavity = RohdeSchwarz_SGS100A(
         'cavity', 'TCPIP0::192.168.15.104::inst0::INSTR')
     STATION.add_component(cavity)
-    awg = AWG5014_cQED(
+    awg = AWG5014_ext(
         'awg', 'TCPIP0::192.168.15.102::inst0::INSTR', timeout=40)
     STATION.add_component(awg)
     mercury = MercuryiPS(name='mercury',
@@ -110,7 +110,7 @@ if __name__ == '__main__':
                          port=7020,
                          axes=['X', 'Y', 'Z'])
     STATION.add_component(mercury)
-    vna = VNA_cQED('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR')
+    vna = VNA_ext('VNA', 'TCPIP0::192.168.15.103::inst0::INSTR')
     STATION.add_component(vna)
     dummy_time = qc.ManualParameter('dummy_time')
     mag_sphere = SphereCor('Magnet', mercury.x_fld, keith.By, mercury.z_fld)

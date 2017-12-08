@@ -3,7 +3,7 @@ from qdev_wrappers.alazar_controllers.ATS9360Controller import ATS9360Controller
 from qcodes.utils import validators as vals
 
 
-class ATS9360Controller_cQED(ATS9360Controller):
+class ATS9360Controller_ext(ATS9360Controller):
     def __init__(self, name, alazar, ctrl_type='ave'):
         if ctrl_type is 'samp':
             integrate_samples = False
@@ -23,7 +23,7 @@ class ATS9360Controller_cQED(ATS9360Controller):
                          average_records=average_records)
 
 
-class AlazarTech_ATS9360_cQED(AlazarTech_ATS9360):
+class AlazarTech_ATS9360_ext(AlazarTech_ATS9360):
     def __init__(self, name, seq_mode='off'):
         if seq_mode is 'on':
             io_mode = 'AUX_IN_TRIGGER_ENABLE'

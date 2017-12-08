@@ -36,7 +36,7 @@ class ConductanceBuffer(ChannelBuffer):
 
 # Subclass the SR830
 
-class SR830_cQED(SR830):
+class SR830_ext(SR830):
     """
     An SR830 with the following super powers:
         - a Voltage divider
