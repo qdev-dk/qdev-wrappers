@@ -161,7 +161,7 @@ def _set_up_config_file(cfg_name: str):
             CURRENT_EXPERIMENT["{}_config".format(cfg_name)] = 'general'
             log.info('set up config file at {}'.format(general_cfg_file))
         else:
-            log.warning('no config file found at {}'
+            log.error('no config file found at {}'
                         ''.format(general_cfg_file))
 
 
