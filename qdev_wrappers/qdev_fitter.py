@@ -58,10 +58,12 @@ class qdev_fitter():
                 return popt, pcov, plot
             else:
                 return popt, pcov
+        if len(keys_set) == 2:
+            print('Fitting for 2D datasets not implemented.')
 
 
     def plot_1D(self,qcxdata,qcydata,fitclass,popt):
-        plot = qc.MatPlot(qcydata,marker='.',markersize=5,linestyle='',color='C0')
+        plot = qc.MatPlot(qcydata,marker='.',markersize=5,linestyle='',color='C0',figsize=(6.5,4))
         plot.fig.tight_layout(pad=3)
         plot.rescale_axis()
         xdata = qcxdata.ndarray
@@ -79,10 +81,10 @@ class qdev_fitter():
                 scaled = popt[i]
             p_label_list.append('{} = {:.3g} {}'.format(fitclass.p_names[i],scaled,unit))
         x = np.linspace(xdata.min(),xdata.max(),len(xdata)*10)
-        plot[0].axes.plot(x,fitclass.fun(x,*popt),color='C0',
-            label='\n'.join(p_label_list))
-        plot[0].axes.legend(loc='upper right')
+        plot[0].axes.plot(x,fitclass.fun(x,*popt),color='C0')
+        plot[0].figure.text(0.8, 0.45, '\n'.join(p_label_list),bbox={'ec':'k','fc':'w'})
         plot.subplots[0].set_title(fitclass.fun_str)
+        plt.subplots_adjust(right=0.78)
         plt.draw()
         return plot
 
@@ -91,7 +93,7 @@ class qdev_fitter():
 class T1():
     def __init__(self):
         self.name = 'T1fit'
-        self.fun_str = r'$f = a \exp(-x/T) + c$'
+        self.fun_str = r'$f(x) = a \exp(-x/T) + c$'
         self.p_names = [r'$a$',r'$T$',r'$c$']
         self.p_units = ['y','x','y']
 
@@ -114,7 +116,7 @@ class T1():
 class T2():
     def __init__(self):
         self.name = 'T2fit'
-        self.fun_str = r'$f = a \sin(\omega x +\phi)\exp(-x/T) + c$'
+        self.fun_str = r'$f(x) = a \sin(\omega x +\phi)\exp(-x/T) + c$'
         self.p_names = [r'$a$',r'$T$',r'$\omega$',r'$\phi$',r'$c$']
         self.p_units = ['y','x','1/x','','y']
 
