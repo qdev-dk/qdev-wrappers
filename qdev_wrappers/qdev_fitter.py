@@ -115,7 +115,7 @@ class T2():
     def __init__(self):
         self.name = 'T2fit'
         self.fun_str = r'$f = a \sin(\omega x +\phi)\exp(-x/T) + c$'
-        self.p_names = [r'$a$',r'$T$',r'$\omega/2\pi$',r'$\phi$',r'$c$']
+        self.p_names = [r'$a$',r'$T$',r'$\omega$',r'$\phi$',r'$c$']
         self.p_units = ['y','x','1/x','','y']
 
     def fun(self,x,a,T,w,p,c):
