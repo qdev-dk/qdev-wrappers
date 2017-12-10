@@ -47,7 +47,7 @@ class qdev_fitter():
             # Get initial guess on parameter is guess function is defined
             if (p0==None and hasattr(fitclass,'guess')):
                 p0 = getattr(fitclass,'guess')(qcxdata.ndarray,qcydata.ndarray)
-            popt, pcov = popt, pcov = curve_fit(fitclass.fun, qcxdata.ndarray, qcydata.ndarray, p0=p0, **kwargs)
+            popt, pcov = curve_fit(fitclass.fun, qcxdata.ndarray, qcydata.ndarray, p0=p0, **kwargs)
 
             if do_plots:
                 plot = self.plot_1D(qcxdata,qcydata,fitclass,popt)
