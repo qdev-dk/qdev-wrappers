@@ -83,18 +83,30 @@ def _do_measurement_single(measurement: Measure, meas_params: tuple,
             # Ensure the correct scaling before saving
             plot.autorange()
             plot.save()
-            if 'pdf_subfolder' in CURRENT_EXPERIMENT:
+
+
+            if any(k in CURRENT_EXPERIMENT for k in ('pdf_subfolder', 'png_subfolder')):
                 plt.ioff()
                 pdfplot, num_subplots = _plot_setup(data, meas_params, useQT=False)
                 # pad a bit more to prevent overlap between
                 # suptitle and title
                 pdfplot.rescale_axis()
                 pdfplot.fig.tight_layout(pad=3)
-                title_list = plot.get_default_title().split(sep)
-                title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
-                title = sep.join(title_list)
 
-                pdfplot.save("{}.pdf".format(title))
+                if 'pdf_subfolder' in CURRENT_EXPERIMENT:
+                    title_list = plot.get_default_title().split(sep)
+                    title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
+                    title = sep.join(title_list)
+                    pdfplot.save("{}.pdf".format(title))
+
+                if 'png_subfolder' in CURRENT_EXPERIMENT:
+                    # Hack to save PNG also
+                    title_list_png = plot.get_default_title().split(sep)
+                    title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
+                    title_png = sep.join(title_list_png)
+
+                    plt.savefig("{}.png".format(title_png),dpi=500)
+
                 if (pdfdisplay['combined'] or
                         (num_subplots == 1 and pdfdisplay['individual'])):
                     pdfplot.fig.canvas.draw()
@@ -104,6 +116,7 @@ def _do_measurement_single(measurement: Measure, meas_params: tuple,
                 if num_subplots > 1:
                     _save_individual_plots(data, meas_params,
                                            pdfdisplay['individual'])
+                plt.ion()
         else:
             plot = None
 
@@ -229,7 +242,7 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
 
 
 def do1d(inst_set, start, stop, num_points, delay, *inst_meas, do_plots=True,
-         use_threads=True):
+         use_threads=False):
     """
 
     Args:
@@ -266,7 +279,7 @@ def do1d(inst_set, start, stop, num_points, delay, *inst_meas, do_plots=True,
 
 def do1dDiagonal(inst_set, inst2_set, start, stop, num_points,
                  delay, start2, slope, *inst_meas, do_plots=True,
-                 use_threads=True):
+                 use_threads=False):
     """
     Perform diagonal sweep in 1 dimension, given two instruments
 
@@ -309,7 +322,7 @@ def do1dDiagonal(inst_set, inst2_set, start, stop, num_points,
 
 def do2d(inst_set, start, stop, num_points, delay,
          inst_set2, start2, stop2, num_points2, delay2,
-         *inst_meas, do_plots=True, use_threads=True):
+         *inst_meas, do_plots=True, use_threads=False):
     """
 
     Args:
@@ -357,7 +370,7 @@ def do2d(inst_set, start, stop, num_points, delay,
     return plot, data
 
 
-def do0d(*inst_meas, do_plots=True, use_threads=True):
+def do0d(*inst_meas, do_plots=True, use_threads=False):
     """
     Args:
         *inst_meas:
