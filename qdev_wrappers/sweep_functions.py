@@ -85,7 +85,8 @@ def _do_measurement_single(measurement: Measure, meas_params: tuple,
             plot.save()
             if 'pdf_subfolder' in CURRENT_EXPERIMENT:
                 plt.ioff()
-                pdfplot, num_subplots = _plot_setup(data, meas_params, useQT=False)
+                pdfplot, num_subplots = _plot_setup(
+                    data, meas_params, useQT=False)
                 # pad a bit more to prevent overlap between
                 # suptitle and title
                 pdfplot.rescale_axis()
@@ -159,7 +160,8 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
 
         if do_plots:
             try:
-                plot, _ = _plot_setup(data, meas_params, startranges=startranges)
+                plot, _ = _plot_setup(
+                    data, meas_params, startranges=startranges)
             except (ClosedError, ConnectionError):
                 log.warning('Remote process crashed png will not be saved')
         else:
@@ -182,7 +184,8 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
 
             if any(k in CURRENT_EXPERIMENT for k in ('pdf_subfolder', 'png_subfolder')):
                 plt.ioff()
-                pdfplot, num_subplots = _plot_setup(data, meas_params, useQT=False)
+                pdfplot, num_subplots = _plot_setup(
+                    data, meas_params, useQT=False)
                 # pad a bit more to prevent overlap between
                 # suptitle and title
                 pdfplot.rescale_axis()
@@ -197,10 +200,11 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
                 if 'png_subfolder' in CURRENT_EXPERIMENT:
                     # Hack to save PNG also
                     title_list_png = plot.get_default_title().split(sep)
-                    title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
+                    title_list_png.insert(-1,
+                                          CURRENT_EXPERIMENT['png_subfolder'])
                     title_png = sep.join(title_list_png)
 
-                    plt.savefig("{}.png".format(title_png),dpi=500)
+                    plt.savefig("{}.png".format(title_png), dpi=500)
 
                 if (pdfdisplay['combined'] or
                         (num_subplots == 1 and pdfdisplay['individual'])):
@@ -260,7 +264,7 @@ def do1d(inst_set, start, stop, num_points, delay, *inst_meas, do_plots=True,
 
     plot, data = _do_measurement(loop, set_params, meas_params,
                                  do_plots=do_plots, use_threads=use_threads)
-
+    data.data_num = qc.data.data_set.DataSet.location_provider.counter
     return plot, data
 
 
@@ -303,7 +307,7 @@ def do1dDiagonal(inst_set, inst2_set, start, stop, num_points,
 
     plot, data = _do_measurement(loop, set_params, meas_params,
                                  do_plots=do_plots, use_threads=use_threads)
-
+    data.data_num = qc.data.data_set.DataSet.location_provider.counter
     return plot, data
 
 
@@ -353,7 +357,7 @@ def do2d(inst_set, start, stop, num_points, delay,
 
     plot, data = _do_measurement(outerloop, set_params, meas_params,
                                  do_plots=do_plots, use_threads=use_threads)
-
+    data.data_num = qc.data.data_set.DataSet.location_provider.counter
     return plot, data
 
 
@@ -372,4 +376,5 @@ def do0d(*inst_meas, do_plots=True, use_threads=True):
     meas_params = _select_plottables(inst_meas)
     plot, data = _do_measurement_single(
         measurement, meas_params, do_plots=do_plots, use_threads=use_threads)
+    data.data_num = qc.data.data_set.DataSet.location_provider.counter
     return plot, data

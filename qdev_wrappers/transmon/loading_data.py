@@ -25,6 +25,7 @@ def load(counter, plot=True, metadata=True, matplot=False):
     """
     useQT = not matplot
     dataset, plots = show_num(counter, do_plot=plot, useQT=useQT)
+    dataset.data_num = counter
     if metadata:
         _ = get_metadata(dataset, printout=True)
         _ = _get_data_duration(dataset)

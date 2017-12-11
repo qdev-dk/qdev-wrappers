@@ -82,7 +82,11 @@ def line_cut(dataset, key, vals, axis='y'):
     y_label = '{} ({})'.format(getattr(array, "set_arrays")[
         0].label, getattr(array, "set_arrays")[0].unit)
     z_label = array.name
-    data_num = dataset.data_num
+    try:
+        num = dataset.data_num
+    except AttributeError:
+        num = None
+        print('dataset has no data_num set, title may be non specific')
     if axis is 'x':
         z_data = np.zeros((len(vals), len(y_data)))
         for i, v in enumerate(vals):
@@ -90,7 +94,7 @@ def line_cut(dataset, key, vals, axis='y'):
             z_data[i] = array[:, x_index]
         fig, sub = plot_cf_data(z_data,
                                 xdata=y_data,
-                                data_num=data_num,
+                                data_num=num,
                                 legend_labels=["{} {}".format(
                                     v, x_label) for v in vals],
                                 axes_labels=[y_label, z_label])
@@ -102,10 +106,10 @@ def line_cut(dataset, key, vals, axis='y'):
             z_data[i] = array[y_index, :]
         fig, sub = plot_cf_data(z_data,
                                 xdata=x_data,
-                                data_num=data_num,
+                                data_num=num,
                                 legend_labels=[str(v) + y_label for v in vals],
                                 axes_labels=[x_label, z_label])
-    fig.data_num = data_num
+    fig.data_num = num
     return sub
 
 
@@ -143,7 +147,12 @@ def plot_subset(dataset, key, x_start=None, x_stop=None,
                           x_indices[0]:x_indices[-1]])
     plt.xlabel(x_label)
     plt.ylabel(y_label)
-    plt.title(get_title(dataset.data_num))
+    try:
+        num = dataset.data_num
+    except AttributeError:
+        num = None
+        print('dataset has no data_num set, title may be non specific')
+    plt.title(get_title(num))
     return pl
 
 
@@ -173,17 +182,18 @@ def plot_with_markers(dataset, indices, subplot=None, x_key="set", y_key="mag",
         subplot = plt.subplot(111)
         try:
             fig.data_num = dataset.data_num
-        except AttributeError as e:
-            print('dataset has no data_num set: {}'.format(e))
-
+        except AttributeError:
+            fig.data_num = None
+            print('dataset has no data_num set, title may be non specific')
     try:
         setpoints = next(getattr(dataset, k)
                          for k in dataset.arrays.keys() if x_key in k)
         magnitude = next(getattr(dataset, k)
                          for k in dataset.arrays.keys() if y_key in k)
     except Exception:
-        raise Exception('could not get {} and {} arrays from dataset, check dataset '
-                        'has these keys array names'.format(x_key, y_key))
+        raise RuntimeError(
+            'could not get {} and {} arrays from dataset, check dataset '
+            'has these keys array names'.format(x_key, y_key))
     subplot.plot(setpoints, magnitude, 'b')
     subplot.plot(setpoints[indices], magnitude[indices], 'gs')
     subplot.set_xlabel('frequency(Hz)')
@@ -192,8 +202,8 @@ def plot_with_markers(dataset, indices, subplot=None, x_key="set", y_key="mag",
     try:
         num = dataset.data_num
     except AttributeError:
-        num = dataset.location_provider.counter
-        print('warning: check title, could be wrong datanum')
+        num = None
+        print('dataset has no data_num set, title may be non specific')
 
     pl_title = str(num) + (' ' + title if title is not None else '')
     subplot.figure.suptitle(pl_title, fontsize=12)
