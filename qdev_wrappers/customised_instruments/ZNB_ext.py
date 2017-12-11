@@ -1,13 +1,9 @@
-<<<<<<< HEAD
-from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB, FrequencySweep, ZNBChannel
-=======
 import numpy as np
 
 # QCoDeS imports
 from qcodes.instrument_drivers.rohde_schwarz.ZNB import (FrequencySweep, ZNB,
                                                          ZNBChannel)
 
->>>>>>> a4339af... right inheritance
 
 class FrequencySweepMagSetCav(FrequencySweep):
     FORMAT = 'dB'
