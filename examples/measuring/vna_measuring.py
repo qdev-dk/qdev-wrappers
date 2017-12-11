@@ -50,3 +50,6 @@ vna.channels.B2G1SAM.trace_mag_phase()
 
 #%%
 do1d(dummy_time, 0, 60, 2, 1, vna.channels.B2G1SAM.trace_mag_phase)
+
+#%%
+do0d(vna.channels.B2G1SAM.trace_mag_phase)
