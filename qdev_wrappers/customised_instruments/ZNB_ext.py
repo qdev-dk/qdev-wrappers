@@ -40,7 +40,7 @@ class ZNBChannel_ext(ZNBChannel):
             start=self.start(),
             stop=self.stop(),
             npts=self.npts(),
-            channel=n,
+            channel=self._instrument_channel,
             parameter_class=FrequencySweepMagSetCav)
 
 
