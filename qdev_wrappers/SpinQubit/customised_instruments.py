@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Customised instruments with extra features such as voltage dividers and derived
-parameters for use with T3
+parameters for use with cQED
 """
 from functools import partial
 import time
@@ -17,7 +17,7 @@ from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB, ZNBChannel
 from qcodes.instrument_drivers.tektronix.AWG5014 import Tektronix_AWG5014
 from qcodes.instrument_drivers.yokogawa.GS200 import GS200
 from qcodes.instrument_drivers.devices import VoltageDivider
-from qcodes.instrument_drivers.Harvard.Decadac import Decadac
+from qcodes.instrument_drivers.Harvard.Decadac import Decadac, DacChannel, DacSlot
 from qcodes.utils import validators as vals
 from qcodes import ManualParameter
 from qcodes import ArrayParameter
@@ -96,7 +96,7 @@ class ConductanceBuffer(ChannelBuffer):
 
 
 # Subclass the SR830
-class SR830_T3(SR830):
+class SR830_cQED(SR830):
     """
     An SR830 with the following super powers:
         - a Voltage divider
@@ -178,7 +178,7 @@ class SR830_T3(SR830):
 
 
 # Subclass the QDAC
-class QDAC_T10(QDac):
+class QDAC_cQED(QDac):
     """
     A QDac with three voltage dividers
     """
@@ -186,119 +186,50 @@ class QDAC_T10(QDac):
     def __init__(self, name, address, config, **kwargs):
         super().__init__(name, address, **kwargs)
 
-        # Define the named channels
+        # same as in decadac but without fine mode
+        config_file = config.get('QDAC')
 
-        topo_channel = int(config.get('Channel Parameters',
-                                      'topo bias channel'))
-        topo_channel = self.channels[topo_channel - 1].v
+        for channelNum, channnel  in enumerate(self.channels):
+            config_settings = config_file[str(channelNum)].split(",")
 
-        self.add_parameter('current_bias',
-                           label='{} conductance'.format(self.name),
-                           # use lambda for late binding
-                           get_cmd=lambda: self.channels.chan40.v.get() / 10E6 * 1E9,
-                           set_cmd=lambda value: self.channels.chan40.v.set(
-                               value * 1E-9 * 10E6),
-                           unit='nA',
-                           get_parser=float)
+            name = config_settings[0]
+            label = config_settings[1]
+            unit = config_settings[2]
+            divisor = float(config_settings[3])
+            step = float(config_settings[4])
+            delay = float(config_settings[5])
+            rangemin = float(config_settings[6])
+            rangemax = float(config_settings[7])
 
-        self.topo_bias = VoltageDivider(topo_channel,
-                                        float(config.get('Gain Settings',
-                                                         'dc factor topo')))
+            param = channel.volt
 
+            param.label = label
+            param.unit = unit
+            param.set_validator(vals.Numbers(rangemin, rangemax))
 
-class Decadac_T3(Decadac):
-    """
-    A Decadac with one voltage dividers
-    """
-
-    def __init__(self, name, address, config, **kwargs):
-        self.config = config
-        deca_physical_min = int(self.config.get('Decadac Range', 'min_volt'))
-        deca_physical_max = int(self.config.get('Decadac Range', 'max_volt'))
-        kwargs.update({'min_val': deca_physical_min,
-                       'max_val': deca_physical_max})
-        # this is maybe not the prettiest solution:
-        self.SLOT_MODE_DEFAULT = "Fine"
-        super().__init__(name, address, **kwargs)
-
-        # addtional parameters go here
-        self.add_parameter("fine_volt",
-                           get_cmd=self._get_fine_voltage,
-                           set_cmd=self._set_fine_voltage,
-                           label="Voltage", unit="V"
-                           )
-        # Define the named channels
-
-        # Assign labels:
-        labels = config.get('Decadac Channel Labels')
-        for chan, label in labels.items():
-            self.channels[int(chan)].volt.label = label
-
-        # Take voltage divider of source/drain into account:
-        dcbias_i = int(config.get('Channel Parameters',
-                                  'source channel'))
-        dcbias = self.channels[dcbias_i].volt
-        self.dcbias = VoltageDivider(dcbias,
-                                     float(config.get('Gain Settings',
-                                                      'dc factor')))
-        self.dcbias.label = config.get('Decadac Channel Labels', dcbias_i)
-
-        # Assign custom variable names
-        lcut = config.get('Channel Parameters', 'left cutter')
-        self.lcut = self.channels[int(lcut)].volt
-
-        rcut = config.get('Channel Parameters', 'right cutter')
-        self.rcut = self.channels[int(rcut)].volt
-
-        jj = config.get('Channel Parameters', 'central cutter')
-        self.jj = self.channels[int(jj)].volt
-
-        rplg = config.get('Channel Parameters', 'right plunger')
-        self.rplg = self.channels[int(rplg)].volt
-
-        lplg = config.get('Channel Parameters', 'left plunger')
-        self.lplg = self.channels[int(lplg)].volt
-
-        self.add_parameter('cutters',
-                           label='{} cutters'.format(self.name),
-                           # use lambda for late binding
-                           get_cmd=self.get_cutters,
-                           set_cmd=self.set_cutters,
-                           unit='V',
-                           get_parser=float)
-
-        # Set up voltage and ramp safetly limits in software
-        ranges = config.get('Decadac Channel Limits')
-        ramp_settings = config.get('Decadac Channel Ramp Setttings')
-
-        for chan in range(20):
-            try:
-                chan_range = ranges[str(chan)]
-            except KeyError:
-                continue
-            range_minmax = chan_range.split(" ")
-            if len(range_minmax) != 2:
-                raise ValueError(
-                    "Expected: min max. Got {}".format(chan_range))
+            if divisor != 1.:
+                # maybe we want a different label
+                setattr(self, name, VoltageDivider(param, divisor, label=label))
+                param.division_value = divisor
+                param._meta_attrs.extend(["division_value"])
             else:
-                rangemin = float(range_minmax[0])
-                rangemax = float(range_minmax[1])
-            vldtr = vals.Numbers(rangemin, rangemax)
-            self.channels[chan].volt.set_validator(vldtr)
+                setattr(self,name, param)
 
-            try:
-                chan_ramp_settings = ramp_settings[str(chan)]
-            except KeyError:
-                continue
-            ramp_stepdelay = chan_ramp_settings.split(" ")
-            if len(ramp_stepdelay) != 2:
-                raise ValueError(
-                    "Expected: step delay. Got {}".format(chan_ramp_settings))
-            else:
-                step = float(ramp_stepdelay[0])
-                delay = float(ramp_stepdelay[1])
-            self.channels[chan].volt.set_step(step)
-            self.channels[chan].volt.set_delay(delay)
+
+
+class DacChannel_cQED(DacChannel):
+    """
+    A Decadac Channel with a fine_volt parameter
+    This alternative channel representation is chosen by setting the class
+    variable DAC_CHANNEL_CLASS in the main Instrument
+    """
+    def __init__(self, *args, **kwargs):
+         super().__init__(*args, **kwargs)
+         self.add_parameter("fine_volt",
+                            get_cmd=self._get_fine_voltage,
+                            set_cmd=self._set_fine_voltage,
+                            label="Voltage", unit="V"
+         )
 
     def _get_fine_voltage(self):
         slot = self._parent
@@ -323,40 +254,84 @@ class Decadac_T3(Decadac):
         else:
             raise RuntimeError("Fine mode only works for Chan 0 and 1")
         coarse_part = self._dac_code_to_v(
-            self._dac_v_to_code(round(voltage,2)-0.01) )
+            self._dac_v_to_code(round(voltage, 2)-0.01))
 
         fine_part = voltage - coarse_part
         fine_scaled = fine_part*200-10
-        print("trying to set to {}, by setting coarse {} and fine {} with total {}".format(voltage,
-              coarse_part, fine_scaled, coarse_part+fine_part))
         self.volt.set(coarse_part)
         slot.channels[fine_chan].volt.set(fine_scaled)
 
-    def set_all(self, voltage_value, set_dcbias=False):
-        channels_in_use = self.config.get('Decadac Channel Labels').keys()
-        channels_in_use = [int(ch) for ch in channels_in_use]
 
-        for ch in channels_in_use:
-            self.channels[ch].volt.set(voltage_value)
 
-        if set_dcbias:
-            self.dcbias.set(voltage_value)
+class DacSlot_cQED(DacSlot):
+    SLOT_MODE_DEFAULT = "Fine"
 
-    def set_cutters(self, voltage_value):
-        dic = self.config.get('Channel Parameters')
 
-        self.channels[int(dic['left cutter'])].volt.set(voltage_value)
-        self.channels[int(dic['right cutter'])].volt.set(voltage_value)
+class Decadac_cQED(Decadac):
+    """
+    A Decadac with one voltage dividers
+    """
+    DAC_CHANNEL_CLASS = DacChannel_cQED
+    DAC_SLOT_CLASS = DacSlot_cQED
 
-    def get_cutters(self):
-        dic = self.config.get('Channel Parameters')
+    def __init__(self, name, address, config, **kwargs):
+        self.config = config
+        deca_physical_min = -10
+        deca_physical_max = 10
+        kwargs.update({'min_val': deca_physical_min,
+                       'max_val': deca_physical_max})
 
-        vleft = self.channels[int(dic['left cutter'])].volt.get()
-        vright = self.channels[int(dic['right cutter'])].volt.get()
-        if (abs(vleft - vright) > 0.05):
-            print('Error! Left and right cutter are not the same!')
-        else:
-            return vleft
+        super().__init__(name, address, **kwargs)
+        '''
+        config file redesigned to have all channels for overview. Indices in config_settings[] for each channel are:
+        0: Channels name for deca.{}
+        1: Channel label
+        2: Channels unit (included as we are using decadac to control the magnet)
+        3: Voltage division factor
+        4: step size
+        5: delay
+        6: max value
+        7: min value
+        8: Fine or coarse mode channel
+        '''
+
+        for channelNum, settings in config.get('Decadac').items():
+            channel = self.channels[ int(channelNum) ]
+            config_settings = settings.split(',')
+
+            name = config_settings[0]
+            label = config_settings[1]
+            unit = config_settings[2]
+            divisor = float(config_settings[3])
+            step = float(config_settings[4])
+            delay = float(config_settings[5])
+            rangemin = float(config_settings[6])
+            rangemax = float(config_settings[7])
+            fine_mode = config_settings[8]
+
+            if  fine_mode == 'fine':
+                param = channel.fine_volt
+            elif fine_mode == 'coarse':
+                param = channel.volt
+            else:
+                raise RuntimeError('Invalid config file. Need to specify \'fine\' or \'coarse\' not {}'.format(fine_mode))
+
+            channel.volt.set_step(step)
+            channel.volt.set_delay(delay)
+
+            param.label = label
+            param.unit = unit
+            param.set_validator(vals.Numbers(rangemin, rangemax))
+
+            if divisor != 1.:
+                # maybe we want a different label
+                setattr(self, name, VoltageDivider(param, divisor, label=label))
+                param.division_value = divisor
+                param._meta_attrs.extend(["division_value"])
+            else:
+                setattr(self,name, param)
+
+
 
 
 # Subclass the DMM
@@ -383,7 +358,7 @@ class Keysight_34465A_T10(Keysight_34465A):
         return self.volt() / self.iv_conv * 1E12
 
 
-class GS200_T3(GS200):
+class GS200_cQED(GS200):
     def __init__(self, name, address, config=None, **kwargs):
         super().__init__(name, address, **kwargs)
 
@@ -399,12 +374,11 @@ class GS200_T3(GS200):
                 raise KeyError('Settings not found in config file. Check they '
                                'are specified correctly. {}'.format(e))
             self.voltage.set_step(int(ramp_stepdelay[0]))
-            self.voltage.set_delay(int(ramp_stepdelay[1]))
-            vldtr = vals.Numbers(int(ranges_minmax[0]), int(ranges_minmax[1]))
-            self.voltage.set_validator(vldtr)
+            self.voltage.set_delay(int(ramp_stepdelay[1])) 
+            self.voltage.vals = vals.Numbers(int(ranges_minmax[0]), int(ranges_minmax[1]))
 
 
-class AlazarTech_ATS9360_T3(AlazarTech_ATS9360):
+class AlazarTech_ATS9360_cQED(AlazarTech_ATS9360):
     def __init__(self, name, seq_mode='off'):
         if seq_mode is 'on':
             io_mode = 'AUX_IN_TRIGGER_ENABLE'
@@ -473,7 +447,7 @@ class AlazarTech_ATS9360_T3(AlazarTech_ATS9360):
             raise ValueError('must set seq mode to "on" or "off"')
 
 
-class ATS9360Controller_T3(ATS9360Controller):
+class ATS9360Controller_cQED(ATS9360Controller):
     def __init__(self, name, alazar, ctrl_type='ave'):
         if ctrl_type is 'samp':
             integrate_samples = False
@@ -493,19 +467,24 @@ class ATS9360Controller_T3(ATS9360Controller):
                          average_records=average_records)
 
 
-class AWG5014_T3(Tektronix_AWG5014):
-    def __init__(self, name, visa_address, **kwargs):
+class AWG5014_cQED(Tektronix_AWG5014):
+    def __init__(self, name, visa_address, id_letter='A', **kwargs):
         super().__init__(name, visa_address, **kwargs)
         self.add_parameter(name='current_seq',
                            parameter_class=ManualParameter,
                            initial_value=None,
                            label='Uploaded sequence index',
                            vals=vals.Ints())
+        self.add_parameter(name='id_letter',
+                           parameter_class=ManualParameter,
+                           initial_value=id_letter,
+                           label='AWG id letter',
+                           vals=vals.Strings())
         self.ref_source('EXT')
         self.clear_message_queue()
 
 
-class VNA_T3(ZNB):
+class VNA_cQED(ZNB):
     def __init__(self, name, visa_address, S21=True, spec_mode=False, gen_address=None,
                  timeout=40):
         super().__init__(name, visa_address, init_s_params=False, timeout=timeout)
@@ -604,4 +583,3 @@ class VNA_T3(ZNB):
 
     def _get_readout_pow(self, chan_num):
         return self.ask('SOUR{}:POW:GEN1:OFFS?'.format(chan_num)).split(',')[0]
-
