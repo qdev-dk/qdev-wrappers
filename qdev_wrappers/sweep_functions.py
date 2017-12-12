@@ -182,7 +182,7 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
     return plot, data
 
 
-def _do_MatPlot(data,meas_params)
+def _do_MatPlot(data,meas_params):
     plt.ioff()
     plot, num_subplots = _plot_setup(data, meas_params, useQT=False)
     # pad a bit more to prevent overlap between
@@ -207,7 +207,7 @@ def _do_MatPlot(data,meas_params)
         plot.fig.canvas.draw()
         plt.show()
     else:
-        plt.close(pdfplot.fig)
+        plt.close(plot.fig)
     if num_subplots > 1:
         _save_individual_plots(data, meas_params,
                                pdfdisplay['individual'])
