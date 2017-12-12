@@ -36,7 +36,8 @@ class AlazarTech_ATS9360_ext(AlazarTech_ATS9360):
                              '"off", received {}'.format(seq_mode))
         super().__init__(name=name)
         self.config(clock_source='EXTERNAL_CLOCK_10MHz_REF',
-                    sample_rate=500000000,
+                    #sample_rate=500_000_000,
+                    external_sample_rate=500_000_000,
                     clock_edge='CLOCK_EDGE_RISING',
                     decimation=1,
                     coupling=['DC', 'DC'],
