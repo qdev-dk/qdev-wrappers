@@ -110,6 +110,7 @@ def _set_up_ipython_logging():
         else:
             log.debug("Logging already started at {}".format(logfile))
 
+
 def init_python_logger() -> None:
     """
     This sets up logging to a time based logging.
@@ -121,7 +122,7 @@ def init_python_logger() -> None:
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     filelogginglevel = logging.INFO
-    consolelogginglevel = logging.WARNING
+    consolelogginglevel = qc.config.core.loglevel
     ch = logging.StreamHandler()
     ch.setLevel(consolelogginglevel)
     ch.setFormatter(formatter)
