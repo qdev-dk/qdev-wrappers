@@ -203,6 +203,7 @@ def _set_up_script_folder(scriptfolder: str=None):
 
 
 def basic_init(sample_name: str, station, mainfolder: str= None):
+    init_python_logger()
     atexit.register(qc.Instrument.close_all)
     _set_up_exp_folder(sample_name, mainfolder)
     _set_up_station(station)
@@ -230,7 +231,6 @@ def my_init(sample_name: str, station, qubit_count=None,
             display_pdf=True,
             display_individual_pdf=False,
             plot_x_position=0.66):
-    init_python_logger()
     basic_init(sample_name, station, mainfolder)
     CURRENT_EXPERIMENT['plot_x_position'] = plot_x_position
     _set_up_script_folder()
