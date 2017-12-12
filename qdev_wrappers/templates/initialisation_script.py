@@ -38,12 +38,6 @@ mpl.rcParams['font.size'] = 10
 
 
 if __name__ == '__main__':
-
-    # Set up logger
-    init_log = logging.getLogger(__name__)
-    logger = logging.getLogger()
-    logger.setLevel(logging.WARNING)
-
     # Close existing connections if present
     if qc.Station.default:
         close_station(qc.Station.default)
