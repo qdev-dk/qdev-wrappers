@@ -7,7 +7,6 @@ from qcodes.instrument_drivers.rohde_schwarz.ZNB import (FrequencySweep, ZNB,
                                                          ZNBChannel)
 from qcodes.utils import validators as vals
 
-
 class FrequencySweepMagSetCav(FrequencySweep):
     FORMAT = 'dB'
 
@@ -44,7 +43,23 @@ class ZNBChannel_ext(ZNBChannel):
 
 
 class VNA_ext(ZNB):
+
     CHANNEL_CLASS = ZNBChannel_ext
+
+    def __init__(self, name, visa_address, S21=True, spec_mode=False,
+                 gen_address=None, timeout=40):
+        super().__init__(name, visa_address, init_s_params=False,
+                         timeout=timeout)
+        if S21:
+            self.add_channel('S21')
+            self.add_parameter(name='single_S21', get_cmd=self._get_single)
+        if spec_mode and gen_address is not None:
+            self.add_spectroscopy_channel(gen_address)
+        elif spec_mode:
+            print('spec mode not added as no generator ip address provided')
+
+    def _get_single(self):
+        return self.channels.S21.trace_mag_phase()[0][0]
 
     # spectroscopy
 
@@ -65,15 +80,10 @@ class VNA_ext(ZNB):
         num = self.ask('SYST:COMM:RDEV:GEN:COUN?').strip()
         return int(num)
 
-    def set_external_generator(self,
-                               address,
-                               gen=1,
-                               gen_name="ext gen 1",
-                               driver="SGS100A",
-                               interface="VXI-11"):
-        self.write(
-            'SYST:COMM:RDEV:GEN{:.0f}:DEF "{}", "{}", "{}",  "{}", OFF, ON'.
-            format(gen, gen_name, driver, interface, address))
+    def set_external_generator(self, address, gen=1, gen_name="ext gen 1",
+                               driver="SGS100A", interface="VXI-11"):
+        self.write('SYST:COMM:RDEV:GEN{:.0f}:DEF "{}", "{}", "{}",  "{}", '
+                   'OFF, ON'.format(gen, gen_name, driver, interface, address))
 
     def get_external_generator_setup(self, num=1):
         setup = self.ask(
@@ -87,8 +97,7 @@ class VNA_ext(ZNB):
         cat = self.ask('SYST:COMM:RDEV:GEN1:CAT?').strip()
         return cat
 
-    def add_spectroscopy_channel(self,
-                                 generator_address,
+    def add_spectroscopy_channel(self, generator_address,
                                  vna_parameter="B2G1SAM"):
         """
         Adds a generator and uses it to generate a fixed frequency tone, the
@@ -108,28 +117,25 @@ class VNA_ext(ZNB):
         self.write('ROSC EXT')
         self.add_parameter(
             'readout_freq',
-            unit='Hz',
             set_cmd=partial(self._set_readout_freq, chan_num),
             get_cmd=partial(self._get_readout_freq, chan_num),
             get_parser=float,
             vals=vals.Numbers(self._min_freq, self._max_freq))
         self.add_parameter(
             'readout_power',
-            unit='dBm',
             set_cmd=partial(self._set_readout_pow, chan_num),
             get_cmd=partial(self._get_readout_pow, chan_num),
-            get_parser=float,
+            get_parser=int,
             vals=vals.Numbers(-150, 25))
 
     def _set_readout_freq(self, chan_num, freq):
-        self.write('SOUR{}:FREQ:CONV:ARB:EFR1 ON, 0, 1, {:.6f}, CW'.format(
-            chan_num, freq))
-        self.write('SOUR{}:FREQ2:CONV:ARB:IFR 0, 1, {:.6f}, CW'.format(
-            chan_num, freq))
+        self.write('SOUR{}:FREQ:CONV:ARB:EFR1 ON, 0, 1, {:.6f}, '
+                   'CW'.format(chan_num, freq))
+        self.write('SOUR{}:FREQ2:CONV:ARB:IFR 0, 1, {:.6f},'
+                   'CW'.format(chan_num, freq))
 
     def _get_readout_freq(self, chan_num):
-        return self.ask(
-            'SOUR{}:FREQ:CONV:ARB:EFR1?'.format(chan_num)).split(',')[3]
+        return self.ask('SOUR:FREQ:CONV:ARB:EFR1?').split(',')[3]
 
     def _set_readout_pow(self, chan_num, pow):
         self.write('SOUR{}:POW:GEN1:OFFS {:.3f}, ONLY'.format(chan_num, pow))
