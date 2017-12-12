@@ -84,39 +84,9 @@ def _do_measurement_single(measurement: Measure, meas_params: tuple,
             plot.autorange()
             plot.save()
 
+            if 'pdf_subfolder' in CURRENT_EXPERIMENT or 'png_subfolder' in CURRENT_EXPERIMENT:
+                _do_MatPlot(data,meas_params)
 
-            if any(k in CURRENT_EXPERIMENT for k in ('pdf_subfolder', 'png_subfolder')):
-                plt.ioff()
-                pdfplot, num_subplots = _plot_setup(data, meas_params, useQT=False)
-                # pad a bit more to prevent overlap between
-                # suptitle and title
-                pdfplot.rescale_axis()
-                pdfplot.fig.tight_layout(pad=3)
-
-                if 'pdf_subfolder' in CURRENT_EXPERIMENT:
-                    title_list = plot.get_default_title().split(sep)
-                    title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
-                    title = sep.join(title_list)
-                    pdfplot.save("{}.pdf".format(title))
-
-                if 'png_subfolder' in CURRENT_EXPERIMENT:
-                    # Hack to save PNG also
-                    title_list_png = plot.get_default_title().split(sep)
-                    title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
-                    title_png = sep.join(title_list_png)
-
-                    plt.savefig("{}.png".format(title_png),dpi=500)
-
-                if (pdfdisplay['combined'] or
-                        (num_subplots == 1 and pdfdisplay['individual'])):
-                    pdfplot.fig.canvas.draw()
-                    plt.show()
-                else:
-                    plt.close(pdfplot.fig)
-                if num_subplots > 1:
-                    _save_individual_plots(data, meas_params,
-                                           pdfdisplay['individual'])
-                plt.ion()
         else:
             plot = None
 
@@ -193,38 +163,9 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
             except (ClosedError, ConnectionError):
                 log.warning('Remote process crashed png will not be saved')
 
-            if any(k in CURRENT_EXPERIMENT for k in ('pdf_subfolder', 'png_subfolder')):
-                plt.ioff()
-                pdfplot, num_subplots = _plot_setup(data, meas_params, useQT=False)
-                # pad a bit more to prevent overlap between
-                # suptitle and title
-                pdfplot.rescale_axis()
-                pdfplot.fig.tight_layout(pad=3)
+            if 'pdf_subfolder' in CURRENT_EXPERIMENT or 'png_subfolder' in CURRENT_EXPERIMENT:
+                _do_MatPlot(data,meas_params)
 
-                if 'pdf_subfolder' in CURRENT_EXPERIMENT:
-                    title_list = plot.get_default_title().split(sep)
-                    title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
-                    title = sep.join(title_list)
-                    pdfplot.save("{}.pdf".format(title))
-
-                if 'png_subfolder' in CURRENT_EXPERIMENT:
-                    # Hack to save PNG also
-                    title_list_png = plot.get_default_title().split(sep)
-                    title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
-                    title_png = sep.join(title_list_png)
-
-                    plt.savefig("{}.png".format(title_png),dpi=500)
-
-                if (pdfdisplay['combined'] or
-                        (num_subplots == 1 and pdfdisplay['individual'])):
-                    pdfplot.fig.canvas.draw()
-                    plt.show()
-                else:
-                    plt.close(pdfplot.fig)
-                if num_subplots > 1:
-                    _save_individual_plots(data, meas_params,
-                                           pdfdisplay['individual'])
-                plt.ion()
         if CURRENT_EXPERIMENT.get('device_image'):
             log.debug('Saving device image')
             save_device_image(tuple(sp[0] for sp in set_params))
@@ -239,6 +180,38 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
         log.exception("Exception in doND")
         raise
     return plot, data
+
+
+def _do_MatPlot(data,meas_params)
+    plt.ioff()
+    plot, num_subplots = _plot_setup(data, meas_params, useQT=False)
+    # pad a bit more to prevent overlap between
+    # suptitle and title
+    plot.rescale_axis()
+    plot.fig.tight_layout(pad=3)
+
+    if 'pdf_subfolder' in CURRENT_EXPERIMENT:
+        title_list = plot.get_default_title().split(sep)
+        title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
+        title = sep.join(title_list)
+        plot.save("{}.pdf".format(title))
+
+    if 'png_subfolder' in CURRENT_EXPERIMENT:
+        title_list = plot.get_default_title().split(sep)
+        title_list.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
+        title = sep.join(title_list)
+        plot.fig.savefig("{}.png".format(title),dpi=500)
+
+    if (pdfdisplay['combined'] or
+            (num_subplots == 1 and pdfdisplay['individual'])):
+        plot.fig.canvas.draw()
+        plt.show()
+    else:
+        plt.close(pdfplot.fig)
+    if num_subplots > 1:
+        _save_individual_plots(data, meas_params,
+                               pdfdisplay['individual'])
+    plt.ion()
 
 
 def do1d(inst_set, start, stop, num_points, delay, *inst_meas, do_plots=True,
