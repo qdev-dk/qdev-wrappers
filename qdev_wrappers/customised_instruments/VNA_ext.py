@@ -7,6 +7,7 @@ from qcodes.instrument_drivers.rohde_schwarz.ZNB import (FrequencySweep, ZNB,
                                                          ZNBChannel)
 from qcodes.utils import validators as vals
 
+
 class FrequencySweepMagSetCav(FrequencySweep):
     FORMAT = 'dB'
 
@@ -46,10 +47,15 @@ class VNA_ext(ZNB):
 
     CHANNEL_CLASS = ZNBChannel_ext
 
-    def __init__(self, name, visa_address, S21=True, spec_mode=False,
-                 gen_address=None, timeout=40):
-        super().__init__(name, visa_address, init_s_params=False,
-                         timeout=timeout)
+    def __init__(self,
+                 name,
+                 visa_address,
+                 S21=True,
+                 spec_mode=False,
+                 gen_address=None,
+                 timeout=40):
+        super().__init__(
+            name, visa_address, init_s_params=False, timeout=timeout)
         if S21:
             self.add_channel('S21')
             self.add_parameter(name='single_S21', get_cmd=self._get_single)
@@ -80,8 +86,12 @@ class VNA_ext(ZNB):
         num = self.ask('SYST:COMM:RDEV:GEN:COUN?').strip()
         return int(num)
 
-    def set_external_generator(self, address, gen=1, gen_name="ext gen 1",
-                               driver="SGS100A", interface="VXI-11"):
+    def set_external_generator(self,
+                               address,
+                               gen=1,
+                               gen_name="ext gen 1",
+                               driver="SGS100A",
+                               interface="VXI-11"):
         self.write('SYST:COMM:RDEV:GEN{:.0f}:DEF "{}", "{}", "{}",  "{}", '
                    'OFF, ON'.format(gen, gen_name, driver, interface, address))
 
@@ -97,7 +107,8 @@ class VNA_ext(ZNB):
         cat = self.ask('SYST:COMM:RDEV:GEN1:CAT?').strip()
         return cat
 
-    def add_spectroscopy_channel(self, generator_address,
+    def add_spectroscopy_channel(self,
+                                 generator_address,
                                  vna_parameter="B2G1SAM"):
         """
         Adds a generator and uses it to generate a fixed frequency tone, the
