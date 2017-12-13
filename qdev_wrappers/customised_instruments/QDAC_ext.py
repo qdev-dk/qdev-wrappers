@@ -26,7 +26,7 @@ class QDAC_ext(QDac):
             rangemin = float(config_settings[6])
             rangemax = float(config_settings[7])
 
-            param = channel.volt
+            param = channel.v
 
             param.label = label
             param.unit = unit
