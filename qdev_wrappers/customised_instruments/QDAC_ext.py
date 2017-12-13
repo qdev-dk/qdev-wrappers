@@ -13,10 +13,9 @@ class QDAC_ext(QDac):
         super().__init__(name, address, **kwargs)
 
         # same as in decadac but without fine mode
-        config_file = config.get('QDAC')
-
-        for channelNum, channnel in enumerate(self.channels):
-            config_settings = config_file[str(channelNum)].split(",")
+        for channelNum, settings in config.get('QDAC').items():
+            channel = self.channels[int(channelNum)]
+            config_settings = settings.split(',')
 
             name = config_settings[0]
             label = config_settings[1]
@@ -27,7 +26,7 @@ class QDAC_ext(QDac):
             rangemin = float(config_settings[6])
             rangemax = float(config_settings[7])
 
-            param = channel.volt
+            param = channel.v
 
             param.label = label
             param.unit = unit
