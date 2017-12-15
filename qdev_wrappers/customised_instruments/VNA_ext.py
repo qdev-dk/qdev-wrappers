@@ -10,6 +10,7 @@ from qcodes.utils import validators as vals
 
 class FrequencySweepMagSetCav(FrequencySweep):
     FORMAT = 'dB'
+
     def __init__(name, instrument, start, stop, npts, channel, maximum, detuning):
         super().__init__(name=name, instrument=instrument, start=start, stop=stop,
                 npts=npts, chammel=channel)
@@ -48,40 +49,8 @@ class ZNBChannel_ext(ZNBChannel):
 #            npts=self.npts(),
 #            channel=self._instrument_channel,
 #            max=maximum,
-#            detuning=detuning, 
+#            detuning=detuning,
 #            parameter_class=FrequencySweepMagSetCav)
-
-    def _set_start(self, val):
-        super()._set_start(val)
-        stop = self.stop()
-        npts = self.npts()
-#        self.trace_mag_SetCav.set_sweep(val, stop, npts)
-
-    def _set_stop(self, val):
-        super()._set_stop(val)
-        start = self.start()
-        npts = self.npts()
-#        self.trace_mag_SetCav.set_sweep(start, val, npts)
-
-    def _set_npts(self, val):
-        super()._set_npts(val)
-        start = self.start()
-        stop = self.stop()
-#        self.trace_mag_SetCav.set_sweep(start, stop, val)
-
-    def _set_span(self, val):
-        super()._set_span(val)
-        start = self.start()
-        stop = self.stop()
-        npts = self.npts()
-#        self.trace_mag_SetCav.set_sweep(start, stop, npts)
-
-    def _set_center(self, val):
-        super()._set_center(val)
-        start = self.start()
-        stop = self.stop()
-        npts = self.npts()
-#        self.trace_mag_SetCav.set_sweep(start, stop, npts)
 
 
 class VNA_ext(ZNB):
