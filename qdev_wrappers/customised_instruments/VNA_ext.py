@@ -11,7 +11,7 @@ from qcodes.utils import validators as vals
 class FrequencySweepMagSetCav(FrequencySweep):
     FORMAT = 'dB'
 
-    def __init__(name, instrument, start, stop, npts, channel, maximum, detuning):
+    def __init__(self, name, instrument, start, stop, npts, channel, maximum, detuning):
         super().__init__(name=name, instrument=instrument, start=start, stop=stop,
                 npts=npts, chammel=channel)
         self.maximum = maximum
