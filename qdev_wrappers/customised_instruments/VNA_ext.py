@@ -11,11 +11,18 @@ from qcodes.utils import validators as vals
 class FrequencySweepMagSetCav(FrequencySweep):
     FORMAT = 'dB'
 
-    def __init__(self, name, instrument, start, stop, npts, channel, maximum, detuning):
-        super().__init__(name=name, instrument=instrument, start=start, stop=stop,
-                npts=npts, chammel=channel)
+    def __init__(self, name, instrument, start, stop, npts, channel, maximum,
+                 detuning):
+        super().__init__(
+            name=name,
+            instrument=instrument,
+            start=start,
+            stop=stop,
+            npts=npts,
+            chammel=channel)
         self.maximum = maximum
         self.detuning = detuning
+
     def get(self):
         # this could also be set here instead of checking
         if self._instrument.format() != self.FORMAT:
@@ -41,6 +48,7 @@ class FrequencySweepMagSetCav(FrequencySweep):
 class ZNBChannel_ext(ZNBChannel):
     def __init__(self, parent, name, channel, maximum=True, detuning=0.7e6):
         super().__init__(parent, name, channel)
+
 
 #        self.add_parameter(
 #            name='trace_mag_SetCav',
@@ -69,7 +77,8 @@ class VNA_ext(ZNB):
         super().__init__(
             name, visa_address, init_s_params=False, timeout=timeout)
         if S21:
-            self.add_channel(vna_parameter='S21', maximum=maximum, detuning=detuning)
+            self.add_channel(
+                vna_parameter='S21', maximum=maximum, detuning=detuning)
             self.add_parameter(name='single_S21', get_cmd=self._get_single)
         if spec_mode and gen_address is not None:
             self.add_spectroscopy_channel(gen_address)
@@ -158,7 +167,8 @@ class VNA_ext(ZNB):
                    'CW'.format(chan_num, freq))
 
     def _get_readout_freq(self, chan_num):
-        return self.ask('SOUR{}:FREQ:CONV:ARB:EFR1?'.format(chan_num)).split(',')[3]
+        return self.ask(
+            'SOUR{}:FREQ:CONV:ARB:EFR1?'.format(chan_num)).split(',')[3]
 
     def _set_readout_pow(self, chan_num, pow):
         self.write('SOUR{}:POW:GEN1:OFFS {:.3f}, ONLY'.format(chan_num, pow))
