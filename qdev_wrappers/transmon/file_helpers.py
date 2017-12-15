@@ -22,6 +22,10 @@ def get_current_qubit():
         return None
 
 
+def get_data_num(dataset):
+    return int(dataset.location[-3:])
+
+
 def set_current_qubit(val: int):
     if not getattr(CURRENT_EXPERIMENT, "init", True):
         raise RuntimeError("Experiment not initalized")
