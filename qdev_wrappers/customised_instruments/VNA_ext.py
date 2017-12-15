@@ -10,7 +10,11 @@ from qcodes.utils import validators as vals
 
 class FrequencySweepMagSetCav(FrequencySweep):
     FORMAT = 'dB'
-
+    def __init__(name, instrument, start, stop, npts, channel, maximum, detuning):
+        super().__init__(name=name, instrument=instrument, start=start, stop=stop,
+                npts=npts, chammel=channel)
+        self.maximum = maximum
+        self.detuning = detuning
     def get(self):
         # this could also be set here instead of checking
         if self._instrument.format() != self.FORMAT:
@@ -18,29 +22,66 @@ class FrequencySweepMagSetCav(FrequencySweep):
                 self.FORMAT))
         mag_array = super().get()
 
-        ind = np.argmax(mag_array)
+        if self.maximum:
+            ind = np.argmax(mag_array)
+        else:
+            ind = np.argmin(mag_array)
         f = tuple(
             np.linspace(
                 int(self._instrument.start()),
                 int(self._instrument.stop()),
                 num=self._instrument.npts()))
-        freadout = f[ind] + 0.7e6
+        freadout = f[ind] + self.detuning
 
         self._instrument._parent.readout_freq(freadout)
         return mag_array
 
 
 class ZNBChannel_ext(ZNBChannel):
-    def __init__(self, parent, name, channel):
+    def __init__(self, parent, name, channel, maximum=True, detuning=0.7e6):
         super().__init__(parent, name, channel)
 
-        self.add_parameter(
-            name='trace_mag_SetCav',
-            start=self.start(),
-            stop=self.stop(),
-            npts=self.npts(),
-            channel=self._instrument_channel,
-            parameter_class=FrequencySweepMagSetCav)
+#        self.add_parameter(
+#            name='trace_mag_SetCav',
+#            start=self.start(),
+#            stop=self.stop(),
+#            npts=self.npts(),
+#            channel=self._instrument_channel,
+#            max=maximum,
+#            detuning=detuning, 
+#            parameter_class=FrequencySweepMagSetCav)
+
+    def _set_start(self, val):
+        super()._set_start(val)
+        stop = self.stop()
+        npts = self.npts()
+#        self.trace_mag_SetCav.set_sweep(val, stop, npts)
+
+    def _set_stop(self, val):
+        super()._set_stop(val)
+        start = self.start()
+        npts = self.npts()
+#        self.trace_mag_SetCav.set_sweep(start, val, npts)
+
+    def _set_npts(self, val):
+        super()._set_npts(val)
+        start = self.start()
+        stop = self.stop()
+#        self.trace_mag_SetCav.set_sweep(start, stop, val)
+
+    def _set_span(self, val):
+        super()._set_span(val)
+        start = self.start()
+        stop = self.stop()
+        npts = self.npts()
+#        self.trace_mag_SetCav.set_sweep(start, stop, npts)
+
+    def _set_center(self, val):
+        super()._set_center(val)
+        start = self.start()
+        stop = self.stop()
+        npts = self.npts()
+#        self.trace_mag_SetCav.set_sweep(start, stop, npts)
 
 
 class VNA_ext(ZNB):
@@ -53,11 +94,13 @@ class VNA_ext(ZNB):
                  S21=True,
                  spec_mode=False,
                  gen_address=None,
-                 timeout=40):
+                 timeout=40,
+                 maximum=True,
+                 detuning=0.7e6):
         super().__init__(
             name, visa_address, init_s_params=False, timeout=timeout)
         if S21:
-            self.add_channel('S21')
+            self.add_channel(vna_parameter='S21', maximum=maximum, detuning=detuning)
             self.add_parameter(name='single_S21', get_cmd=self._get_single)
         if spec_mode and gen_address is not None:
             self.add_spectroscopy_channel(gen_address)
@@ -70,8 +113,8 @@ class VNA_ext(ZNB):
     # spectroscopy
 
     # override Base class
-    def add_channel(self, vna_parameter: str):
-        super().add_channel(vna_parameter)
+    def add_channel(self, vna_parameter: str, **kwargs):
+        super().add_channel(vna_parameter, **kwargs)
         i_channel = len(self.channels) + 1
         self.write('SOUR{}:FREQ1:CONV:ARB:IFR 1, 1, 0, SWE'.format(i_channel))
         self.write('SOUR{}:FREQ2:CONV:ARB:IFR 1, 1, 0, SWE'.format(i_channel))
@@ -146,7 +189,7 @@ class VNA_ext(ZNB):
                    'CW'.format(chan_num, freq))
 
     def _get_readout_freq(self, chan_num):
-        return self.ask('SOUR:FREQ:CONV:ARB:EFR1?').split(',')[3]
+        return self.ask('SOUR{}:FREQ:CONV:ARB:EFR1?'.format(chan_num)).split(',')[3]
 
     def _set_readout_pow(self, chan_num, pow):
         self.write('SOUR{}:POW:GEN1:OFFS {:.3f}, ONLY'.format(chan_num, pow))
