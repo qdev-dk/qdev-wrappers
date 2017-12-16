@@ -72,10 +72,10 @@ class qdev_fitter():
             ax_letter = fitclass.p_units[i]
             if ax_letter in ['x','y']:
                 unit = getattr(plot.subplots[0], 'get_{}label'.format(ax_letter))().split('(')[1].split(')')[0]
-                scaled = float(getattr(plot.subplots[0], '{}axis'.format(ax_letter)).get_major_formatter()(popt[i]))
+                scaled = float(getattr(plot.subplots[0], '{}axis'.format(ax_letter)).get_major_formatter()(popt[i]).replace('−','-'))
             elif ax_letter in ['1/x','1/y']:
                 unit = '/{}'.format(getattr(plot.subplots[0], 'get_{}label'.format(ax_letter[2]))().split('(')[1].split(')')[0])
-                scaled = 1/float(getattr(plot.subplots[0], '{}axis'.format(ax_letter[2])).get_major_formatter()(1/popt[i]))
+                scaled = 1/float(getattr(plot.subplots[0], '{}axis'.format(ax_letter[2])).get_major_formatter()(1/popt[i]).replace('−','-'))
             else:
                 unit = ax_letter
                 scaled = popt[i]
