@@ -69,7 +69,7 @@ if __name__ == '__main__':
     calib_config = get_config('calib')
 
     # Initialise intruments and add them to the station
-    qdac = QDAC_ext('qDac', 'ASRL4::INSTR')
+    qdac = QDAC_ext('QDAC', 'ASRL4::INSTR')
     STATION.add_component(qdac)
     dmm1 = Agilent_34400A(
         'DMM1', 'GPIB0::11::INSTR')
@@ -77,7 +77,7 @@ if __name__ == '__main__':
     dmm2 = Agilent_34400A(
         'DMM2', 'GPIB0::8::INSTR')
     STATION.add_component(dmm2)
-    deca = Decadac_ext('Decadac', 'ASRL1::INSTR', instr_config)
+    deca = Decadac_ext('Decadac', 'ASRL1::INSTR', instr_config,terminator='\n')
     STATION.add_component(deca)
     lockin_2 = SR830_ext('lockin_2', 'GPIB0::2::INSTR', instr_config)
     STATION.add_component(lockin_2)
