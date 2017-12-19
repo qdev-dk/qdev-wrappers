@@ -13,8 +13,28 @@ class QDAC_ext(QDac):
         super().__init__(name, address, **kwargs)
 
         # same as in decadac but without fine mode
-        for channelNum, settings in config.get('QDAC').items():
-            channel = self.channels[int(channelNum)]
+
+        # load from config file whether enumeration should start
+        # at zero or one.
+        dac_config = config.get('QDac')
+        enum_mode = dac_config.get('enumeration', 'zero_based')
+        offset = 0
+        if enum_mode == 'zero_based':
+            pass
+        elif enum_mode == 'one_based':
+            offset = 1
+        else:
+            raise RuntimeError(
+                ('The enumeration attribute has to be either ' +
+                ' \'zero_based\' or \'one_based\' not {}').
+                format(enum_mode))
+
+        for attribute, settings in config.get('QDAC').items():
+            try:
+                channel = self.channels[int(attribute)] + offset
+            except TypeError:
+                continue
+
             config_settings = settings.split(',')
 
             name = config_settings[0]
