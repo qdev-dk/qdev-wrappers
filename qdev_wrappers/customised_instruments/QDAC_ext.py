@@ -13,7 +13,7 @@ class QDAC_ext(QDac):
         super().__init__(name, address, **kwargs)
 
         # same as in decadac but without fine mode
-        for channelNum, settings in config.get('QDAC').items():
+        for channelNum, settings in config.get(name).items():
             channel = self.channels[int(channelNum)]
             config_settings = settings.split(',')
 
