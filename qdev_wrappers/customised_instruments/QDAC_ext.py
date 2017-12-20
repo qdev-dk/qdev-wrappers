@@ -15,7 +15,13 @@ class QDAC_ext(QDac):
         # same as in decadac but without fine mode
 
         for attribute, settings in config.get('QDAC').items():
-            channel = getattr(self, attribute)
+            try:
+                channel = getattr(self, attribute)
+            except AttributeError as e:
+                raise AttributeError(e.message +
+                                     'config file implementation has changed:\n'+
+                                     '\'1 = ... -> chan02 = ...\' make sure to'+
+                                     ' increment the channel number!')
 
             config_settings = settings.split(',')
 
