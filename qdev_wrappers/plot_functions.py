@@ -81,7 +81,7 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
     for measurement in inst_meas:
         if getattr(measurement, "names", False):
             # deal with multidimensional parameter
-            for k, name in enumerate(measurement.names):
+            for name in measurement.names:
                 _create_plot(plot, measurement, name, data, counter_two, subplot_index, 0)
                 subplot_index += 1
                 counter_two += 1
