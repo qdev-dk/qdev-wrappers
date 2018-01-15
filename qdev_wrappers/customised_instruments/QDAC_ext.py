@@ -13,8 +13,7 @@ class QDAC_ext(QDac):
         super().__init__(name, address, **kwargs)
 
         # same as in decadac but without fine mode
-
-        for attribute, settings in config.get('QDAC').items():
+        for attribute, settings in config.get(name).items():
             try:
                 channel = getattr(self, attribute)
             except AttributeError as e:
