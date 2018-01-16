@@ -85,7 +85,7 @@ class Decadac_ext(Decadac):
         8: Fine or coarse mode channel
         '''
 
-        for channelNum, settings in config.get('Decadac').items():
+        for channelNum, settings in config.get(name).items():
             channel = self.channels[int(channelNum)]
             config_settings = settings.split(',')
 
