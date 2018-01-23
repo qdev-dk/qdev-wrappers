@@ -52,7 +52,7 @@ class ZNBChannel_ext(ZNBChannel):
     # in mod 3 powers
     def _set_format(self, val):
         super()._set_format(val)
-        if val == 'MLIN':
+        if val == 'MLIN\n':
             self.trace.unit = 'V'
 
 
