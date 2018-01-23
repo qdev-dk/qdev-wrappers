@@ -32,9 +32,9 @@ class ZNBChannel_ext(ZNBChannel):
                 vals=vals.Numbers(-150, 25))
 
     def _set_readout_freq(self, channel, freq):
-        self.write('SOUR{}:FREQ:CONV:ARB:EFR1 ON, 0, 1, {:.6f}, '
+        self.write('SOUR{}:FREQ:CONV:ARB:EFR1 ON, 0, 1, {:.7f}, '
                    'CW'.format(channel, freq))
-        self.write('SOUR{}:FREQ2:CONV:ARB:IFR 0, 1, {:.6f},'
+        self.write('SOUR{}:FREQ2:CONV:ARB:IFR 0, 1, {:.7f},'
                    'CW'.format(channel, freq))
 
     def _get_readout_freq(self, channel):
