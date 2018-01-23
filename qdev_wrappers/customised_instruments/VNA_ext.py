@@ -1,69 +1,65 @@
+import logging
 import time
 from functools import partial
 import numpy as np
 
 # QCoDeS imports
-from qcodes.instrument_drivers.rohde_schwarz.ZNB import (FrequencySweep, ZNB,
-                                                         ZNBChannel)
+from local_instruments.ZNB_new import ZNB, ZNBChannel
+#from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB, ZNBChannel
 from qcodes.utils import validators as vals
 
-
-class FrequencySweepMagSetCav(FrequencySweep):
-    FORMAT = 'dB'
-
-    def __init__(self, name, instrument, start, stop, npts, channel, maximum,
-                 detuning):
-        super().__init__(
-            name=name,
-            instrument=instrument,
-            start=start,
-            stop=stop,
-            npts=npts,
-            chammel=channel)
-        self.maximum = maximum
-        self.detuning = detuning
-
-    def get(self):
-        # this could also be set here instead of checking
-        if self._instrument.format() != self.FORMAT:
-            raise RuntimeError('Channel format must be set to {} first'.format(
-                self.FORMAT))
-        mag_array = super().get()
-
-        if self.maximum:
-            ind = np.argmax(mag_array)
-        else:
-            ind = np.argmin(mag_array)
-        f = tuple(
-            np.linspace(
-                int(self._instrument.start()),
-                int(self._instrument.stop()),
-                num=self._instrument.npts()))
-        freadout = f[ind] + self.detuning
-
-        self._instrument._parent.readout_freq(freadout)
-        return mag_array
-
+log = logging.getLogger(__name__)
 
 class ZNBChannel_ext(ZNBChannel):
-    def __init__(self, parent, name, channel, maximum=True, detuning=0.7e6):
+    def __init__(self, parent, name, channel):
         super().__init__(parent, name, channel)
 
+        if self.vna_parameter() == 'B2G1SAM':
+            self.add_parameter(
+                'readout_freq',
+                label='{} Readout frequency'.format(self.vna_parameter()),
+                unit='Hz',
+                set_cmd=partial(self._set_readout_freq, self._instrument_channel),
+                get_cmd=partial(self._get_readout_freq, self._instrument_channel),
+                get_parser=float)
+            self.add_parameter(
+                'readout_power',
+                label='{} Readout power'.format(self.vna_parameter()),
+                unit='dBm',
+                set_cmd=partial(self._set_readout_pow, self._instrument_channel),
+                get_cmd=partial(self._get_readout_pow, self._instrument_channel),
+                get_parser=int,
+                vals=vals.Numbers(-150, 25))
 
-#        self.add_parameter(
-#            name='trace_mag_SetCav',
-#            start=self.start(),
-#            stop=self.stop(),
-#            npts=self.npts(),
-#            channel=self._instrument_channel,
-#            max=maximum,
-#            detuning=detuning,
-#            parameter_class=FrequencySweepMagSetCav)
+    def _set_readout_freq(self, channel, freq):
+        self.write('SOUR{}:FREQ:CONV:ARB:EFR1 ON, 0, 1, {:.6f}, '
+                   'CW'.format(channel, freq))
+        self.write('SOUR{}:FREQ2:CONV:ARB:IFR 0, 1, {:.6f},'
+                   'CW'.format(channel, freq))
+
+    def _get_readout_freq(self, channel):
+        return self.ask(
+            'SOUR{}:FREQ:CONV:ARB:EFR1?'.format(channel)).split(',')[3]
+
+    def _set_readout_pow(self, channel, pow):
+        self.write('SOUR{}:POW:GEN1:OFFS {:.3f}, ONLY'.format(channel, pow))
+        self.write('SOUR{}:POW2:OFFS {:.3f}, ONLY'.format(channel, pow))
+
+    def _get_readout_pow(self, channel):
+        return self.ask('SOUR{}:POW:GEN1:OFFS?'.format(channel)).split(',')[0]
+
+    # this is a quick and dirty work around to get scaling of the plot
+    # in mod 3 powers
+    def _set_format(self, val):
+        super()._set_format(val)
+        if val == 'MLIN':
+            self.trace.unit = 'V'
 
 
-class VNA_ext(ZNB):
+class ZNB_ext(ZNB):
 
     CHANNEL_CLASS = ZNBChannel_ext
+    WRITE_DELAY = 0.2
 
     def __init__(self,
                  name,
@@ -71,29 +67,26 @@ class VNA_ext(ZNB):
                  S21=True,
                  spec_mode=False,
                  gen_address=None,
-                 timeout=40,
-                 maximum=True,
-                 detuning=0.7e6):
+                 timeout=40):
         super().__init__(
             name, visa_address, init_s_params=False, timeout=timeout)
-        if S21:
-            self.add_channel(
-                vna_parameter='S21', maximum=maximum, detuning=detuning)
-            self.add_parameter(name='single_S21', get_cmd=self._get_single)
-        if spec_mode and gen_address is not None:
-            self.add_spectroscopy_channel(gen_address)
-        elif spec_mode:
-            print('spec mode not added as no generator ip address provided')
 
-    def _get_single(self):
-        return self.channels.S21.trace_mag_phase()[0][0]
+        if S21:
+            self.add_channel(vna_parameter='S21')
+        if spec_mode:
+            if gen_address is not None:
+                self.add_spectroscopy_channel(gen_address)
+            else:
+                log.warning('spec mode not added as ' +
+                            'no generator ip address provided')
+        self.channels.autoscale()
+
 
     # spectroscopy
-
     # override Base class
     def add_channel(self, vna_parameter: str, **kwargs):
         super().add_channel(vna_parameter, **kwargs)
-        i_channel = len(self.channels) + 1
+        i_channel = len(self.channels)
         self.write('SOUR{}:FREQ1:CONV:ARB:IFR 1, 1, 0, SWE'.format(i_channel))
         self.write('SOUR{}:FREQ2:CONV:ARB:IFR 1, 1, 0, SWE'.format(i_channel))
         self.write('SOUR{}:POW1:OFFS 0, CPAD'.format(i_channel))
@@ -139,40 +132,14 @@ class VNA_ext(ZNB):
         self.add_channel(vna_parameter)
         chan_num = len(self.channels)
         self.write('SOUR{}:POW2:STAT OFF'.format(chan_num))
-        time.sleep(0.2)
         self.write('SOUR{}:POW:GEN1:PERM ON'.format(chan_num))
-        time.sleep(0.2)
         self.write('SOUR{}:POW1:PERM ON'.format(chan_num))
-        time.sleep(0.2)
         self.write('SOUR{}:POW:GEN1:STAT ON'.format(chan_num))
-        time.sleep(0.2)
         self.write('ROSC EXT')
-        self.add_parameter(
-            'readout_freq',
-            set_cmd=partial(self._set_readout_freq, chan_num),
-            get_cmd=partial(self._get_readout_freq, chan_num),
-            get_parser=float,
-            vals=vals.Numbers(self._min_freq, self._max_freq))
-        self.add_parameter(
-            'readout_power',
-            set_cmd=partial(self._set_readout_pow, chan_num),
-            get_cmd=partial(self._get_readout_pow, chan_num),
-            get_parser=int,
-            vals=vals.Numbers(-150, 25))
+        for n in range(chan_num):
+            if 'G1' not in self.channels[n].vna_parameter():
+                self.write('SOUR{}:POW:GEN1:STAT Off'.format(n+1))
 
-    def _set_readout_freq(self, chan_num, freq):
-        self.write('SOUR{}:FREQ:CONV:ARB:EFR1 ON, 0, 1, {:.6f}, '
-                   'CW'.format(chan_num, freq))
-        self.write('SOUR{}:FREQ2:CONV:ARB:IFR 0, 1, {:.6f},'
-                   'CW'.format(chan_num, freq))
-
-    def _get_readout_freq(self, chan_num):
-        return self.ask(
-            'SOUR{}:FREQ:CONV:ARB:EFR1?'.format(chan_num)).split(',')[3]
-
-    def _set_readout_pow(self, chan_num, pow):
-        self.write('SOUR{}:POW:GEN1:OFFS {:.3f}, ONLY'.format(chan_num, pow))
-        self.write('SOUR{}:POW2:OFFS {:.3f}, ONLY'.format(chan_num, pow))
-
-    def _get_readout_pow(self, chan_num):
-        return self.ask('SOUR{}:POW:GEN1:OFFS?'.format(chan_num)).split(',')[0]
+    def write(self, *args, **kwargs):
+        time.sleep(self.WRITE_DELAY)
+        super().write(*args, **kwargs)
