@@ -14,17 +14,17 @@ class ZNBChannel_ext(ZNBChannel):
     def __init__(self, parent, name, channel):
         super().__init__(parent, name, channel)
 
-        if self.vna_parameter() == 'B2G1SAM':
+        if self. channel_name() == 'B2G1SAM':
             self.add_parameter(
                 'readout_freq',
-                label='{} Readout frequency'.format(self.vna_parameter()),
+                label='{} Readout frequency'.format(self. channel_name()),
                 unit='Hz',
                 set_cmd=partial(self._set_readout_freq, self._instrument_channel),
                 get_cmd=partial(self._get_readout_freq, self._instrument_channel),
                 get_parser=float)
             self.add_parameter(
                 'readout_power',
-                label='{} Readout power'.format(self.vna_parameter()),
+                label='{} Readout power'.format(self. channel_name()),
                 unit='dBm',
                 set_cmd=partial(self._set_readout_pow, self._instrument_channel),
                 get_cmd=partial(self._get_readout_pow, self._instrument_channel),
@@ -72,7 +72,7 @@ class ZNB_ext(ZNB):
             name, visa_address, init_s_params=False, timeout=timeout)
 
         if S21:
-            self.add_channel(vna_parameter='S21')
+            self.add_channel(channel_name='S21')
         if spec_mode:
             if gen_address is not None:
                 self.add_spectroscopy_channel(gen_address)
@@ -84,8 +84,8 @@ class ZNB_ext(ZNB):
 
     # spectroscopy
     # override Base class
-    def add_channel(self, vna_parameter: str, **kwargs):
-        super().add_channel(vna_parameter, **kwargs)
+    def add_channel(self, channel_name: str, **kwargs):
+        super().add_channel(channel_name, **kwargs)
         i_channel = len(self.channels)
         self.write('SOUR{}:FREQ1:CONV:ARB:IFR 1, 1, 0, SWE'.format(i_channel))
         self.write('SOUR{}:FREQ2:CONV:ARB:IFR 1, 1, 0, SWE'.format(i_channel))
@@ -123,13 +123,16 @@ class ZNB_ext(ZNB):
 
     def add_spectroscopy_channel(self,
                                  generator_address,
-                                 vna_parameter="B2G1SAM"):
+                                 channel_name="B2G1SAM",
+                                 readout_freq=6e9,
+                                 readout_power=-60):
         """
         Adds a generator and uses it to generate a fixed frequency tone, the
         response at this frequency is read out at port 2 which is also set to
         be fixed freq. Port 1 is set as the port for sweeping etc"""
         self.set_external_generator(generator_address)
-        self.add_channel(vna_parameter)
+        self.add_channel(channel_name)
+        new_channel = getattr(self, channel_name)
         chan_num = len(self.channels)
         self.write('SOUR{}:POW2:STAT OFF'.format(chan_num))
         self.write('SOUR{}:POW:GEN1:PERM ON'.format(chan_num))
@@ -137,8 +140,12 @@ class ZNB_ext(ZNB):
         self.write('SOUR{}:POW:GEN1:STAT ON'.format(chan_num))
         self.write('ROSC EXT')
         for n in range(chan_num):
-            if 'G1' not in self.channels[n].vna_parameter():
+            if 'G1' not in self.channels[n]. channel_name():
                 self.write('SOUR{}:POW:GEN1:STAT Off'.format(n+1))
+
+        # setting default values
+        new_channel.readout_freq(readout_freq)
+        new_channel.readout_power(readout_power)
 
     def write(self, *args, **kwargs):
         time.sleep(self.WRITE_DELAY)
