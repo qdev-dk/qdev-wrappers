@@ -1,30 +1,29 @@
 import logging
 import time
 from functools import partial
-import numpy as np
 
 # QCoDeS imports
-from local_instruments.ZNB_new import ZNB, ZNBChannel
-#from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB, ZNBChannel
+from qcodes.instrument_drivers.rohde_schwarz.ZNB import ZNB, ZNBChannel
 from qcodes.utils import validators as vals
 
 log = logging.getLogger(__name__)
+
 
 class ZNBChannel_ext(ZNBChannel):
     def __init__(self, parent, name, channel):
         super().__init__(parent, name, channel)
 
-        if self. channel_name() == 'B2G1SAM':
+        if self.channel_name() == 'B2G1SAM':
             self.add_parameter(
                 'readout_freq',
-                label='{} Readout frequency'.format(self. channel_name()),
+                label='{} Readout frequency'.format(self.channel_name()),
                 unit='Hz',
                 set_cmd=partial(self._set_readout_freq, self._instrument_channel),
                 get_cmd=partial(self._get_readout_freq, self._instrument_channel),
                 get_parser=float)
             self.add_parameter(
                 'readout_power',
-                label='{} Readout power'.format(self. channel_name()),
+                label='{} Readout power'.format(self.channel_name()),
                 unit='dBm',
                 set_cmd=partial(self._set_readout_pow, self._instrument_channel),
                 get_cmd=partial(self._get_readout_pow, self._instrument_channel),
@@ -140,7 +139,7 @@ class ZNB_ext(ZNB):
         self.write('SOUR{}:POW:GEN1:STAT ON'.format(chan_num))
         self.write('ROSC EXT')
         for n in range(chan_num):
-            if 'G1' not in self.channels[n]. channel_name():
+            if 'G1' not in self.channels[n].channel_name():
                 self.write('SOUR{}:POW:GEN1:STAT Off'.format(n+1))
 
         # setting default values
