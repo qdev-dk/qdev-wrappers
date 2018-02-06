@@ -17,6 +17,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.python-version
 
 # ipython extras
 .ipynb_checkpoints/
@@ -29,3 +30,5 @@ __pycache__/
 *.md~
 *.py~
 tmp/
+
+.idea
