@@ -734,3 +734,122 @@ def make_ramsey_sequence(start, stop, step, SSBfreq=None, pi_half_amp=None,
                   'pulse_mod': pulse_mod,
                   'readoutSSBfreqs': readout_SSBfreqs}
     return seq
+
+
+################################################################
+# T2 echo
+################################################################
+
+def _make_echo_carrier_sequence(start, stop, step, pi_half_amp=None,
+                                pi_amp=None,
+                                channels=[1, 4], pulse_mod=False,
+                                gaussian=True, readout_SSBfreqs=None):
+    pi_half_amp = pi_half_amp or get_calibration_val('pi_half_pulse_amp')
+    pi_amp = pi_amp or get_calibration_val('pi_pulse_amp')
+
+    time_after_qubit = (get_calibration_val('cycle_time') -
+                        get_calibration_val('pulse_end'))
+
+    if pulse_mod:
+        pmtime = get_calibration_val('pulse_mod_time')
+        pulse_mod_markers = {
+            1: {'delay_time': [-1 * pmtime],
+                'duration_time': [pmtime]}}
+    else:
+        pulse_mod_markers = None
+
+    compensating_wait_segment = Segment(
+        name='compensating_wait', gen_func=flat_array, func_args={'amp': 0})
+
+    if gaussian:
+        pi_half_sigma = get_calibration_val('pi_pulse_sigma')
+        pi_half_segment = Segment(
+            name='gaussian_pi_pulse', gen_func=gaussian_array,
+            func_args={'sigma_cutoff': get_calibration_val('sigma_cutoff'),
+                       'amp': pi_half_amp, 'sigma': pi_half_sigma})
+        pi_sigma = get_calibration_val('pi_pulse_sigma')
+        pi_segment = Segment(
+            name='gaussian_pi_pulse', gen_func=gaussian_array,
+            func_args={
+                'sigma_cutoff': get_calibration_val('sigma_cutoff'),
+                'amp': pi_amp, 'sigma': pi_sigma})
+    else:
+        pi_half_dur = get_calibration_val('pi_pulse_dur')
+        pi_half_segment = Segment(
+            name='square_pi_pulse', gen_func=flat_array,
+            func_args={'amp': pi_half_amp, 'dur': pi_half_dur})
+        pi_dur = get_calibration_val('pi_pulse_dur')
+        pi_segment = Segment(
+            name='square_pi_pulse', gen_func=flat_array,
+            func_args={'amp': pi_amp, 'dur': pi_dur})
+
+    variable_wait_segment = Segment(
+        name='pulse_pulse_delay', gen_func=flat_array,
+        func_args={'amp': 0})
+
+    wait_segment = Segment(
+        name='wait', gen_func=flat_array,
+        func_args={'amp': 0, 'dur': time_after_qubit},
+        time_markers=pulse_mod_markers)
+
+    echo_wf = Waveform(
+        channel=channels[0],
+        segment_list=[compensating_wait_segment, pi_half_segment,
+                      variable_wait_segment, pi_segment,
+                      variable_wait_segment, pi_half_segment,
+                      wait_segment])
+
+    echo_element = Element(sample_rate=get_calibration_val('sample_rate'))
+    echo_element.add_waveform(echo_wf)
+
+    if readout_SSBfreqs is not None:
+        if len(channels) != 3:
+            raise Exception('Not enough channels for SSB readout')
+        readout_wf_I = make_readout_ssb_wf_I(readout_SSBfreqs,
+                                             channel=channels[-2])
+        readout_wf_Q = make_readout_ssb_wf_Q(readout_SSBfreqs,
+                                             channel=channels[-1])
+        echo_element.add_waveform(readout_wf_I)
+        echo_element.add_waveform(readout_wf_Q)
+    else:
+        readout_wf = make_readout_wf(channel=channels[-1])
+        echo_element.add_waveform(readout_wf)
+
+    marker_points = int(get_calibration_val('marker_time') *
+                        get_calibration_val('sample_rate'))
+
+
+    var_name = 'pi_half_pulse_pi_pulse_delay'
+    seq_name = 'echo_seq_time_varying_seq'
+    echo_sequence = Sequence(
+        name=seq_name, variable=var_name, start=start,
+        stop=stop, step=step, variable_unit='s')
+    for i, val in enumerate(echo_sequence.variable_array):
+        elem = echo_element.copy()
+        elem[channels[0]].segment_list[2].func_args['dur'] = val
+        elem[channels[0]].segment_list[4].func_args['dur'] = val
+        compensate_time = get_calibration_val('cycle_time') - elem[channels[0]].duration
+        elem[channels[0]].segment_list[0].func_args['dur'] = compensate_time
+        echo_sequence.add_element(elem)
+        if i == 0:
+            elem[channels[-1]].add_marker(2, 0, marker_points)
+    echo_sequence.check()
+    return echo_sequence
+
+
+def make_echo_sequence(start, stop, step, SSBfreq=None, pi_half_amp=None,
+                         channels=[1, 2, 4], pulse_mod=False,
+                         gaussian=True, readout_SSBfreqs=None):
+    if SSBfreq is not None:
+        raise RuntimeError('ssb echo sequence not implemented')
+    else:
+        if len(channels) < 2:
+            raise Exception('at least 2 channels needed for drive and readout')
+        seq = _make_echo_carrier_sequence(
+            start, stop, step, channels=[channels[0], channels[-1]],
+            pulse_mod=pulse_mod, pi_half_amp=pi_half_amp, gaussian=gaussian)
+    seq.labels = {'qubitSSBfreq': SSBfreq, 'seq_type': 'echo',
+                  'gaussian': gaussian, 'drag': False,
+                  'pulse_mod': pulse_mod,
+                  'readoutSSBfreqs': readout_SSBfreqs}
+    return seq
