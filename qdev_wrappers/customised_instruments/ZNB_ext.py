@@ -10,20 +10,20 @@ log = logging.getLogger(__name__)
 
 
 class ZNBChannel_ext(ZNBChannel):
-    def __init__(self, parent, name, channel):
-        super().__init__(parent, name, channel)
+    def __init__(self, parent, name, channel, vna_parameter: str=None):
+        super().__init__(parent, name, channel, vna_parameter=vna_parameter)
 
-        if self.channel_name() == 'B2G1SAM':
+        if self.vna_parameter() == 'B2G1SAM':
             self.add_parameter(
                 'readout_freq',
-                label='{} Readout frequency'.format(self.channel_name()),
+                label='Readout frequency',
                 unit='Hz',
                 set_cmd=partial(self._set_readout_freq, self._instrument_channel),
                 get_cmd=partial(self._get_readout_freq, self._instrument_channel),
                 get_parser=float)
             self.add_parameter(
                 'readout_power',
-                label='{} Readout power'.format(self.channel_name()),
+                label='Readout power',
                 unit='dBm',
                 set_cmd=partial(self._set_readout_pow, self._instrument_channel),
                 get_cmd=partial(self._get_readout_pow, self._instrument_channel),
@@ -58,7 +58,7 @@ class ZNBChannel_ext(ZNBChannel):
 class ZNB_ext(ZNB):
 
     CHANNEL_CLASS = ZNBChannel_ext
-    WRITE_DELAY = 0.2
+    WRITE_DELAY = 0.1
 
     def __init__(self,
                  name,
@@ -122,7 +122,8 @@ class ZNB_ext(ZNB):
 
     def add_spectroscopy_channel(self,
                                  generator_address,
-                                 channel_name="B2G1SAM",
+                                 channel_name='SPEC',
+                                 vna_parameter='B2G1SAM',
                                  readout_freq=6e9,
                                  readout_power=-60):
         """
@@ -130,7 +131,7 @@ class ZNB_ext(ZNB):
         response at this frequency is read out at port 2 which is also set to
         be fixed freq. Port 1 is set as the port for sweeping etc"""
         self.set_external_generator(generator_address)
-        self.add_channel(channel_name)
+        self.add_channel(channel_name,vna_parameter=vna_parameter)
         new_channel = getattr(self, channel_name)
         chan_num = len(self.channels)
         self.write('SOUR{}:POW2:STAT OFF'.format(chan_num))
@@ -139,7 +140,7 @@ class ZNB_ext(ZNB):
         self.write('SOUR{}:POW:GEN1:STAT ON'.format(chan_num))
         self.write('ROSC EXT')
         for n in range(chan_num):
-            if 'G1' not in self.channels[n].channel_name():
+            if 'G1' not in self.channels[n].vna_parameter():
                 self.write('SOUR{}:POW:GEN1:STAT Off'.format(n+1))
 
         # setting default values
