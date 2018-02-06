@@ -110,6 +110,7 @@ def _set_up_ipython_logging():
         else:
             log.debug("Logging already started at {}".format(logfile))
 
+
 def init_python_logger() -> None:
     """
     This sets up logging to a time based logging.
@@ -121,7 +122,7 @@ def init_python_logger() -> None:
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     filelogginglevel = logging.INFO
-    consolelogginglevel = logging.WARNING
+    consolelogginglevel = qc.config.core.loglevel
     ch = logging.StreamHandler()
     ch.setLevel(consolelogginglevel)
     ch.setFormatter(formatter)
@@ -230,7 +231,6 @@ def my_init(sample_name: str, station, qubit_count=None,
             display_pdf=True,
             display_individual_pdf=False,
             plot_x_position=0.66):
-    init_python_logger()
     basic_init(sample_name, station, mainfolder)
     CURRENT_EXPERIMENT['plot_x_position'] = plot_x_position
     _set_up_script_folder()
