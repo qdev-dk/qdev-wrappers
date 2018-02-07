@@ -6,7 +6,7 @@
     },
     "core": {
         "default_fmt": "data/{date}/#{counter}_{name}_{time}",
-        "loglevel": "DEBUG"
+        "loglevel": "WARNING"
     },
     "user": {
         "scriptfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/ExperimentScripts",
