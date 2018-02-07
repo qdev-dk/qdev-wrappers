@@ -31,8 +31,10 @@ def make_local_config_file(cfg_name: str, source=None):
                 '_set_up_config_file was run in init and that file exists in '
                 'scriptsfolder or local_scripts_subfolder'.format(cfg_name))
         if cfg_type == 'local':
-            raise RuntimeError('{}_config is already using local config at '
+            log.error('Attempt to make new local {}_config failed as a '
+                            'file already exists at '
                                '{}'.format(cfg_name, cfg_file))
+            return
     elif not os.path.isfile(source):
         raise FileNotFoundError('{} file does not exist'.format(source))
     else:

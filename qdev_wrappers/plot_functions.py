@@ -38,7 +38,6 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
             k: -
         """
         color = 'C' + str(counter_two)
-        counter_two += 1
         parent_instr_name = (i._instrument.name + '_') if i._instrument else ''
         inst_meas_name = "{}{}".format(parent_instr_name, name)
         inst_meas_data = getattr(data, inst_meas_name)
@@ -77,15 +76,19 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
                     fulltitle = ""
                 plot.subplots[j + k].set_title(fulltitle)
 
-    for j, i in enumerate(inst_meas):
-        if getattr(i, "names", False):
+
+    subplot_index = 0
+    for measurement in inst_meas:
+        if getattr(measurement, "names", False):
             # deal with multidimensional parameter
-            for k, name in enumerate(i.names):
-                _create_plot(plot, i, name, data, counter_two, j, k)
+            for name in measurement.names:
+                _create_plot(plot, measurement, name, data, counter_two, subplot_index, 0)
+                subplot_index += 1
                 counter_two += 1
         else:
             # simple_parameters
-            _create_plot(plot, i, i.name, data, counter_two, j, 0)
+            _create_plot(plot, measurement, measurement.name, data, counter_two, subplot_index, 0)
+            subplot_index += 1
             counter_two += 1
     return plot, num_subplots
 

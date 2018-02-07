@@ -1,7 +1,6 @@
 # import modules you might want to use
 import qcodes as qc
 import time
-import logging
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -26,7 +25,8 @@ from qdev_wrappers.customised_instruments.VNA_ext import VNA_ext
 from local_instruments.GS200_special import GS200_special
 
 # import necessary wrappers and measurement functions
-from qdev_wrappers.file_setup import CURRENT_EXPERIMENT, my_init, close_station
+from qdev_wrappers.file_setup import (
+    CURRENT_EXPERIMENT, my_init, close_station, init_python_logger)
 from qdev_wrappers.configreader import Config
 from qdev_wrappers.show_num import show_num, show_meta
 from qdev_wrappers.sweep_functions import do1d, do2d, do0d
@@ -38,12 +38,8 @@ mpl.rcParams['font.size'] = 10
 
 
 if __name__ == '__main__':
-
-    # Set up logger
-    init_log = logging.getLogger(__name__)
-    logger = logging.getLogger()
-    logger.setLevel(logging.WARNING)
-
+    # this line should be the first line, no matter what
+    init_python_logger()
     # Close existing connections if present
     if qc.Station.default:
         close_station(qc.Station.default)
@@ -69,7 +65,7 @@ if __name__ == '__main__':
     calib_config = get_config('calib')
 
     # Initialise intruments and add them to the station
-    qdac = QDAC_ext('qDac', 'ASRL4::INSTR')
+    qdac = QDAC_ext('QDAC', 'ASRL4::INSTR')
     STATION.add_component(qdac)
     dmm1 = Agilent_34400A(
         'DMM1', 'GPIB0::11::INSTR')
@@ -77,7 +73,7 @@ if __name__ == '__main__':
     dmm2 = Agilent_34400A(
         'DMM2', 'GPIB0::8::INSTR')
     STATION.add_component(dmm2)
-    deca = Decadac_ext('Decadac', 'ASRL1::INSTR', instr_config)
+    deca = Decadac_ext('Decadac', 'ASRL1::INSTR', instr_config,terminator='\n')
     STATION.add_component(deca)
     lockin_2 = SR830_ext('lockin_2', 'GPIB0::2::INSTR', instr_config)
     STATION.add_component(lockin_2)

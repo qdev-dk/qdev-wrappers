@@ -8,7 +8,7 @@ from .acquisition_parametersold import AcqVariablesParam, \
                                        NonSettableDerivedParameter, \
                                        DemodFreqParameter
 
-
+log = logging.getLogger(__name__)
 class ATS9360Controller(AcquisitionController):
     """
     This is the Acquisition Controller class which works with the ATS9360,
@@ -134,8 +134,10 @@ class ATS9360Controller(AcquisitionController):
         """
         total_time = (int_time or 0) + (int_delay or 0)
         samples_needed = total_time * sample_rate
+        log.info("needing {} samples at total time {} with sample rate {}".format(samples_needed, total_time, sample_rate))
         samples_per_record = helpers.roundup(
             samples_needed, self.samples_divisor)
+        log.info("rounding up samples pr record to {}".format(samples_per_record))
         self.samples_per_record._save_val(samples_per_record)
         self.acquisition.set_setpoints_and_labels()
 
