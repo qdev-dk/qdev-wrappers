@@ -316,8 +316,8 @@ def do2d(inst_set, start, stop, num_points, delay,
             Data is still saved and can be displayed with show_num.
         use_threads: If True and if multiple things are being measured,
             multiple threads will be used to parallelise the waiting.
-        set_before_sweep: if True the first parameter is set to its first value
-            before the second parameter is swept to its next value.
+        set_before_sweep: if True the outer parameter is set to its first value
+            before the inner parameter is swept to its next value.
 
     Returns:
         plot, data : returns the plot and the dataset
