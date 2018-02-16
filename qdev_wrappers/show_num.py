@@ -14,11 +14,12 @@ def check_experiment_is_initialized():
                            "use qc.Init(mainfolder, samplename)")
 
 
-def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, savepng=True, fig_size=[6,4],clim=None, dataname=None, xlim=None, ylim=None, **kwargs):
+def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng=True,
+            fig_size=[6,4],clim=None,dataname=None,xlim=None,ylim=None,**kwargs):
     """
-    Show  and return plot and data for id in current instrument.
+    Show and return plot and data.
     Args:
-        ids (number, list): id of instrument, or list of ids
+        ids (number, list): id or list of ids of dataset(s)
         samplefolder (str): Sample folder if loading data from different sample than the initialized. 
         useQT (boolean): If true plots with QTplot instead of matplotlib
         ave_sub (str: 'col' or 'row'): If true subtracts average from each collumn ('col') or row ('row')
@@ -55,9 +56,10 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
         # find datanames to be plotted
         if do_plots:
             if dataname is not None:
-                keys = [dataname]
                 if dataname not in [key for key in data.arrays.keys() if "_set" not in key]:
-                        raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\' while dataname(s) in dataset are: {}.'.format(dataname,', '.join(key_data)))
+                    raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\'', \
+                        'while dataname(s) in dataset are: {}.'.format(dataname,', '.join(key_data)))
+                keys = [dataname]
             else:
                 keys = [key for key in data.arrays.keys() if "_set" not in key]
             keys_list.append(keys)
@@ -109,7 +111,8 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
                 plot.subplots[0].setTitle(title)
                 plot.subplots[0].showGrid(True, True)
                 if savepng:
-                    print('Save plot only working for matplotlib figure. Set useQT=False to save png.')
+                    print('Save plot only working for matplotlib figure.', \
+                        'Set useQT=False to save png.')
             else:
                 plot = MatPlot(array_list, **kwargs)
                 plot.rescale_axis()
