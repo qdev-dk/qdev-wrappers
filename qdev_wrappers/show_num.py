@@ -77,11 +77,9 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
                     if ave_sub == 'row':
                         for i in range(np.shape(arrays)[0]):
                             arrays[i,:] -= arrays[i,:].mean()
-                        avestr = 'row'
                     if ave_sub == 'col':
                         for i in range(np.shape(arrays)[1]):
                             arrays[:,i] -= arrays[:,i].mean()
-                        avestr = 'col'
                     array_list.append(arrays)
                     if len(arrays.set_arrays)==2:
                         xlims[0].append(arrays.set_arrays[1].min())
