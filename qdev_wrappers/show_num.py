@@ -41,6 +41,7 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
     data_list = []
     keys_list = []
 
+    # Load all datasets into list
     for id in ids:
         str_id = '{0:03d}'.format(id)
         if samplefolder==None:
@@ -52,13 +53,15 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
             data = qc.load_data(path)
         data_list.append(data)
 
-        if dataname is not None:
-            keys = [dataname]
-            if dataname not in [key for key in data.arrays.keys() if "_set" not in key]:
-                    raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\' while dataname(s) in dataset are: {}.'.format(dataname,', '.join(key_data)))
-        else:
-            keys = [key for key in data.arrays.keys() if "_set" not in key]
-        keys_list.append(keys)
+        # find datanames to be plotted
+        if do_plots:
+            if dataname is not None:
+                keys = [dataname]
+                if dataname not in [key for key in data.arrays.keys() if "_set" not in key]:
+                        raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\' while dataname(s) in dataset are: {}.'.format(dataname,', '.join(key_data)))
+            else:
+                keys = [key for key in data.arrays.keys() if "_set" not in key]
+            keys_list.append(keys)
 
 
     if do_plots:
@@ -71,6 +74,7 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
         l = len(unique_keys)
 
         for j, key in enumerate(unique_keys):
+            # Find datasets containing data with dataname == key
             for data, keys in zip(data_list,keys_list):
                 if key in keys:
                     arrays = getattr(data, key)
@@ -81,6 +85,8 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
                         for i in range(np.shape(arrays)[1]):
                             arrays[:,i] -= arrays[:,i].mean()
                     array_list.append(arrays)
+
+                    # Find axis limits for dataset
                     if len(arrays.set_arrays)==2:
                         xlims[0].append(arrays.set_arrays[1].min())
                         xlims[1].append(arrays.set_arrays[1].max())
@@ -138,7 +144,7 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
                 # Save figure
                 if savepng:
                     title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
-                    if ids[0] == ids[-1]:
+                    if len(ids) == 1:
                         title_png = title_png+sep+CURRENT_EXPERIMENT['png_subfolder']+sep+'{}'.format(ids[0])
                     else:
                         title_png = title_png+sep+CURRENT_EXPERIMENT['png_subfolder']+sep+'{}-{}'.format(ids[0],ids[-1])
