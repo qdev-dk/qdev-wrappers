@@ -19,6 +19,7 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
     Show  and return plot and data for id in current instrument.
     Args:
         ids (number, list): id of instrument, or list of ids
+        samplefolder (str): Sample folder if loading data from different sample than the initialized. 
         useQT (boolean): If true plots with QTplot instead of matplotlib
         ave_sub (str: 'col' or 'row'): If true subtracts average from each collumn ('col') or row ('row')
         do_plots: (boolean): if false no plots are produced.
@@ -31,7 +32,7 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
         **kwargs: Are passed to plot function
 
     Returns:
-        data, plots : returns the plots and the dataset
+        data, plots : returns the plots and the datasets
 
     """
     
@@ -46,11 +47,9 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
         str_id = '{0:03d}'.format(id)
         if samplefolder==None:
             check_experiment_is_initialized()
-            path = qc.DataSet.location_provider.fmt.format(counter=str_id)
-            data = qc.load_data(path)
-        else:
-            path = '{}{}{}'.format(samplefolder,sep,str_id)
-            data = qc.load_data(path)
+            samplefolder = qc.DataSet.location_provider.fmt.format(counter='')
+        path = '{}{}'.format(samplefolder,str_id)
+        data = qc.load_data(path)
         data_list.append(data)
 
         # find datanames to be plotted
@@ -67,13 +66,14 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
     if do_plots:
         unique_keys = list(set([item for sublist in keys_list for item in sublist]))
         plots = []
-        array_list = []
-        xlims = [[],[]]
-        ylims = [[],[]]
-        clims = [[],[]]
+        num = ''
         l = len(unique_keys)
 
         for j, key in enumerate(unique_keys):
+            array_list = []
+            xlims = [[],[]]
+            ylims = [[],[]]
+            clims = [[],[]]
             # Find datasets containing data with dataname == key
             for data, keys in zip(data_list,keys_list):
                 if key in keys:
@@ -132,22 +132,19 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
                             plot[0].get_children()[i].set_clim(clim[0],clim[1])
 
                 # Set figure titles
-                title_list_png = plot.get_default_title().split(sep)
-                title_png = sep.join(title_list_png[0:-1])
-                plot.fig.suptitle(title_png)
+                plot.fig.suptitle(samplefolder)
                 if len(ids)<6:
                     plot.subplots[0].set_title(', '.join(map(str,ids)))
                 else:
-                    plot.subplots[0].set_title(', '.join(map(str,[ids[0],ids[-1]])))
+                    plot.subplots[0].set_title(' - '.join(map(str,[ids[0],ids[-1]])))
                 plt.draw()
 
                 # Save figure
                 if savepng:
-                    title_list_png.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
                     if len(ids) == 1:
-                        title_png = title_png+sep+CURRENT_EXPERIMENT['png_subfolder']+sep+'{}'.format(ids[0])
+                        title_png = samplefolder+CURRENT_EXPERIMENT['png_subfolder']+sep+'{}'.format(ids[0])
                     else:
-                        title_png = title_png+sep+CURRENT_EXPERIMENT['png_subfolder']+sep+'{}-{}'.format(ids[0],ids[-1])
+                        title_png = samplefolder+CURRENT_EXPERIMENT['png_subfolder']+sep+'{}-{}'.format(ids[0],ids[-1])
                     if l>1:
                         num = '{}'.format(j+1)
                     plt.savefig(title_png+'_{}_{}.png'.format(num,ave_sub),dpi=500)
