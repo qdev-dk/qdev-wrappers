@@ -40,7 +40,7 @@ def show_num(id, samplefolder=None, useQT=False, ave_sub=None, do_plots=True, sa
         path = '{}{}{}'.format(samplefolder,sep,str_id)
         data = qc.load_data(path)
 
-    keys = [key for key in data.arrays.keys() if "_set" not in key[-4:]]
+    keys = [key for key in data.arrays.keys() if "_set" not in key]
 
     if do_plots:
         plots = []
