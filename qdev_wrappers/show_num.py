@@ -41,7 +41,7 @@ def show_num(ids, samplefolder=None, useQT=False, ave_sub='', do_plots=True, sav
     data_list = []
     keys_list = []
 
-    for i, id in enumerate(ids):
+    for id in ids:
         str_id = '{0:03d}'.format(id)
         if samplefolder==None:
             check_experiment_is_initialized()
