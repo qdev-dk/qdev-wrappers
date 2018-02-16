@@ -13,7 +13,7 @@ def check_experiment_is_initialized():
                            "use qc.Init(mainfolder, samplename)")
 
 
-def show_num(id, samplefolder=None, useQT=False, ave_col=False, ave_row=False, do_plots=True, savepng=False, clim=None, **kwargs):
+def show_num(id, samplefolder=None, useQT=False, ave_sub=None, do_plots=True, savepng=False, clim=None, **kwargs):
     """
     Show  and return plot and data for id in current instrument.
     Args:
@@ -50,11 +50,11 @@ def show_num(id, samplefolder=None, useQT=False, ave_col=False, ave_row=False, d
 
         for j, value in enumerate(keys):
             arrays = getattr(data, value)
-            if ave_row:
+            if ave_sub == 'row':
                 for i in range(np.shape(arrays)[0]):
                     arrays[i,:] -= arrays[i,:].mean()
                 avestr = '_row'
-            if ave_col:
+            if ave_sub == 'col':
                 for i in range(np.shape(arrays)[1]):
                     arrays[:,i] -= arrays[:,i].mean()
                 avestr = '_col'
