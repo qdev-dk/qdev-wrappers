@@ -36,10 +36,10 @@ def roundup(num, to_nearest):
         rounded up value
 
     """
-    # remainder = num % to_nearest
-    # divisor = num // to_nearest
-    # return int(num if remainder == 0 else (divisor + 1)*to_nearest)
+    remainder = num % to_nearest
+    divisor = num // to_nearest
+    return int(num if remainder == 0 else (divisor + 1)*to_nearest)
     # there seems to be alignment related issues with non power of two
     # buffers so restrict to power of two for now
-    smallest_power = 2 ** math.ceil(math.log2(num))
-    return max(smallest_power, 256)
+    # smallest_power = 2 ** math.ceil(math.log2(num))
+    # return max(smallest_power, 256)

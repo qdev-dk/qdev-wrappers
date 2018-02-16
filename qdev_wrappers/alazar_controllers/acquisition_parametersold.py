@@ -2,6 +2,8 @@ from qcodes import Parameter, MultiParameter, ArrayParameter
 import numpy as np
 import logging
 
+log = logging.getLogger(__name__)
+
 class AcqVariablesParam(Parameter):
     """
     Parameter of an AcquisitionController which has a _check_and_update_instr
@@ -279,13 +281,12 @@ class ExpandingAlazarArrayMultiParameter(MultiParameter):
 
     def set_setpoints_and_labels(self):
         if not self._integrate_samples:
-            int_time = self._instrument.int_time.get() or 0
-            int_delay = self._instrument.int_delay.get() or 0
-            total_time = int_time + int_delay
             samples = self._instrument.samples_per_record.get()
-            if total_time and samples:
+            sample_rate = self._instrument._get_alazar().get_sample_rate()
+            log.info("setting setpoints from {} sample_rate and samples {}".format(sample_rate, samples))
+            if sample_rate and samples:
                 start = 0
-                stop = total_time
+                stop = samples/sample_rate
             else:
                 start = 0
                 stop = 1
@@ -478,14 +479,14 @@ class DemodFreqParameter(ArrayParameter):
         oversampling = sample_rate / (2 * value)
         if min_oscillations_measured < 10:
             isValid = False
-            logging.warning('{} oscillation measured for largest '
+            log.warning('{} oscillation measured for largest '
                             'demod freq, recommend at least 10: '
                             'decrease sampling rate, take '
                             'more samples or increase demodulation '
                             'freq'.format(min_oscillations_measured))
         elif oversampling < 1:
             isValid = False
-            logging.warning('oversampling rate is {}, recommend > 1: '
+            log.warning('oversampling rate is {}, recommend > 1: '
                             'increase sampling rate or decrease '
                             'demodulation frequency'.format(oversampling))
 
