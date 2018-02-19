@@ -55,6 +55,8 @@ def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng
 
         # find datanames to be plotted
         if do_plots:
+            if useQT and len(ids) is not 1:
+                raise ValueError('qcodes.QtPlot does not support multigraph plotting.')
             if dataname is not None:
                 if dataname not in [key for key in data.arrays.keys() if "_set" not in key]:
                     raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\'', \
