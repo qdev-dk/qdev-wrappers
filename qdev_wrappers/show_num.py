@@ -105,7 +105,7 @@ def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng
                         ylims[1].append(arrays.ndarray.max())
 
             if useQT:
-                plot = QtPlot(array_list,
+                plot = QtPlot(array_list[0],
                     fig_x_position=CURRENT_EXPERIMENT['plot_x_position'],
                     **kwargs)
                 title = "{} #{}".format(CURRENT_EXPERIMENT["sample_name"],
