@@ -60,7 +60,7 @@ def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng
             if dataname is not None:
                 if dataname not in [key for key in data.arrays.keys() if "_set" not in key]:
                     raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\'', \
-                        'while dataname(s) in dataset are: {}.'.format(dataname,', '.join(key_data)))
+                        'while dataname(s) in dataset are: {}.'.format(dataname,', '.join(data.arrays.keys())))
                 keys = [dataname]
             else:
                 keys = [key for key in data.arrays.keys() if "_set" not in key]
