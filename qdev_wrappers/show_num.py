@@ -84,25 +84,25 @@ def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng
                     arrays = getattr(data, key)
                     if ave_sub == 'row':
                         for i in range(np.shape(arrays)[0]):
-                            arrays[i,:] -= arrays[i,:].mean()
+                            arrays[i,:] -= np.nanmean(arrays[i,:])
                     if ave_sub == 'col':
                         for i in range(np.shape(arrays)[1]):
-                            arrays[:,i] -= arrays[:,i].mean()
+                            arrays[:,i] -= np.nanmean(arrays[:,i])
                     array_list.append(arrays)
 
                     # Find axis limits for dataset
                     if len(arrays.set_arrays)==2:
-                        xlims[0].append(arrays.set_arrays[1].min())
-                        xlims[1].append(arrays.set_arrays[1].max())
-                        ylims[0].append(arrays.set_arrays[0].min())
-                        ylims[1].append(arrays.set_arrays[0].max())
-                        clims[0].append(arrays.ndarray.min())
-                        clims[1].append(arrays.ndarray.max())
+                        xlims[0].append(np.nanmin(arrays.set_arrays[1]))
+                        xlims[1].append(np.nanmax(arrays.set_arrays[1]))
+                        ylims[0].append(np.nanmin(arrays.set_arrays[0]))
+                        ylims[1].append(np.nanmax(arrays.set_arrays[0]))
+                        clims[0].append(np.nanmin(arrays.ndarray))
+                        clims[1].append(np.nanmax(arrays.ndarray))
                     else:
-                        xlims[0].append(arrays.set_arrays[0].min())
-                        xlims[1].append(arrays.set_arrays[0].max())
-                        ylims[0].append(arrays.ndarray.min())
-                        ylims[1].append(arrays.ndarray.max())
+                        xlims[0].append(np.nanmin(arrays.set_arrays[0]))
+                        xlims[1].append(np.nanmax(arrays.set_arrays[0]))
+                        ylims[0].append(np.nanmin(arrays.ndarray))
+                        ylims[1].append(np.nanmax(arrays.ndarray))
 
             if useQT:
                 plot = QtPlot(array_list[0],
@@ -122,19 +122,19 @@ def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng
                 plot.fig.set_size_inches(fig_size)
                 # Set axis limits
                 if xlim is None:
-                    plot[0].axes.set_xlim([min(xlims[0]),max(xlims[1])])
+                    plot[0].axes.set_xlim([np.nanmin(xlims[0]),np.nanmax(xlims[1])])
                 else:
                     plot[0].axes.set_xlim(xlim)
                 if ylim is None:
-                    plot[0].axes.set_ylim([min(ylims[0]),max(ylims[1])])
+                    plot[0].axes.set_ylim([np.nanmin(ylims[0]),np.nanmax(ylims[1])])
                 else:
                     plot[0].axes.set_ylim(ylim)
                 if len(arrays.set_arrays)==2:
                     for i in range(len(array_list)):
                         if clim is None:
-                            plot[0].get_children()[i].set_clim(min(clims[0]),max(clims[1]))
+                            plot[0].get_children()[i].set_clim(np.nanmin(clims[0]),np.nanmax(clims[1]))
                         else:
-                            plot[0].get_children()[i].set_clim(clim[0],clim[1])
+                            plot[0].get_children()[i].set_clim(clim)
 
                 # Set figure titles
                 plot.fig.suptitle(samplefolder)
