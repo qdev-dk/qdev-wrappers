@@ -5,7 +5,8 @@ import matplotlib.ticker as mtick
 from scipy import signal
 from . import exp_decay, exp_decay_sin, get_calibration_dict, get_title, \
     save_fig, smooth_data_butter, smooth_data_SG, plot_cf_data, \
-    get_sample_name, g_from_qubit, set_calibration_val, get_calibration_val
+    get_sample_name, g_from_qubit, set_calibration_val, get_calibration_val, \
+    get_data_num
 
 # TODO: write fit functions: qubit_from_ssb_measure,
 #                            qubit_from_ssb_power_sweep,
@@ -62,11 +63,7 @@ def find_peaks(dataset, fs, x_key="set", y_key="mag", cutoff=5e-6, order=2,
     # find peak indices
     peakind = signal.find_peaks_cwt(np.multiply(smoothed_data, -1), widths)
 
-    try:
-        num = dataset.data_num
-    except AttributeError:
-        num = dataset.location_provider.counter
-        print('warning: check title, could be wrong datanum')
+    num = get_data_num(dataset)
 
     # plot: unsmoothed data, smoothed data and add peak estimate values
     fig, subplot = plot_cf_data([unsmoothed_data, smoothed_data],
@@ -156,14 +153,10 @@ def get_resonator_push(dataset, x_key="freq", y_key="pow", z_key="mag"):
 
     plt.tight_layout()
 
-    try:
-        fig.data_num = dataset.data_num
-        fig.suptitle('dataset {}'.format(fig.data_num), fontsize=12)
-        fig.text(0, 0, 'bare res: {}, pushed res: {}, push: {}'.format(
-            high_res, low_res, dif))
-    except AttributeError as e:
-        fig.data_num = dataset.location_provider.counter
-        print('dataset has no data_num set: {}'.format(e))
+    num = get_data_num(dataset)
+    fig.suptitle('dataset {}'.format(num), fontsize=12)
+    fig.text(0, 0, 'bare res: {}, pushed res: {}, push: {}'.format(
+        high_res, low_res, dif))
 
     return low_res, high_res, fig
 
@@ -260,7 +253,7 @@ def qubit_from_ssb_volt_sweep(dataset, gradient_sign=1, min_res_width=4e6,
     raise NotImplementedError
 
 
-def get_t2(data, x_name='delay', y_name='magnitude',
+def get_t2(dataset, x_name='delay', y_name='magnitude',
            plot=True, subplot=None,
            initial_fit_params=[0.003, 1e-7, 10e7, 0, 0.01]):
     """
@@ -278,10 +271,10 @@ def get_t2(data, x_name='delay', y_name='magnitude',
         expected_vals (default [0.003, 1e-7, 10e7, 0, 0.01]): initial values
             for fit function
     """
-    x_data = getattr(getattr(data, x_name), 'ndarray')
-    y_data = getattr(getattr(data, y_name), 'ndarray')
-    x_units = getattr(getattr(data, x_name), 'unit')
-    y_units = getattr(getattr(data, y_name), 'unit')
+    x_data = getattr(getattr(dataset, x_name), 'ndarray')
+    y_data = getattr(getattr(dataset, y_name), 'ndarray')
+    x_units = getattr(getattr(dataset, x_name), 'unit')
+    y_units = getattr(getattr(dataset, y_name), 'unit')
     popt, pcov = curve_fit(exp_decay_sin, x_data, y_data,
                            p0=initial_fit_params)
     errors = np.sqrt(np.diag(pcov))
@@ -297,8 +290,7 @@ def get_t2(data, x_name='delay', y_name='magnitude',
             fig, ax = plt.subplots()
         else:
             ax = subplot
-            fig = ax.figure
-        num = data.data_num
+        num = get_data_num(dataset)
         try:
             qubit = get_calibration_dict()['current_qubit']
             title = '{}_{}_T2'.format(get_title(num), qubit)
@@ -307,24 +299,22 @@ def get_t2(data, x_name='delay', y_name='magnitude',
             title = '{}_T2'.format(get_title(num))
             name = '{}_T2'.format(num)
 
-        if not hasattr(fig, "data_num"):
-            fig.data_num = num
         ax.plot(x_data,
                 exp_decay_sin(x_data, *popt),
                 label='fit: T2 {:.3g}{}'.format(popt[1],
-                                            x_units))
+                                                x_units))
         ax.plot(x_data, y_data, label='data')
         ax.set_xlabel('{} ({})'.format(x_name, x_units))
         ax.set_ylabel('{} ({})'.format(y_name, y_units))
         ax.set_title(title)
         ax.legend(loc='upper right', fontsize=10)
-        save_fig(ax, name=name)
+        save_fig(ax, name=name, counter=num)
         return ax, popt, errors
     else:
         return popt, errors
 
 
-def get_t1(data, x_name='delay', y_name='magnitude',
+def get_t1(dataset, x_name='delay', y_name='magnitude',
            plot=True, subplot=None, initial_fit_params=[0.05, 1e-6, 0.01]):
     """
     Function which fits results of a data set to an exponential decay and
@@ -340,10 +330,10 @@ def get_t1(data, x_name='delay', y_name='magnitude',
         expected_vals (default 0.05, 1e-6, 0.01]): initial values
             for fit function
     """
-    x_data = getattr(getattr(data, x_name), 'ndarray')
-    y_data = getattr(getattr(data, y_name), 'ndarray')
-    x_units = getattr(getattr(data, x_name), 'unit')
-    y_units = getattr(getattr(data, y_name), 'unit')
+    x_data = getattr(getattr(dataset, x_name), 'ndarray')
+    y_data = getattr(getattr(dataset, y_name), 'ndarray')
+    x_units = getattr(getattr(dataset, x_name), 'unit')
+    y_units = getattr(getattr(dataset, y_name), 'unit')
     popt, pcov = curve_fit(exp_decay, x_data, y_data, p0=initial_fit_params)
     errors = np.sqrt(np.diag(pcov))
     print('fit to equation of form y = a * exp(-x / b) + c gives:\n'
@@ -356,8 +346,7 @@ def get_t1(data, x_name='delay', y_name='magnitude',
             fig, ax = plt.subplots()
         else:
             ax = subplot
-            fig = ax.figure
-        num = data.data_num
+        num = get_data_num(dataset)
         try:
             qubit = get_calibration_dict()['current_qubit']
             title = '{}_{}_T1'.format(get_title(num), qubit)
@@ -366,19 +355,17 @@ def get_t1(data, x_name='delay', y_name='magnitude',
             title = '{}_T1'.format(get_title(num))
             name = '{}_T1'.format(num)
 
-        if not hasattr(fig, "data_num"):
-            fig.data_num = num
         ax.plot(x_data,
                 exp_decay(x_data, *popt),
                 label='fit: T1 {:.3g}{}'.format(popt[1],
-                                            x_units))
+                                                x_units))
         ax.plot(x_data, y_data, label='data')
         ax.set_xlabel('{} ({})'.format(x_name, x_units))
         ax.set_ylabel('{} ({})'.format(y_name, y_units))
         ax.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1e'))
         ax.set_title(title)
         ax.legend(loc='upper right', fontsize=10)
-        save_fig(ax, name=name)
+        save_fig(ax, name=name, counter=num)
         return ax, popt, errors
     else:
         return popt, errors
