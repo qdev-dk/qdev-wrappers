@@ -344,9 +344,9 @@ def do2d(inst_set, start, stop, num_points, delay,
         ateach = [innerloop]
 
     if outerloop_pre_tasks is not None:
-        ateach = outerloop_pre_tasks + ateach
+        ateach = list(outerloop_pre_tasks) + ateach
     if outerloop_post_tasks is not None:
-        ateach = ateach + outerloop_post_tasks
+        ateach = ateach + list(outerloop_post_tasks)
 
     outerloop = qc.Loop(inst_set.sweep(start,
                                        stop,
