@@ -43,20 +43,21 @@ def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng
     data_list = []
     keys_list = []
 
+    # Define samplefolder
+    if samplefolder==None:
+        check_experiment_is_initialized()
+        samplefolder = qc.DataSet.location_provider.fmt.format(counter='')
+
     # Load all datasets into list
     for id in ids:
-        str_id = '{0:03d}'.format(id)
-        if samplefolder==None:
-            check_experiment_is_initialized()
-            samplefolder = qc.DataSet.location_provider.fmt.format(counter='')
-        path = '{}{}'.format(samplefolder,str_id)
+        path = '{}{0:03d}'.format(samplefolder,id)
         data = qc.load_data(path)
         data_list.append(data)
 
         # find datanames to be plotted
         if do_plots:
             if useQT and len(ids) is not 1:
-                raise ValueError('qcodes.QtPlot does not support multigraph plotting.')
+                raise ValueError('qcodes.QtPlot does not support multigraph plotting. Set useQT=False to plot multiple datasets.')
             if dataname is not None:
                 if dataname not in [key for key in data.arrays.keys() if "_set" not in key]:
                     raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\'', \
