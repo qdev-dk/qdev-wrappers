@@ -14,7 +14,7 @@ def check_experiment_is_initialized():
                            "use qc.Init(mainfolder, samplename)")
 
 
-def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng=True,
+def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng=True,
             fig_size=[6,4],clim=None,dataname=None,xlim=None,ylim=None,**kwargs):
     """
     Show and return plot and data.
@@ -22,7 +22,7 @@ def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng
         ids (number, list): id or list of ids of dataset(s)
         samplefolder (str): Sample folder if loading data from different sample than the initialized. 
         useQT (boolean): If true plots with QTplot instead of matplotlib
-        ave_sub (str: 'col' or 'row'): If true subtracts average from each collumn ('col') or row ('row')
+        avg_sub (str: 'col' or 'row'): Subtracts average from either each collumn ('col') or each row ('row')
         do_plots: (boolean): if false no plots are produced.
         dataname (str): If given only plots dataset with that name
         savepng (boolean): If true saves matplotlib figure as png
@@ -83,10 +83,10 @@ def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng
             for data, keys in zip(data_list,keys_list):
                 if key in keys:
                     arrays = getattr(data, key)
-                    if ave_sub == 'row':
+                    if avg_sub == 'row':
                         for i in range(np.shape(arrays)[0]):
                             arrays[i,:] -= np.nanmean(arrays[i,:])
-                    if ave_sub == 'col':
+                    if avg_sub == 'col':
                         for i in range(np.shape(arrays)[1]):
                             arrays[:,i] -= np.nanmean(arrays[:,i])
                     array_list.append(arrays)
@@ -153,7 +153,7 @@ def show_num(ids, samplefolder=None,useQT=False,ave_sub='',do_plots=True,savepng
                         title_png = samplefolder+CURRENT_EXPERIMENT['png_subfolder']+sep+'{}-{}'.format(ids[0],ids[-1])
                     if l>1:
                         num = '{}'.format(j+1)
-                    plt.savefig(title_png+'_{}_{}.png'.format(num,ave_sub),dpi=500)
+                    plt.savefig(title_png+'_{}_{}.png'.format(num,avg_sub),dpi=500)
             plots.append(plot)
     else:
         plots = None
