@@ -298,6 +298,7 @@ def do2d(inst_set, start, stop, num_points, delay,
          inst_set2, start2, stop2, num_points2, delay2,
          *inst_meas, do_plots=True, use_threads=False,
          set_before_sweep: Optional[bool]=False,
+         outerloop_repetitions: Optional[int]=1,
          outerloop_pre_tasks: Optional[Sequence]=None,
          outerloop_post_tasks: Optional[Sequence]=None):
     """
@@ -347,6 +348,8 @@ def do2d(inst_set, start, stop, num_points, delay,
         ateach = list(outerloop_pre_tasks) + ateach
     if outerloop_post_tasks is not None:
         ateach = ateach + list(outerloop_post_tasks)
+
+    ateach = ateach*outerloop_repetitions
 
     outerloop = qc.Loop(inst_set.sweep(start,
                                        stop,
