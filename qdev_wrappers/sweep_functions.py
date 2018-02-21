@@ -298,9 +298,9 @@ def do2d(inst_set, start, stop, num_points, delay,
          inst_set2, start2, stop2, num_points2, delay2,
          *inst_meas, do_plots=True, use_threads=False,
          set_before_sweep: Optional[bool]=False,
-         outerloop_repetitions: Optional[int]=1,
-         outerloop_pre_tasks: Optional[Sequence]=None,
-         outerloop_post_tasks: Optional[Sequence]=None):
+         innerloop_repetitions: Optional[int]=1,
+         innerloop_pre_tasks: Optional[Sequence]=None,
+         innerloop_post_tasks: Optional[Sequence]=None):
     """
 
     Args:
@@ -321,9 +321,9 @@ def do2d(inst_set, start, stop, num_points, delay,
             multiple threads will be used to parallelise the waiting.
         set_before_sweep: if True the outer parameter is set to its first value
             before the inner parameter is swept to its next value.
-        outerloop_pre_tasks: Tasks to execute before each iteration of the
+        innerloop_pre_tasks: Tasks to execute before each iteration of the
             outer loop
-        outerloop_post_tasks: Tasks to execute after each iteration of the
+        innerloop_post_tasks: Tasks to execute after each iteration of the
             outer loop
 
     Returns:
@@ -336,8 +336,7 @@ def do2d(inst_set, start, stop, num_points, delay,
             raise ValueError("3d plotting is not supported")
 
     actions = []
-    for i_rep in range(outerloop_repetitions):
-
+    for i_rep in range(innerloop_repetitions):
         innerloop = qc.Loop(inst_set2.sweep(start2,
                                             stop2,
                                             num=num_points2),
@@ -347,13 +346,12 @@ def do2d(inst_set, start, stop, num_points, delay,
         else:
             ateach = [innerloop]
 
-        if outerloop_pre_tasks is not None:
-            ateach = list(outerloop_pre_tasks) + ateach
-        if outerloop_post_tasks is not None:
-            ateach = ateach + list(outerloop_post_tasks)
+        if innerloop_pre_tasks is not None:
+            ateach = list(innerloop_pre_tasks) + ateach
+        if innerloop_post_tasks is not None:
+            ateach = ateach + list(innerloop_post_tasks)
 
         actions += ateach
-
 
     outerloop = qc.Loop(inst_set.sweep(start,
                                        stop,
