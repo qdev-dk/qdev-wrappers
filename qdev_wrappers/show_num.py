@@ -50,7 +50,7 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
 
     # Load all datasets into list
     for id in ids:
-        path = '{}{0:03d}'.format(samplefolder,id)
+        path = samplefolder + '{0:03d}'.format(id)
         data = qc.load_data(path)
         data_list.append(data)
 
@@ -110,7 +110,7 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                     fig_x_position=CURRENT_EXPERIMENT['plot_x_position'],
                     **kwargs)
                 title = "{} #{}".format(CURRENT_EXPERIMENT["sample_name"],
-                                        str_id)
+                                        '{}'.format(ids[0]))
                 plot.subplots[0].setTitle(title)
                 plot.subplots[0].showGrid(True, True)
                 if savepng:
