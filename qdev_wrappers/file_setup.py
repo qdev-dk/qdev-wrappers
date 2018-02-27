@@ -132,7 +132,21 @@ def init_python_logger() -> None:
     logging.basicConfig(handlers=[ch, fh1], level=logging.DEBUG)
     # capture any warnings from the warnings module
     logging.captureWarnings(capture=True)
-    logging.info("QCoDes python logger setup")
+
+    # Install exception handler
+    ipython = get_ipython()
+    if ipython is None:
+        def my_handler(type, value, tb):
+            logging.exception("Uncaught exception: {0}".format(str(value)))
+        sys.excepthook = my_handler
+    else:
+        def exc_handler(self, etype, value, tb, tb_offset=None):
+            logging.exception("Uncaught exception: {0}".format(str(value)))
+            return self.showtraceback()
+        log.info("Setup Ipython exception handler to log exceptions")
+        ipython.set_custom_exc((BaseException,), exc_handler)
+
+    log.info("QCoDes python logger setup")
 
 def _set_up_pdf_preferences(subfolder_name: str = 'pdf', display_pdf=True,
                             display_individual_pdf=False):
