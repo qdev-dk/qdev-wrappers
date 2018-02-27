@@ -298,6 +298,7 @@ def do2d(inst_set, start, stop, num_points, delay,
          inst_set2, start2, stop2, num_points2, delay2,
          *inst_meas, do_plots=True, use_threads=False,
          set_before_sweep: Optional[bool]=False,
+         innerloop_repetitions: Optional[int]=1,
          innerloop_pre_tasks: Optional[Sequence]=None,
          innerloop_post_tasks: Optional[Sequence]=None):
     """
@@ -334,24 +335,28 @@ def do2d(inst_set, start, stop, num_points, delay,
         if getattr(inst, "setpoints", False):
             raise ValueError("3d plotting is not supported")
 
-    innerloop = qc.Loop(inst_set2.sweep(start2,
-                                        stop2,
-                                        num=num_points2),
-                        delay2).each(*inst_meas)
-    if set_before_sweep:
-        ateach = [innerloop, Task(inst_set2, start2)]
-    else:
-        ateach = [innerloop]
+    actions = []
+    for i_rep in range(innerloop_repetitions):
+        innerloop = qc.Loop(inst_set2.sweep(start2,
+                                            stop2,
+                                            num=num_points2),
+                            delay2).each(*inst_meas)
+        if set_before_sweep:
+            ateach = [innerloop, Task(inst_set2, start2)]
+        else:
+            ateach = [innerloop]
 
-    if innerloop_pre_tasks is not None:
-        ateach = list(innerloop_pre_tasks) + ateach
-    if innerloop_post_tasks is not None:
-        ateach = ateach + list(innerloop_post_tasks)
+        if innerloop_pre_tasks is not None:
+            ateach = list(innerloop_pre_tasks) + ateach
+        if innerloop_post_tasks is not None:
+            ateach = ateach + list(innerloop_post_tasks)
+
+        actions += ateach
 
     outerloop = qc.Loop(inst_set.sweep(start,
                                        stop,
                                        num=num_points),
-                        delay).each(*ateach)
+                        delay).each(*actions)
 
     set_params = ((inst_set, start, stop),
                   (inst_set2, start2, stop2))

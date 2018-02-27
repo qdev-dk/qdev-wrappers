@@ -40,7 +40,12 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
         color = 'C' + str(counter_two)
         parent_instr_name = (i._instrument.name + '_') if i._instrument else ''
         inst_meas_name = "{}{}".format(parent_instr_name, name)
-        inst_meas_data = getattr(data, inst_meas_name)
+        try:
+            inst_meas_data = getattr(data, inst_meas_name)
+        except AttributeError:
+            inst_meas_name = "{}{}_0_0".format(parent_instr_name, name)
+            inst_meas_data = getattr(data, inst_meas_name)
+
         inst_meta_data = __get_plot_type(inst_meas_data, plot)
         if useQT:
             plot.add(inst_meas_data, subplot=j + k + 1)
@@ -117,6 +122,11 @@ def _save_individual_plots(data, inst_meas, display_plot=True):
         plot = MatPlot()
         inst_meas_name = "{}_{}".format(i._instrument.name, name)
         inst_meas_data = getattr(data, inst_meas_name)
+        try:
+            inst_meas_data = getattr(data, inst_meas_name)
+        except AttributeError:
+            inst_meas_name = "{}{}_0_0".format(i._instrument.name, name)
+            inst_meas_data = getattr(data, inst_meas_name)
         inst_meta_data = __get_plot_type(inst_meas_data, plot)
         if 'z' in inst_meta_data:
             xlen, ylen = inst_meta_data['z'].shape
