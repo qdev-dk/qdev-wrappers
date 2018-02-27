@@ -1,4 +1,5 @@
 # import modules you might want to use
+import atexit
 import qcodes as qc
 import time
 import numpy as np
@@ -40,6 +41,8 @@ mpl.rcParams['font.size'] = 10
 if __name__ == '__main__':
     # this line should be the first line, no matter what
     init_python_logger()
+    # make sure that all instrument connections are closed at shutdown
+    atexit.register(qc.Instrument.close_all)
     # Close existing connections if present
     if qc.Station.default:
         close_station(qc.Station.default)
