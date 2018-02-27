@@ -126,7 +126,7 @@ def init_python_logger() -> None:
     ch = logging.StreamHandler()
     ch.setLevel(consolelogginglevel)
     ch.setFormatter(formatter)
-    fh1 = logging.handlers.TimedRotatingFileHandler('pythonlog.log', when='D')
+    fh1 = logging.handlers.TimedRotatingFileHandler('pythonlog.log', when='midnight')
     fh1.setLevel(filelogginglevel)
     fh1.setFormatter(formatter)
     logging.basicConfig(handlers=[ch, fh1], level=logging.DEBUG)
