@@ -130,6 +130,9 @@ def init_python_logger() -> None:
     fh1.setLevel(filelogginglevel)
     fh1.setFormatter(formatter)
     logging.basicConfig(handlers=[ch, fh1], level=logging.DEBUG)
+    # capture any warnings from the warnings module
+    logging.captureWarnings(capture=True)
+    logging.info("QCoDes python logger setup")
 
 def _set_up_pdf_preferences(subfolder_name: str = 'pdf', display_pdf=True,
                             display_individual_pdf=False):
