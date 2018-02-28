@@ -1,3 +1,4 @@
+from qdev_wrappers import logging
 from qdev_wrappers.file_setup import my_init
 from qdev_wrappers.device_annotator.device_image import save_device_image
 from qdev_wrappers.show_num import show_num

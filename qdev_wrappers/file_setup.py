@@ -92,48 +92,6 @@ def _init_device_image(station):
     log.info('device image initialised')
 
 
-def _set_up_ipython_logging():
-    ipython = get_ipython()
-    # turn on logging only if in ipython
-    # else crash and burn
-    if ipython is None:
-        raise RuntimeWarning("History can't be saved. "
-                             "-Refusing to proceed (use IPython/jupyter)")
-    else:
-        exp_folder = CURRENT_EXPERIMENT["exp_folder"]
-        logfile = "{}{}".format(exp_folder, "commands.log")
-        CURRENT_EXPERIMENT['logfile'] = logfile
-        if not CURRENT_EXPERIMENT["logging_enabled"]:
-            log.debug("Logging commands to: t{}".format(logfile))
-            ipython.magic("%logstart -t -o {} {}".format(logfile, "append"))
-            CURRENT_EXPERIMENT["logging_enabled"] = True
-        else:
-            log.debug("Logging already started at {}".format(logfile))
-
-
-def init_python_logger() -> None:
-    """
-    This sets up logging to a time based logging.
-    This means that all logging messages on or above
-    filelogginglevel will be written to pythonlog.log
-    All logging messages on or above consolelogginglevel
-    will be written to stderr.
-    """
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    filelogginglevel = logging.INFO
-    consolelogginglevel = qc.config.core.loglevel
-    ch = logging.StreamHandler()
-    ch.setLevel(consolelogginglevel)
-    ch.setFormatter(formatter)
-    fh1 = logging.handlers.TimedRotatingFileHandler('pythonlog.log', when='midnight')
-    fh1.setLevel(filelogginglevel)
-    fh1.setFormatter(formatter)
-    logging.basicConfig(handlers=[ch, fh1], level=logging.DEBUG)
-    # capture any warnings from the warnings module
-    logging.captureWarnings(capture=True)
-    logging.info("QCoDes python logger setup")
-
 def _set_up_pdf_preferences(subfolder_name: str = 'pdf', display_pdf=True,
                             display_individual_pdf=False):
     _set_up_subfolder(subfolder_name)
