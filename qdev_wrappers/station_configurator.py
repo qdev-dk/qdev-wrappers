@@ -46,7 +46,8 @@ class StationConfigurator:
             def snapshot(self, update=True):
                 return self.data
 
-        self.station.add_component(ConfigComponent(self.config), 'Config')
+        # self.station.add_component(ConfigComponent(self.config), 'Config')
+        self.station.components['StationConfigurator'] = ConfigComponent(self.config)
 
     def load_instrument(self, identifier: str,
                           **kwargs) -> Instrument:
