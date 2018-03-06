@@ -24,10 +24,13 @@ from qdev_wrappers.station_configurator import StationConfigurator
 scfg = StationConfigurator('exampleConfig.yaml')
 dmm1 = scfg.load_instrument('dmm1')
 mock_dac = scfg.load_instrument('mock_dac')
+# this works only with the lakeshore PR and when you change the directory in
+# yaml file to point to the sim file
+# ls = scfg.load_instrument('lakeshore')
 
-# if you happen to have a qdac you can also change the hardware address in the
-# config file and then do the following:
-# watch out! the current config file will set a voltage on the qdac!
+if you happen to have a qdac you can also change the hardware address in the
+config file and then do the following:
+watch out! the current config file will set a voltage on the qdac!
 qdac = scfg.load_instrument('qdac')
 # now you should be able to do
 qdac.Bx(0.04)

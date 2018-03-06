@@ -30,6 +30,7 @@ class StationConfigurator:
 
     def __init__(self, filename: str, station: Optional[Station] = None) -> None:
         self.monitor_parameter_list = []
+        # self.station = station if is not None else Station.default if is not None else Station()
         if station is None:
             station = Station.default or Station()
         self.station = station
@@ -72,6 +73,14 @@ class StationConfigurator:
         if instr_cfg.get('auto_reconnect', auto_reconnect_instrument):
             try:
                 instr = Instrument.find_instrument(identifier)
+                # remove parameters related to this instrument from the monitor list
+                for param in self.monitor_parameter_list:
+                    try:
+                        if param._instrument is instr:
+                            self.monitor_parameter_list.remove(param)
+                    except AttributeError:
+                        # some parameters don't have an associated instrument
+                        pass
                 instr.close()
             except KeyError:
                 pass

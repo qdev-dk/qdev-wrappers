@@ -71,6 +71,14 @@ instruments:
       visalib: 'Agilent_34400A.yaml@sim'
     parameters:
       volt: {monitor: true}
+  lakeshore:
+    driver: qcodes.instrument_drivers.Lakeshore.Model_336
+    type: Model_336
+    auto_reconnect: true
+    address: GPIB::2::65535::INSTR
+    init:
+      # visalib: 'lakeshore_model336.yaml@sim'
+      visalib: 'C:\Users\a-dovoge\Qcodes\qcodes\instrument\sims\Lakeshore_model336.yaml@sim'
   # for the decadac it is possible to define the fine voltage option
   decadac:
     driver: qdev-wrappers.customised_instruments.Decadac_ext
