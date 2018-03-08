@@ -1,3 +1,4 @@
+from contextlib import suppress
 from typing import Optional
 import importlib
 import logging
@@ -29,7 +30,7 @@ class StationConfigurator:
                             'step']
 
     def __init__(self, filename: str, station: Optional[Station] = None) -> None:
-        self.monitor_parameter_list = []
+        self.monitor_parameters = {}
         # self.station = station if is not None else Station.default if is not None else Station()
         if station is None:
             station = Station.default or Station()
@@ -72,33 +73,23 @@ class StationConfigurator:
 
         # check if instrument is already defined and close connection
         if instr_cfg.get('auto_reconnect', auto_reconnect_instrument):
-            try:
+            # save close instrument and remove from monitor list
+            with suppress(KeyError):
                 instr = Instrument.find_instrument(identifier)
                 # remove parameters related to this instrument from the monitor list
-                for param in self.monitor_parameter_list:
-                    try:
-                        if param._instrument is instr:
-                            self.monitor_parameter_list.remove(param)
-                    except AttributeError:
-                        # some parameters don't have an associated instrument
-                        pass
+                self.monitor_parameters = {k:v for k,v in self.monitor_parameters.items() if v.get_root_instrument() is not instr}
                 instr.close()
-            except KeyError:
-                pass
 
         # instantiate instrument
         module = importlib.import_module(instr_cfg['driver'])
         instr_class = getattr(module, instr_cfg['type'])
-        # TODO: make this more pretty:
-        # I want to keep address as a toplevel element in the yaml file,
-        # but it does not need to be there, for non-Visa/Ip instruments
+
+        init_kwargs = instr_cfg.get('init',{})
+        # somebody might have a empty init section in the config
+        init_kwargs = {} if init_kwargs is None else init_kwargs
         if 'address' in instr_cfg:
-            instr = instr_class(identifier,
-                                address=instr_cfg['address'],
-                                **instr_cfg['init'])
-        else:
-            instr = instr_class(identifier,
-                                **instr_cfg['init'])
+            init_kwargs['address'] = instr_cfg['address']
+        instr = instr_class(identifier, **init_kwargs)
         # setup
 
         # local function to refactor common code from defining new parameter
@@ -113,7 +104,7 @@ class StationConfigurator:
                     lower, upper = [float(x) for x in val.split(',')]
                     p.vals = validators.Numbers(lower, upper)
                 elif attr == 'monitor' and val is True:
-                    self.monitor_parameter_list.append(p)
+                    self.monitor_parameters[id(p)] = p
                 elif attr == 'alias':
                     setattr(instr, val, p)
                 elif attr == 'value':
@@ -156,14 +147,12 @@ class StationConfigurator:
 
         # add the instrument to the station
         self.station.add_component(instr)
+
+        # restart the monitor to apply the changes
         self._restart_monitor()
         return instr
 
     def _restart_monitor(self):
         if Monitor.running:
             Monitor.running.stop()
-        #     del Monitor.running
-        #     Monitor.running = None
-        import time
-        time.sleep(1)
-        Monitor(*self.monitor_parameter_list)
+        Monitor(*self.monitor_parameters.values())
