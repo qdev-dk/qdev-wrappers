@@ -47,9 +47,11 @@ class ParametricSequencer:
     # TODO: implement
     # TODO: implement as stream
     def serialize(self) -> str:
+        # TODO: explain this to Natalie ;)
         return "Not yet implemented"
 
     def deserialize(self, str) -> None:
+        # TODO: explain this to Natalie ;)
         pass
 
 
@@ -65,6 +67,7 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
     def __init__(station: Station=None, awg=None, alazar=None) -> None:
         self.station, self.awg, self.alazar = station, awg, alazar
         # create alazar controller
+        # TODO: why create alazar controller here but not the alazar or awg?
         self.alazar_controller = ATSChannelController(name='PWA_controller',
                                                       alazar_name='Alazar')
         self.alazar_channel = None
@@ -119,22 +122,3 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
 
 # implement shownums equivalent for acquisition parameters and sequencers
 
-
-# application examples:
-# 1. Cavity resonance
-
-# load some channel mapping, instantiat instruments
-
-npoints=100
-parameters = [[{'readout_delay': 1,
-              'readout_duration': 1,
-              'readout_amplitude': 1,
-              'readout_marker_delay': 1,
-              'readout_marker_duration': 1,
-              'readout_stage_duration': 1,
-              'drive_stage_duration': 1}]*npoints]
-
-sequencer = ParametricSequencer(channel_base_name = 'qubit1_cavity',
-                      parameters=parameters,
-                      pulse_builder=create_pulse)
-exp = ParametricWaveformAnalysator()
