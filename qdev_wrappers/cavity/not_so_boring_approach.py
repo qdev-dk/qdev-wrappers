@@ -19,7 +19,9 @@ class ParametricSequencer:
     record_index: int, record_setpoint:float) -> bb.Element
 
     """
-    def __init__(builder: Callable,
+
+    def __init__(self,
+                 builder: Callable,
                  parameters: List[List[Dict[str, float]]],
                  integration_delay: float = None,
                  integration_time: float = None,
@@ -49,7 +51,6 @@ class ParametricSequencer:
         self.n_averages = n_averages
 
         self.check_parameters()
-
 
     def check_parameters(self):
         # check buffer setpoints with parameters
@@ -103,7 +104,8 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
             alazar
         awg
 """
-    def __init__(station: Station=None, awg=None, alazar=None, alazar_controller=None) -> None:
+
+    def __init__(self, station: Station=None, awg=None, alazar=None, alazar_controller=None) -> None:
         self.station, self.awg, self.alazar = station, awg, alazar
         self.alazar_controller = alazar_controller
         self.alazar_channels = self.alazar_controller.channels
@@ -150,7 +152,6 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
         self.alazar_controller.channels.append(chan_m)
         self.alazar_controller.channels.append(chan_p)
         self.alazar_channels = self.alazar_controller.channels
-
 
     # def get(self):
     #     # must have called update_sequence before
