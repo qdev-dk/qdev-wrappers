@@ -105,11 +105,12 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
             alazar
         awg
 """
-
+    # TODO: make instruments private?
     def __init__(self, station: Station=None, awg=None, alazar=None, alazar_controller=None) -> None:
         self.station, self.awg, self.alazar = station, awg, alazar
         self.alazar_controller = alazar_controller
         self.alazar_channels = self.alazar_controller.channels
+        self._demod_ref = None
 
     # implementations
     def update_sequencer(self, sequencer):
@@ -121,7 +122,12 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
         self.awg.upload(seq)
         self.awg.start()
 
-    def setup_alazar(self, f_demod=None):
+    def set_demod_freq(self, f_demod):
+        for ch in self.alazar_channels:
+            ch.demod_freq(f_demod)
+        self._demod_ref = f_demod
+
+    def setup_alazar(self):
         # Magnitude, phase,I, Q?
         # need to be called when setting a new sequencer
         # set alazar in the right averaging mode
@@ -135,11 +141,11 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
         self.alazar_controller.int_delay(self.sequencer.integration_delay)
         # setup channels
         chan_m = AlazarChannel(self.alazar_controller,
-                               demod=f_demod is not None,
+                               demod=self._demod_ref is not None,
                                average_buffers=self.sequencer.average_buffers,
                                average_records=self.sequencer.average_records,
                                integrate_samples=self.sequencer.average_time)
-        chan_m.demod_freq(f_demod)
+        chan_m.demod_freq(self._demod_ref)
         chan_m.num_averages(self.sequencer.n_averages)
         if not self.sequencer.average_records:
             chan_m.records_per_buffer(len(self.sequencer.records_per_buffer))
