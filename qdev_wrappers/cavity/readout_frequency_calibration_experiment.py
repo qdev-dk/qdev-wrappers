@@ -24,8 +24,8 @@ pulse_parameters = [[{'readout_delay': 1,
                       'readout_stage_duration': 1,
                       'drive_stage_duration': 1}]]
 
-readout_parameters = {'int_delay': 0.5e-6,
-                      'int_time': 1e-6}
+readout_parameters = {'integration_delay': 0.5e-6,
+                      'integration_time': 1e-6}
 
 
 sequencer = ParametricSequencer(
@@ -33,8 +33,7 @@ sequencer = ParametricSequencer(
     pulse_builder=make_parametric_sequence,
     sequencing_mode=False,
     n_averages=1000,
-    integration_delay=readout_parameters['int_delay'],
-    integration_time=readout_parameters['int_time'])
+    **readout_parameters)
 
 pwa = ParametricWaveformAnalysator(station, awg, alazar, acq_ctrl)
 
