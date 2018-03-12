@@ -6,6 +6,7 @@ from qdev_wrappers.customised_instruments.AWG5014_ext import AWG5014_ext
 from qdev_wrappers.customised_instruments.AlazarTech_ATS9360_ext import AlazarTech_ATS9360_ext
 from qdev_wrappers.alazar_controllers.ATSChannelController import ATSChannelController
 from qcodes.instrument_drivers.rohde_schwarz.SGS100A import RohdeSchwarz_SGS100A
+from qdev_wrappers.cavity.lock_in import LockIn
 
 station = qc.Station()
 awg = AWG5014_ext('awg', 'address')
@@ -37,10 +38,11 @@ sequencer = ParametricSequencer(
 
 pwa = ParametricWaveformAnalysator(station, awg, alazar, acq_ctrl)
 
+lockin = LockIn(cavity, localos, pwa, demodulation_frequency=15e6)
+lockin.on()
+
 pwa.update_sequencer(sequencer)
-pwa.setup_alazar(f_demod=15e6)
+pwa.setup_alazar()
 
-
-qc.Loop(cavity.frequency.sweep(7e9, 7.1e9, 1e6)).each(
-    qc.Task(localos.frequency.set, cavity.frequency + 15e6),
+qc.Loop(lockin.frequency.sweep(7e9, 7.1e9, 1e6)).each(
     pwa.alazar_channels.data).run()
