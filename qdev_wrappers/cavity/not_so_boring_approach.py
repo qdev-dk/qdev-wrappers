@@ -27,35 +27,41 @@ class ParametricSequencer:
                  integration_time: float = None,
                  record_set_points: List[float] = None,
                  buffer_set_points: List[float] = None,
+                 setpoint_labels: Tuple = None,
                  sequencing_mode: bool =True,
                  n_averages=1):
         # TODO: add units and labels
         self.integration_delay = integration_delay
         self.integration_time = integration_time
-        self.record_set_points = record_set_points
-        self.buffer_set_points = buffer_set_points
+        self._record_set_points = record_set_points  # TODO: remove these?
+        self._buffer_set_points = buffer_set_points  # TODO: remove these?
+        self.setpoint_labels = setpoint_labels
         self.parameters = parameters
 
         self.average_records = self.record_set_points is not None:
         self.average_buffers = self.buffer_set_points is not None:
         self.average_time = self.integration_delay is not None and self.integration_time is not None
-        self.records_per_buffer = len(
-            self.record_set_points) if not self.average_records else None
-        self.buffers_per_acquisition = len(
-            self.buffer_set_points) if not self.average_buffers else None
+        if record_set_points is not None:
+            self.records_per_buffer = len(record_set_points)
+        if buffer_set_points is not None:
+            self.buffers_per_acquisition = len(buffer_set_points)
 
-        if not self.average_records and not self.average_buffers and n_averages > 1:
-            raise RuntimeError(
-                'You are not averaging records or buffers so you cannot really '
-                'expect to have n_averages > 1 can you now?')
+        self.dimension = 3 - int(self.average_records) - \
+            int(self.average_buffers) - int(self.average_time)
+
+        if self.dimension == 1:
+            self.setpoints = None if self.average_time else record_set_points or buffer_set_points
+        elif self.dimension == 2:
+            self.outer_setpoints = buffer_set_points or record_set_points
+            self.inner_setpoints = record_set_points or None
+
         self.n_averages = n_averages
-
         self.check_parameters()
 
     def check_parameters(self):
         # check buffer setpoints with parameters
         if not self.average_buffers:
-            if len(self.parameters) > 1 and len(self.buffer_set_points) != len(self.parameters):
+            if len(self.parameters) > 1 and len(self._buffer_set_points) != len(self.parameters):
             raise RuntimeError(
                 'Number of buffers implied by parameter '
                 'list does not match buffer_set_points.')
@@ -68,10 +74,23 @@ class ParametricSequencer:
                 raise RuntimeError(
                     'Number of records per buffer implied by '
                     'parameter list is not consistent between buffers')
-            if record_paremeter_lengths[0] > 1 and len(self.record_set_points) != record_paremeter_lengths[0]:
+            if record_paremeter_lengths[0] > 1 and len(self._record_set_points) != record_paremeter_lengths[0]:
                 raise RuntimeError(
                     'Number of records implied by parameter '
                     'list does not match record_set_points.')
+
+        # check for no averaging ability
+        if not self.average_records and not self.average_buffers and self.n_averages > 1:
+            raise RuntimeError(
+                'You are not averaging records or buffers so you cannot really '
+                'expect to have n_averages > 1 can you now?')
+
+        # check dimension is reasonable
+        if self.dimension > 2:
+            raise RuntimeError(
+                'Cannot take data with dimension > 2 (yet)')
+
+        # TODO: check labels
 
     def create_sequence(self) -> bb.Sequence:
         # this is the simple and naïve way, without any repeat elements
@@ -104,7 +123,8 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
             alazar
         awg
 """
-    # TODO: make instruments private?
+# TODO: make instruments private?
+
     def __init__(self, station: Station=None, awg=None, alazar=None, alazar_controller=None) -> None:
         self.station, self.awg, self.alazar = station, awg, alazar
         self.alazar_controller = alazar_controller
@@ -147,8 +167,17 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
         chan_m.demod_freq(self._demod_ref)
         chan_m.num_averages(self.sequencer.n_averages)
         if not self.sequencer.average_records:
-            chan_m.records_per_buffer(len(self.sequencer.records_per_buffer))
-        chan_m.prepare_channel()  # sets setpoints and labels
+            chan_m.records_per_buffer(self.sequencer.records_per_buffer)
+        if not self.sequencer.average_buffers:
+            chan_m.buffers_per_acquisition(
+                self.sequencer.buffers_per_acquisition)
+        prep_kwargs = {'setpoint_labels': sequencer.setpoint_labels}
+        if sequencer.dimension == 1:
+            prep_kwargs['setpoints'] = sequencer.setpoints
+        elif sequencer.dimension == 2:
+            prep_kwargs['inner_setpoints'] = sequencer.inner_setpoints
+            prep_kwargs['outer_setpoints'] = sequencer.outer_setpoints
+        chan_m.prepare_channel(**prep_kwargs)
         # this is a problem, can I not get magnitude and phase at the same time?
         chan_p = deepcopy(chan_m)
         chan_m.demod_type('magnitude')
