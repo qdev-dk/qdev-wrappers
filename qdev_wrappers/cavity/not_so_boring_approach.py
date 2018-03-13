@@ -18,11 +18,13 @@ class ParametricSequencer:
 
     def __init__(self,
                  builder: Callable,
-                 parameters: List[List[Dict[str, float]]],
+                 default_parameters: Dict[str, float],
                  integration_delay: float = None,
                  integration_time: float = None,
                  record_set_points: List[float] = None,
                  buffer_set_points: List[float] = None,
+                 record_set_parameter: str = None,
+                 buffer_set_parameter: str = None,
                  setpoint_labels: Tuple = None,
                  sequencing_mode: bool =True,
                  n_averages=1):
