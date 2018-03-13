@@ -262,20 +262,24 @@ class Alazar2DParameter(AlazarNDParameter):
         samples = self._instrument._parent.samples_per_record.get()
         if self._integrate_samples:
             self.shape = (buffers,records)
-            inner_setpoints = inner_setpoints or tuple(np.linspace(0, records, records))
-            outer_setpoints = outer_setpoints or tuple(np.linspace(0, buffers, buffers))
+            inner_setpoints = record_setpoints or tuple(np.linspace(0, records, records))
+            outer_setpoints = buffer_setpoints or tuple(np.linspace(0, buffers, buffers))
         elif self._average_records:
+            if record_setpoints:
+                raise RuntimeError('Not allowed record setpoints when averaging over records')
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
             stop = samples/sample_rate
             self.shape = (buffers,samples)
             inner_setpoints = tuple(np.linspace(0, stop, samples))
-            outer_setpoints = outer_setpoints or tuple(np.linspace(0, buffers, buffers))
+            outer_setpoints = buffer_setpoints or tuple(np.linspace(0, buffers, buffers))
         elif self._average_buffers:
+            if buffer_setpoints:
+                raise RuntimeError('Not allowed buffer setpoints when averaging over buffers')
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
             stop = samples/sample_rate
             self.shape = (records,samples)
             inner_setpoints = tuple(np.linspace(0, stop, samples))
-            outer_setpoints = outer_setpoints or tuple(np.linspace(0, records, records))
+            outer_setpoints = record_setpoints or tuple(np.linspace(0, records, records))
         else:
             raise RuntimeError("Non supported Array type")
         self.setpoints = (outer_setpoints, tuple(inner_setpoints for _ in range(len(outer_setpoints))))
