@@ -181,7 +181,7 @@ class Alazar1DParameter(AlazarNDParameter):
                          average_records=average_records,
                          integrate_samples=integrate_samples)
 
-    def set_setpoints_and_labels(self, record_setpoints=None, buffer_setpoints=None, setpoint_labels=None) -> None:
+    def set_setpoints_and_labels(self, record_setpoints=None, buffer_setpoints=None) -> None:
         # setpoint_limits (lim0, limN)
         # setpoint_labels (label, )
         # ignores any samples/time setpoint limits and labels
@@ -210,8 +210,6 @@ class Alazar1DParameter(AlazarNDParameter):
             buffers = self._instrument.buffers_per_acquisition.get()
             self.shape = (buffers,)
             self.setpoints = (tuple(buffer_setpoints or np.linspace(0, buffers - 1, buffers)),)
-        if setpoint_labels is not None:
-            self.setpoint_labels = setpoint_labels
 
 
 class Alazar2DParameter(AlazarNDParameter):
@@ -255,7 +253,7 @@ class Alazar2DParameter(AlazarNDParameter):
                          average_records=average_records,
                          integrate_samples=integrate_samples)
 
-    def set_setpoints_and_labels(self, record_setpoints=None, buffer_setpoints=None, setpoint_labels=None):
+    def set_setpoints_and_labels(self, record_setpoints=None, buffer_setpoints=None):
         # ignores any samples/time setpoint limits and labels
         records = self._instrument.records_per_buffer()
         buffers = self._instrument.buffers_per_acquisition()
@@ -283,8 +281,6 @@ class Alazar2DParameter(AlazarNDParameter):
         else:
             raise RuntimeError("Non supported Array type")
         self.setpoints = (outer_setpoints, tuple(inner_setpoints for _ in range(len(outer_setpoints))))
-        if setpoint_labels is not None:
-            self.setpoint_labels = setpoint_labels
 
 
 class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
