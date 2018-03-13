@@ -181,7 +181,7 @@ class Alazar1DParameter(AlazarNDParameter):
                          average_records=average_records,
                          integrate_samples=integrate_samples)
 
-    def set_setpoints_and_labels(self, setpoint_limits=None, setpoint_labels=None) -> None:
+    def set_setpoints_and_labels(self, setpoints=None, setpoint_labels=None) -> None:
         # setpoint_limits (lim0, limN)
         # setpoint_labels (label, )
         # ignores any samples/time setpoint limits and labels
@@ -197,20 +197,18 @@ class Alazar1DParameter(AlazarNDParameter):
             self.setpoints = (tuple(np.linspace(start, stop, samples)),)
         elif not self._average_records:
             records = self._instrument.records_per_buffer.get()
-            start = 0 if setpoint_limits is None else setpoint_limits[0]
-            stop = records if setpoint_limits is None else setpoint_limits[1]
+            start = 0
+            stop = records
             self.shape = (records,)
-            self.setpoints = (tuple(np.linspace(start, stop, records)),)
-            if setpoint_labels is not None:
-                self.setpoint_labels = setpoint_labels
+            self.setpoints = (setpoints,) or (tuple(np.linspace(start, stop, records)),)
         elif not self._average_buffers:
             buffers = self._instrument.buffers_per_acquisition.get()
-            start = 0 if setpoint_limits is None else setpoint_limits[0]
-            stop = buffers if setpoint_limits is None else setpoint_limits[1]
+            start = 0
+            stop = buffers
             self.shape = (buffers,)
-            self.setpoints = (tuple(np.linspace(start, stop, buffers)),)
-            if setpoint_labels is not None:
-                self.setpoint_labels = setpoint_labels
+            self.setpoints = (setpoints,) or (tuple(np.linspace(start, stop, buffers)),)
+        if setpoint_labels is not None:
+            self.setpoint_labels = setpoint_labels
 
 
 class Alazar2DParameter(AlazarNDParameter):
@@ -254,41 +252,32 @@ class Alazar2DParameter(AlazarNDParameter):
                          average_records=average_records,
                          integrate_samples=integrate_samples)
 
-    def set_setpoints_and_labels(self, setpoint_limits=None, setpoint_labels=None):
-        # setpoint_limits ((innerlim0, innerlimN), (outerlim0, outerlimN))
-        # setpoint_labels (inner_label, outer_label)
+    def set_setpoints_and_labels(self, outer_setpoints=None, inner_setpoints=None, setpoint_labels=None):
         # ignores any samples/time setpoint limits and labels
         records = self._instrument.records_per_buffer()
         buffers = self._instrument.buffers_per_acquisition()
         samples = self._instrument._parent.samples_per_record.get()
-        if setpoint_limits is not None:
-            inner_start = setpoint_limits[0][0]
-            inner_stop = setpoint_limits[0][1]
-            outer_start = setpoint_limits[1][0]
-            outer_stop = setpoint_limits[1][1]
-        else:
-            inner_start = outer_start = 0
-            inner_stop = records
-            outer_stop = buffers
-        if self._integrate_samples:
+        elif self._integrate_samples:
             self.shape = (buffers,records)
-            inner_setpoints = tuple(np.linspace(inner_start, inner_stop, records))
-            outer_setpoints = tuple(np.linspace(outer_start, outer_stop, buffers))
+            inner_setpoints = inner_setpoints or tuple(np.linspace(0, records, records))
+            outer_setpoints = outer_setpoints or tuple(np.linspace(0, buffers, buffers))
         elif self._average_records:
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
             stop = samples/sample_rate
             self.shape = (buffers,samples)
             inner_setpoints = tuple(np.linspace(0, stop, samples))
-            outer_setpoints = tuple(np.linspace(outer_start, outer_stop, buffers))
+            outer_setpoints = outer_setpoints or tuple(np.linspace(0, buffers, buffers))
         elif self._average_buffers:
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
             stop = samples/sample_rate
             self.shape = (records,samples)
             inner_setpoints = tuple(np.linspace(0, stop, samples))
-            outer_setpoints = tuple(np.linspace(outer_start, outer_stop, records))
+            outer_setpoints = outer_setpoints or tuple(np.linspace(0, records, records))
         else:
             raise RuntimeError("Non supported Array type")
         self.setpoints = (outer_setpoints, tuple(inner_setpoints for _ in range(len(outer_setpoints))))
+        if setpoint_labels is not None:
+            self.setpoint_labels = setpoint_labels
 
 
 class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
