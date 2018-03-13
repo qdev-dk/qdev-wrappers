@@ -48,6 +48,8 @@ class ParametricSequencer:
         if buffer_setpoints is not None:
             self.buffers_per_acquisition = len(buffer_setpoints)
         self.n_averages = n_averages
+        self._dimension = 3 - int(self.average_buffers) - \
+            int(self.average_records) - int(self.average_time)
         self.check_parameters()
 
     def check_parameters(self):
@@ -71,7 +73,31 @@ class ParametricSequencer:
                     'Number of records implied by parameter '
                     'list does not match record_setpoints.')
 
-        # TODO: check labels
+        # check labels, units, names
+        if self._dim == 2 and self.average_time:
+            for s in [self.setpoint_units, self.setpoint_names, self.setpoint_labels]:
+                if s is not None and len(s) != 2:
+                    raise RuntimeError('Must specify 2 setpoint labels or none at all'
+                        'when averaging over time but not records or buffers')
+        elif self._dim == 2:
+            for s in [self.setpoint_units, self.setpoint_names, self.setpoint_labels]:
+                if s is not None and len(s) != 1:
+                    raise RuntimeError('Must specify 1 setpoint labels or none at all'
+                        'when not averaging over time and one other from [records, buffers]')
+                elif s is not None:
+                    self.setpoint_names = (setpoint_names[0], 'time')
+                    self.setpoint_labels = (setpoint_labels[0], 'Time')
+                    self.setpoint_units = (setpoint_units[0], 'S')
+        elif self._dim == 1 and self.average_time:
+            for s in [self.setpoint_units, self.setpoint_names, self.setpoint_labels]:
+                if s is not None and len(s) != 1:
+                    raise RuntimeError('Must specify 1 setpoint labels or none at all'
+                        'when averaging over time and one other from [records, buffers]')
+        else:
+            if any([self.setpoint_units, self.setpoint_names, self.setpoint_labels]):
+                raise RuntimeError('Cannot specify setpoint labels, units or names'
+                    ' when averaging over records and buffers')
+
 
     def create_sequence(self) -> bb.Sequence:
         # this is the simple and naïve way, without any repeat elements
