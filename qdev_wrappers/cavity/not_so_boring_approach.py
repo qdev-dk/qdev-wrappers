@@ -2,11 +2,6 @@ from typing import Callable
 from copy import deepcopy
 
 # broadbean extentions
-import broadbean as bb
-from broadbean import Element
-
-def pushElement(self, element: bb.Element) -> None:
-    self.addElement(self.length_sequenceelements, element)
 
 
 bb.Sequence.pushElement = pushElement
