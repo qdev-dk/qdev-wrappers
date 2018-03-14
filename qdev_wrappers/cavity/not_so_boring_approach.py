@@ -1,15 +1,14 @@
-from typing import Callable
+from typing import Callable, Dict, List
 from copy import deepcopy
-
-# broadbean extentions
-
-
-bb.Sequence.pushElement = pushElement
+from qcodes import Station
+from qdev_wrappers.alazar_controllers.ATSChannelController import ATSChannelController
+from qdev_wrappers.alazar_controllers.alazar_channel import AlazarChannel
 
 
 class ParametricSequencer:
     """
-    Take a step back to make it more general, and keep the ParametricWaveforms in the background
+    Take a step back to make it more general, and keep the
+    ParametricWaveforms in the background
     Args:
     builder:  f_with_footprint(buffer_index:int, buffer_setpoint:float,
     record_index: int, record_setpoint:float) -> bb.Element
@@ -25,40 +24,44 @@ class ParametricSequencer:
                  buffer_setpoints: List[float] = None,
                  record_set_parameter: str = None,
                  buffer_set_parameter: str = None,
-                 setpoint_labels: Tuple = None,
-                 setpoint_names: Tuple = None,
-                 setpoint_units: Tuple = None,
+                 record_setpoint_name: str = None,
+                 record_setpoint_label: str = None,
+                 record_setpoint_unit: str = None,
+                 buffer_setpoint_name: str = None,
+                 buffer_setpoint_label: str = None,
+                 buffer_setpoint_unit: str = None,
                  sequencing_mode: bool =True,
                  n_averages=1):
-        # TODO: add units and labels
         self.integration_delay = integration_delay
         self.integration_time = integration_time
         self.record_setpoints = record_setpoints
         self.buffer_setpoints = buffer_setpoints
-        self.setpoint_labels = setpoint_labels
-        self.setpoint_names = setpoint_names
-        self.setpoint_units = setpoint_units
-        self.parameters = parameters
+        self.record_setpoint_name = record_setpoint_name
+        self.record_setpoint_label = record_setpoint_label
+        self.record_setpoint_unit = record_setpoint_unit
+        self.buffer_setpoint_name = buffer_setpoint_name
+        self.buffer_setpoint_label = buffer_setpoint_label
+        self.buffer_setpoint_unit = buffer_setpoint_unit
 
-        self.average_records = self.record_setpoints is not None:
-        self.average_buffers = self.buffer_setpoints is not None:
+        self.average_records = self.record_setpoints is not None
+        self.average_buffers = self.buffer_setpoints is not None
         self.average_time = self.integration_delay is not None and self.integration_time is not None
         if record_setpoints is not None:
             self.records_per_buffer = len(record_setpoints)
         if buffer_setpoints is not None:
             self.buffers_per_acquisition = len(buffer_setpoints)
         self.n_averages = n_averages
-        self._dimension = 3 - int(self.average_buffers) - \
-            int(self.average_records) - int(self.average_time)
+
         self.check_parameters()
 
     def check_parameters(self):
         # check buffer setpoints with parameters
         if not self.average_buffers:
-            if len(self.parameters) > 1 and len(self._buffer_setpoints) != len(self.parameters):
-            raise RuntimeError(
-                'Number of buffers implied by parameter '
-                'list does not match buffer_setpoints.')
+            if (len(self.parameters) > 1 and
+                    len(self._buffer_setpoints) != len(self.parameters)):
+                raise RuntimeError(
+                    'Number of buffers implied by parameter '
+                    'list does not match buffer_setpoints.')
 
         # check record setpoints with parameters
         if not self.average_records:
@@ -68,36 +71,25 @@ class ParametricSequencer:
                 raise RuntimeError(
                     'Number of records per buffer implied by '
                     'parameter list is not consistent between buffers')
-            if record_paremeter_lengths[0] > 1 and len(self._record_setpoints) != record_paremeter_lengths[0]:
+            if (record_paremeter_lengths[0] > 1 and
+                    len(self._record_setpoints) != record_paremeter_lengths[0]):
                 raise RuntimeError(
                     'Number of records implied by parameter '
                     'list does not match record_setpoints.')
 
         # check labels, units, names
-        if self._dim == 2 and self.average_time:
-            for s in [self.setpoint_units, self.setpoint_names, self.setpoint_labels]:
-                if s is not None and len(s) != 2:
-                    raise RuntimeError('Must specify 2 setpoint labels or none at all'
-                        'when averaging over time but not records or buffers')
-        elif self._dim == 2:
-            for s in [self.setpoint_units, self.setpoint_names, self.setpoint_labels]:
-                if s is not None and len(s) != 1:
-                    raise RuntimeError('Must specify 1 setpoint labels or none at all'
-                        'when not averaging over time and one other from [records, buffers]')
-                elif s is not None:
-                    self.setpoint_names = (setpoint_names[0], 'time')
-                    self.setpoint_labels = (setpoint_labels[0], 'Time')
-                    self.setpoint_units = (setpoint_units[0], 'S')
-        elif self._dim == 1 and self.average_time:
-            for s in [self.setpoint_units, self.setpoint_names, self.setpoint_labels]:
-                if s is not None and len(s) != 1:
-                    raise RuntimeError('Must specify 1 setpoint labels or none at all'
-                        'when averaging over time and one other from [records, buffers]')
-        else:
-            if any([self.setpoint_units, self.setpoint_names, self.setpoint_labels]):
-                raise RuntimeError('Cannot specify setpoint labels, units or names'
-                    ' when averaging over records and buffers')
-
+        if self.record_setpoints is None:
+            if any([self.record_setpoint_label, self.record_setpoint_name,
+                    self.record_setpoint_unit]):
+                raise RuntimeError(
+                    'Not able to set record setpoint name,'
+                    ' label or unit as no record setpoints are specified.')
+        if self.buffer_setpoints is None:
+            if any([self.buffer_setpoint_label, self.buffer_setpoint_name,
+                    self.buffer_setpoint_unit]):
+                raise RuntimeError(
+                    'Not able to set buffer setpoint name,'
+                    ' label or unit as no buffer setpoints are specified.')
 
     def create_sequence(self) -> bb.Sequence:
         # this is the simple and naïve way, without any repeat elements
@@ -120,21 +112,26 @@ class ParametricSequencer:
 
 
 class ParametricWaveformAnalyser:
+    """
+    The PWA represents a composite instrument. It is similar to a
+    spectrum analyzer, but instead of a sine wave it probes using
+    waveforms described through a set of parameters.
+    For that functionality it compises an AWG and a Alazar as a high speed ADC.
+        Attributes:
+            sequencer (ParametricSequencer): represents the current
+                sequence in parametric
+            form and can be rendered into an uploadable sequence
+                alazar
+            awg
+    """
+    # TODO: make instruments private?
 
-
-"""
-The PWA represents a composite instrument. It is similar to a spectrum analyzer, but instead of a sine wave it probes using waveforms described through a set of parameters.
-For that functionality it compises an AWG and a Alazar as a high speed ADC.
-    Attributes:
-        sequencer (ParametricSequencer): represents the current sequence in parametric form and can be rendered into an uploadable sequence
-            alazar
-        awg
-"""
-# TODO: make instruments private?
-
-    def __init__(self, station: Station=None, awg=None, alazar=None, alazar_controller=None) -> None:
+    def __init__(self,
+                 station: Station=None,
+                 awg=None, alazar=None) -> None:
         self.station, self.awg, self.alazar = station, awg, alazar
-        self.alazar_controller = alazar_controller
+        self.alazar_controller = ATSChannelController(
+            'pwa_controller', alazar.name)
         self.alazar_channels = self.alazar_controller.channels
         self._demod_ref = None
 
@@ -142,7 +139,7 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
     def update_sequencer(self, sequencer):
         self.sequencer = sequencer
         # see how this needs to be converted, to and from the json config
-        station.components['sequencer'] = self.sequencer.serialize()
+        self.station.components['sequencer'] = self.sequencer.serialize()
         seq = self.sequencer.create_sequence()
 
         self.awg.upload(seq)
@@ -170,10 +167,7 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
                                demod=self._demod_ref is not None,
                                average_buffers=self.sequencer.average_buffers,
                                average_records=self.sequencer.average_records,
-                               integrate_samples=self.sequencer.average_time,
-                               setpoint_labels=self.sequencer.setpoint_labels,
-                               setpoint_names=self.sequencer.setpoint_names,
-                               setpoint_units=self.sequencer.setpoint_units)
+                               integrate_samples=self.sequencer.average_time)
         chan_m.demod_freq(self._demod_ref)
         chan_m.num_averages(self.sequencer.n_averages)
         if not self.sequencer.average_records:
@@ -181,13 +175,19 @@ For that functionality it compises an AWG and a Alazar as a high speed ADC.
         if not self.sequencer.average_buffers:
             chan_m.buffers_per_acquisition(
                 self.sequencer.buffers_per_acquisition)
-        chan_m.prepare_channel(record_setpoints=self.sequencer.record_setpoints,
-                               buffer_setpoints=self.sequencer.buffer_setpoints)
-        # this is a problem, can I not get magnitude and phase at the same time?
+        chan_m.prepare_channel(
+            record_setpoints=self.sequencer.record_setpoints,
+            buffer_setpoints=self.sequencer.buffer_setpoints,
+            record_setpoint_name=self.sequencer.record_setpoint_name,
+            record_setpoint_label=self.sequencer.record_setpoint_label,
+            record_setpoint_unit=self.sequencer.record_setpoint_unit,
+            buffer_setpoint_name=self.sequencer.buffer_setpoint_name,
+            buffer_setpoint_label=self.sequencer.buffer_setpoint_label,
+            buffer_setpoint_unit=self.sequencer.buffer_setpoint_unit)
+        # this is a problem, can't I get magnitude and phase at the same time?
         chan_p = deepcopy(chan_m)
         chan_m.demod_type('magnitude')
         chan_p.demod_type('phase')
-        # set the labels correctly here chan_m.data.setpoint_labels/units setpoints....
         # data is MultidimParameter
         self.alazar_controller.channels.append(chan_m)
         self.alazar_controller.channels.append(chan_p)

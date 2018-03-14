@@ -8,6 +8,7 @@ from qcodes.instrument.channel import MultiChannelInstrumentParameter
 
 logger = logging.getLogger(__name__)
 
+
 class Alazar0DParameter(Parameter):
     def __init__(self,
                  name: str,
@@ -30,12 +31,13 @@ class Alazar0DParameter(Parameter):
         channel = self._instrument
         cntrl = channel._parent
         alazar_channels = 2
-        cntrl.active_channels_nested = [{'ndemods': 0,
-                                         'nsignals': 0,
-                                         'demod_freqs': [],
-                                         'demod_types': [],
-                                         'numbers': [],
-                                         'raw': False} for _ in range(alazar_channels)]
+        cntrl.active_channels_nested = [
+            {'ndemods': 0,
+             'nsignals': 0,
+             'demod_freqs': [],
+             'demod_types': [],
+             'numbers': [],
+             'raw': False} for _ in range(alazar_channels)]
         alazar_channel = channel.alazar_channel.raw_value
         channel_info = cntrl.active_channels_nested[alazar_channel]
         channel_info['nsignals'] = 1
@@ -53,9 +55,9 @@ class Alazar0DParameter(Parameter):
                             'buffers_per_acquisition', 'allocated_buffers']
         acq_kwargs = self._instrument.acquisition_kwargs.copy()
         controller_acq_kwargs = {key: val.get() for key, val in cntrl.parameters.items() if
-             key in params_to_kwargs}
+                                 key in params_to_kwargs}
         channel_acq_kwargs = {key: val.get() for key, val in channel.parameters.items() if
-             key in params_to_kwargs}
+                              key in params_to_kwargs}
         acq_kwargs.update(controller_acq_kwargs)
         acq_kwargs.update(channel_acq_kwargs)
         if acq_kwargs['buffers_per_acquisition'] > 1:
@@ -98,16 +100,18 @@ class AlazarNDParameter(ArrayParameter):
     def get_raw(self) -> np.ndarray:
         channel = self._instrument
         if channel._stale_setpoints:
-            raise RuntimeError("Must run prepare channel before capturing data.")
+            raise RuntimeError(
+                "Must run prepare channel before capturing data.")
         cntrl = channel._parent
         cntrl.shape_info = {}
         alazar_channels = 2
-        cntrl.active_channels_nested = [{'ndemods': 0,
-                                         'nsignals': 0,
-                                         'demod_freqs': [],
-                                         'demod_types': [],
-                                         'numbers': [],
-                                         'raw': False} for _ in range(alazar_channels)]
+        cntrl.active_channels_nested = [
+            {'ndemods': 0,
+             'nsignals': 0,
+             'demod_freqs': [],
+             'demod_types': [],
+             'numbers': [],
+             'raw': False} for _ in range(alazar_channels)]
         alazar_channel = channel.alazar_channel.raw_value
         channel_info = cntrl.active_channels_nested[alazar_channel]
         channel_info['nsignals'] = 1
@@ -126,9 +130,9 @@ class AlazarNDParameter(ArrayParameter):
                             'buffers_per_acquisition', 'allocated_buffers']
         acq_kwargs = self._instrument.acquisition_kwargs.copy()
         controller_acq_kwargs = {key: val.get() for key, val in cntrl.parameters.items() if
-             key in params_to_kwargs}
+                                 key in params_to_kwargs}
         channel_acq_kwargs = {key: val.get() for key, val in channel.parameters.items() if
-             key in params_to_kwargs}
+                              key in params_to_kwargs}
         acq_kwargs.update(controller_acq_kwargs)
         acq_kwargs.update(channel_acq_kwargs)
         if acq_kwargs['buffers_per_acquisition'] > 1:
@@ -152,10 +156,7 @@ class Alazar1DParameter(AlazarNDParameter):
                  average_buffers: bool=True,
                  average_records: bool=True,
                  integrate_samples: bool=True,
-                 shape: Sequence[int] = (1,),
-                 setpoint_names: Optional[Sequence[str]] = None,
-                 setpoint_labels: Optional[Sequence[str]] = None,
-                 setpoint_units: Optional[Sequence[str]] = None):
+                 shape: Sequence[int] = (1,)):
 
         if not integrate_samples:
             setpoint_names = ('time',)
@@ -174,42 +175,66 @@ class Alazar1DParameter(AlazarNDParameter):
                          instrument=instrument,
                          label=label,
                          shape=shape,
-                         setpoint_names=setpoint_names,
-                         setpoint_labels=setpoint_labels,
-                         setpoint_units=setpoint_units,
                          average_buffers=average_buffers,
                          average_records=average_records,
                          integrate_samples=integrate_samples)
 
-    def set_setpoints_and_labels(self, record_setpoints=None, buffer_setpoints=None) -> None:
-        # setpoint_limits (lim0, limN)
-        # setpoint_labels (label, )
-        # ignores any samples/time setpoint limits and labels
+    def set_setpoints_and_labels(self,
+                                 record_setpoints=None,
+                                 buffer_setpoints=None,
+                                 record_setpoint_name=None,
+                                 record_setpoint_label=None,
+                                 record_setpoint_unit=None,
+                                 buffer_setpoint_name=None,
+                                 buffer_setpoint_label=None,
+                                 buffer_setpoint_unit=None) -> None:
         # int_time = self._instrument.int_time.get() or 0
         # int_delay = self._instrument.int_delay.get() or 0
         # total_time = int_time + int_delay
+        r_checklist = [record_setpoint_name, record_setpoint_label,
+                       record_setpoint_unit, record_setpoints]
+        b_checklist = [buffer_setpoint_name, buffer_setpoint_label,
+                       buffer_setpoint_unit, buffer_setpoints]
         if not self._integrate_samples:
-            if record_set_points or buffer_set_points:
-                raise RuntimeError('Not allowed record or buffer setpoints when averaging'
+            if any([record_setpoints or buffer_setpoints]):
+                raise RuntimeError(
+                    'Not allowed record or buffer setpoints when averaging'
                     ' over records and buffers')
             samples = self._instrument._parent.samples_per_record.get()
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
             start = 0
-            stop = stop or samples/sample_rate
+            stop = samples / sample_rate
             self.shape = (samples,)
             self.setpoints = (tuple(np.linspace(start, stop, samples)),)
+            self.setpoint_names = ('time',)
+            self.setpoint_labels = ('Time',)
+            self.setpoint_units = ('S',)
         elif not self._average_records:
-            if buffer_set_points:
-                raise RuntimeError('Not allowed buffer setpoints when averaging over buffers')
+            if any([b is not None for b in b_checklist]):
+                raise RuntimeError(
+                    'Not allowed buffer setpoints, setpoint names labels '
+                    'or units when averaging over buffers')
             records = self._instrument.records_per_buffer.get()
+            record_setpoints = record_setpoints or np.linspace(
+                0, records - 1, records)
             self.shape = (records,)
-            self.setpoints = (tuple(record_setpoints or np.linspace(0, records - 1, records)),)
+            self.setpoints = (tuple(record_setpoints),)
+            self.setpoint_names = (record_setpoint_name or 'records',)
+            self.setpoint_labels = (record_setpoint_label or 'Records',)
+            self.setpoint_units = (record_setpoint_unit or '',)
         elif not self._average_buffers:
-            if record_set_points:
-                raise RuntimeError('Not allowed record setpoints when averaging over records')
+            if any([r is not None for r in r_checklist]):
+                raise RuntimeError(
+                    'Not allowed record setpoints, setpoint names labels '
+                    'or units when averaging over records')
             buffers = self._instrument.buffers_per_acquisition.get()
+            buffer_setpoints = buffer_setpoints or np.linspace(
+                0, buffers - 1, buffers)
             self.shape = (buffers,)
-            self.setpoints = (tuple(buffer_setpoints or np.linspace(0, buffers - 1, buffers)),)
+            self.setpoints = (tuple(buffer_setpoints),)
+            self.setpoint_names = (buffer_setpoint_name or 'buffers',)
+            self.setpoint_labels = (buffer_setpoint_label or 'Buffers',)
+            self.setpoint_units = (buffer_setpoint_unit or '',)
 
 
 class Alazar2DParameter(AlazarNDParameter):
@@ -221,66 +246,84 @@ class Alazar2DParameter(AlazarNDParameter):
                  average_buffers: bool=True,
                  average_records: bool=True,
                  integrate_samples: bool=True,
-                 shape: Sequence[int] = (1,1),
-                 setpoint_names: Sequence[str] = None,
-                 setpoint_labels: Sequence[str] = None,
-                 setpoint_units: Sequence[str] = None) -> None:
+                 shape: Sequence[int] = (1, 1)) -> None:
         self._integrate_samples = integrate_samples
         self._average_records = average_records
         self._average_buffers = average_buffers
 
-        if integrate_samples:
-            setpoint_names = setpoint_names or ('buffers', 'records')
-            setpoint_labels = setpoint_labels or ('Buffers', 'Records')
-            setpoint_units = setpoint_units or ('', '')
-        if average_records:
-            setpoint_names = (setpoint_names[0] or 'buffers', 'time')
-            setpoint_labels = (setpoint_labels[0] or 'Buffers', 'Time')
-            setpoint_units = (setpoint_units[0] or '', 'S')
-        if average_buffers:
-            setpoint_names = (setpoint_names[0] or 'records', 'time')
-            setpoint_labels = (setpoint_labels[0] or 'Records', 'Time')
-            setpoint_units = (setpoint_units[0] or '', 'S')
         super().__init__(name,
                          unit=unit,
                          label=label,
                          shape=shape,
                          instrument=instrument,
-                         setpoint_names=setpoint_names,
-                         setpoint_labels=setpoint_labels,
-                         setpoint_units=setpoint_units,
                          average_buffers=average_buffers,
                          average_records=average_records,
                          integrate_samples=integrate_samples)
 
-    def set_setpoints_and_labels(self, record_setpoints=None, buffer_setpoints=None):
-        # ignores any samples/time setpoint limits and labels
+    def set_setpoints_and_labels(self,
+                                 record_setpoints=None,
+                                 buffer_setpoints=None,
+                                 record_setpoint_name=None,
+                                 record_setpoint_label=None,
+                                 record_setpoint_unit=None,
+                                 buffer_setpoint_name=None,
+                                 buffer_setpoint_label=None,
+                                 buffer_setpoint_unit=None):
         records = self._instrument.records_per_buffer()
         buffers = self._instrument.buffers_per_acquisition()
         samples = self._instrument._parent.samples_per_record.get()
+
+        r_checklist = [record_setpoint_name, record_setpoint_label,
+                       record_setpoint_unit, record_setpoints]
+        b_checklist = [buffer_setpoint_name, buffer_setpoint_label,
+                       buffer_setpoint_unit, buffer_setpoints]
         if self._integrate_samples:
-            self.shape = (buffers,records)
-            inner_setpoints = record_setpoints or tuple(np.linspace(0, records, records))
-            outer_setpoints = buffer_setpoints or tuple(np.linspace(0, buffers, buffers))
+            self.shape = (buffers, records)
+            inner_setpoints = record_setpoints or tuple(
+                np.linspace(0, records, records))
+            outer_setpoints = buffer_setpoints or tuple(
+                np.linspace(0, buffers, buffers))
+            setpoint_names = (buffer_setpoint_name or 'buffers',
+                              record_setpoint_name or 'records')
+            setpoint_labels = (buffer_setpoint_label or 'Buffers',
+                               record_setpoint_label or 'Records')
+            setpoint_units = (buffer_setpoint_unit or '',
+                              record_setpoint_unit or '')
         elif self._average_records:
-            if record_setpoints:
-                raise RuntimeError('Not allowed record setpoints when averaging over records')
+            if any([r is not None for r in r_checklist]):
+                raise RuntimeError(
+                    'Not allowed record setpoints, setpoint names labels '
+                    'or units when averaging over records')
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
-            stop = samples/sample_rate
-            self.shape = (buffers,samples)
+            stop = samples / sample_rate
+            self.shape = (buffers, samples)
             inner_setpoints = tuple(np.linspace(0, stop, samples))
-            outer_setpoints = buffer_setpoints or tuple(np.linspace(0, buffers, buffers))
+            outer_setpoints = buffer_setpoints or tuple(
+                np.linspace(0, buffers, buffers))
+            setpoint_names = (buffer_setpoint_name or 'buffers', 'time')
+            setpoint_labels = (buffer_setpoint_label or 'Buffers', 'Time')
+            setpoint_units = (buffer_setpoint_unit or '', 'S')
         elif self._average_buffers:
-            if buffer_setpoints:
-                raise RuntimeError('Not allowed buffer setpoints when averaging over buffers')
+            if any([b is not None for b in b_checklist]):
+                raise RuntimeError(
+                    'Not allowed buffer setpoints, setpoint names labels '
+                    'or units when averaging over buffers')
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
-            stop = samples/sample_rate
-            self.shape = (records,samples)
+            stop = samples / sample_rate
+            self.shape = (records, samples)
             inner_setpoints = tuple(np.linspace(0, stop, samples))
-            outer_setpoints = record_setpoints or tuple(np.linspace(0, records, records))
+            outer_setpoints = record_setpoints or tuple(
+                np.linspace(0, records, records))
+            setpoint_names = (record_setpoint_name or 'records', 'time')
+            setpoint_labels = (record_setpoint_label or 'Records', 'Time')
+            setpoint_units = (record_setpoint_unit or '', 'S')
         else:
             raise RuntimeError("Non supported Array type")
-        self.setpoints = (outer_setpoints, tuple(inner_setpoints for _ in range(len(outer_setpoints))))
+        self.setpoints = (outer_setpoints, tuple(
+            inner_setpoints for _ in range(len(outer_setpoints))))
+        self.setpoint_names = setpoint_names
+        self.setpoint_labels = setpoint_labels
+        self.setpoint_units = setpoint_units
 
 
 class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
@@ -288,6 +331,7 @@ class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
 
 
     """
+
     def get_raw(self) -> np.ndarray:
         if self._param_name == 'data':
             channel = self._channels[0]
@@ -295,14 +339,15 @@ class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
             instrument = cntrl._get_alazar()
             cntrl.shape_info = {}
             alazar_channels = 2
-            cntrl.active_channels_nested = [{'ndemods':0,
-                                             'nsignals':0,
-                                             'demod_freqs':[],
-                                             'demod_types': [],
-                                             'demod_order': [],
-                                             'raw_order': [],
-                                             'numbers': [],
-                                             'raw':False} for _ in range(alazar_channels)]
+            cntrl.active_channels_nested = [
+                {'ndemods': 0,
+                 'nsignals': 0,
+                 'demod_freqs': [],
+                 'demod_types': [],
+                 'demod_order': [],
+                 'raw_order': [],
+                 'numbers': [],
+                 'raw':False} for _ in range(alazar_channels)]
 
             for i, channel in enumerate(self._channels):
                 # change this to use raw value once mapping is
@@ -314,8 +359,10 @@ class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
                 if channel._demod:
                     channel_info['ndemods'] += 1
                     channel_info['demod_order'].append(i)
-                    channel_info['demod_freqs'].append(channel.demod_freq.get())
-                    channel_info['demod_types'].append(channel.demod_type.get())
+                    channel_info['demod_freqs'].append(
+                        channel.demod_freq.get())
+                    channel_info['demod_types'].append(
+                        channel.demod_type.get())
                 else:
                     channel_info['raw'] = True
                     channel_info['raw_order'].append(i)
@@ -333,14 +380,16 @@ class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
                                 'buffers_per_acquisition', 'allocated_buffers']
             acq_kwargs = channel.acquisition_kwargs.copy()
             controller_acq_kwargs = {key: val.get() for key, val in cntrl.parameters.items() if
-                 key in params_to_kwargs}
+                                     key in params_to_kwargs}
             channels_acq_kwargs = []
             for i, channel in enumerate(self._channels):
                 channels_acq_kwargs.append({key: val.get() for key, val in channel.parameters.items() if
-                     key in params_to_kwargs})
+                                            key in params_to_kwargs})
                 if channels_acq_kwargs[i] != channels_acq_kwargs[0]:
-                    raise RuntimeError("Found non matching kwargs. Got {} and {}".format(channels_acq_kwargs[0],
-                                                                                         channels_acq_kwargs[i]))
+                    raise RuntimeError(
+                        "Found non matching kwargs. Got {} and {}".format(
+                            channels_acq_kwargs[0],
+                            channels_acq_kwargs[i]))
             acq_kwargs.update(controller_acq_kwargs)
             acq_kwargs.update(channels_acq_kwargs[0])
             if acq_kwargs['buffers_per_acquisition'] > 1:
