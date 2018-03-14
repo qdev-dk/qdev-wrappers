@@ -118,7 +118,7 @@ class AlazarChannel(InstrumentChannel):
 
     def prepare_channel(self, **kwargs) -> None:
         if self.dimensions > 0:
-            self.data.set_setpoints_and_labels(*kwargs)
+            self.data.set_setpoints_and_labels(**kwargs)
             self._stale_setpoints = False
 
     def _update_num_avg(self, value: int, **kwargs) -> None:

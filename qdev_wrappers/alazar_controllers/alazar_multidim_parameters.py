@@ -196,7 +196,8 @@ class Alazar1DParameter(AlazarNDParameter):
         b_checklist = [buffer_setpoint_name, buffer_setpoint_label,
                        buffer_setpoint_unit, buffer_setpoints]
         if not self._integrate_samples:
-            if any([record_setpoints or buffer_setpoints]):
+            if (any([rb is not None for rb in r_checklist+b_checklist])):
+                print(r_checklist, b_checklist)
                 raise RuntimeError(
                     'Not allowed record or buffer setpoints when averaging'
                     ' over records and buffers')

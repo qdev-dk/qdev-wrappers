@@ -1,8 +1,9 @@
 from typing import Callable, Dict, List
 from copy import deepcopy
-from qcodes import Station
+from qcodes import Station, Instrument
 from qdev_wrappers.alazar_controllers.ATSChannelController import ATSChannelController
 from qdev_wrappers.alazar_controllers.alazar_channel import AlazarChannel
+from qdev_wrappers.transmon.awg_helpers import make_save_send_load_awg_file
 
 
 class ParametricSequencer:
@@ -17,9 +18,11 @@ class ParametricSequencer:
 
     def __init__(self,
                  builder: Callable,
-                 default_parameters: Dict[str, float],
-                 integration_delay: float = None,
-                 integration_time: float = None,
+                 builder_parms: Dict=None, 
+                 default_parameters: Dict[str, float] = None,
+                 integration_delay: float = 0,
+                 integration_time: float = 1e-6,
+                 average_time: bool = True,
                  record_setpoints: List[float] = None,
                  buffer_setpoints: List[float] = None,
                  record_set_parameter: str = None,
@@ -30,7 +33,7 @@ class ParametricSequencer:
                  buffer_setpoint_name: str = None,
                  buffer_setpoint_label: str = None,
                  buffer_setpoint_unit: str = None,
-                 sequencing_mode: bool =True,
+                 sequencing_mode: bool = True,
                  n_averages=1):
         self.integration_delay = integration_delay
         self.integration_time = integration_time
@@ -42,17 +45,19 @@ class ParametricSequencer:
         self.buffer_setpoint_name = buffer_setpoint_name
         self.buffer_setpoint_label = buffer_setpoint_label
         self.buffer_setpoint_unit = buffer_setpoint_unit
+        self.builder = builder
+        self.builder_parms = builder_parms
 
-        self.average_records = self.record_setpoints is not None
-        self.average_buffers = self.buffer_setpoints is not None
-        self.average_time = self.integration_delay is not None and self.integration_time is not None
+        self.average_records = self.record_setpoints is None
+        self.average_buffers = self.buffer_setpoints is None
+        self.average_time = average_time
         if record_setpoints is not None:
             self.records_per_buffer = len(record_setpoints)
         if buffer_setpoints is not None:
             self.buffers_per_acquisition = len(buffer_setpoints)
         self.n_averages = n_averages
 
-        self.check_parameters()
+#        self.check_parameters()
 
     def check_parameters(self):
         # check buffer setpoints with parameters
@@ -91,16 +96,17 @@ class ParametricSequencer:
                     'Not able to set buffer setpoint name,'
                     ' label or unit as no buffer setpoints are specified.')
 
-    def create_sequence(self) -> bb.Sequence:
-        # this is the simple and naïve way, without any repeat elements
-        # but one can simply add them here
-        sequence = bb.Sequence()
-        for buffer_index, buffer_setpoint in enumerate(self.buffer_setpoints or 1):
-            for record_index, record_setpoint in enumerate(self.record_setpoints or 1):
-                parms = parameters[buffer_index][record_index]
-                element = builder(parms)
-                sequence.pushElement(element)
-        return sequence
+    def create_sequence(self):# -> bb.Sequence:
+        return self.builder(**self.builder_parms)
+#        # this is the simple and naïve way, without any repeat elements
+#        # but one can simply add them here
+#        sequence = bb.Sequence()
+#        for buffer_index, buffer_setpoint in enumerate(self.buffer_setpoints or 1):
+#            for record_index, record_setpoint in enumerate(self.record_setpoints or 1):
+#                parms = parameters[buffer_index][record_index]
+#                element = builder(parms)
+#                sequence.pushElement(element)
+#        return sequence
 
     # TODO: implement
     # TODO: implement as stream
@@ -111,7 +117,7 @@ class ParametricSequencer:
         pass
 
 
-class ParametricWaveformAnalyser:
+class ParametricWaveformAnalyser(Instrument):
     """
     The PWA represents a composite instrument. It is similar to a
     spectrum analyzer, but instead of a sine wave it probes using
@@ -127,8 +133,10 @@ class ParametricWaveformAnalyser:
     # TODO: make instruments private?
 
     def __init__(self,
+                 name: str,
                  station: Station=None,
                  awg=None, alazar=None) -> None:
+        super().__init__(name)
         self.station, self.awg, self.alazar = station, awg, alazar
         self.alazar_controller = ATSChannelController(
             'pwa_controller', alazar.name)
@@ -139,11 +147,12 @@ class ParametricWaveformAnalyser:
     def update_sequencer(self, sequencer):
         self.sequencer = sequencer
         # see how this needs to be converted, to and from the json config
-        self.station.components['sequencer'] = self.sequencer.serialize()
+#        self.station.components['sequencer'] = self.sequencer.serialize()
         seq = self.sequencer.create_sequence()
 
-        self.awg.upload(seq)
-        self.awg.start()
+        make_save_send_load_awg_file(self.awg, seq, seq.name+'.awg')
+        self.awg.all_channels_on()
+        self.awg.run()
 
     def set_demod_freq(self, f_demod):
         for ch in self.alazar_channels:
@@ -156,6 +165,7 @@ class ParametricWaveformAnalyser:
         # set alazar in the right averaging mode
         if self.alazar_channels is not None:
             del self.alazar_channels
+            self.alazar_channels = None
             # TODO: try to remove it from the channel list
             # self.alazar_controller.channels.remove(chan_m)
             # remove all channels
@@ -164,11 +174,13 @@ class ParametricWaveformAnalyser:
         self.alazar_controller.int_delay(self.sequencer.integration_delay)
         # setup channels
         chan_m = AlazarChannel(self.alazar_controller,
+                               'alazar_channel_m',
                                demod=self._demod_ref is not None,
                                average_buffers=self.sequencer.average_buffers,
                                average_records=self.sequencer.average_records,
                                integrate_samples=self.sequencer.average_time)
-        chan_m.demod_freq(self._demod_ref)
+        if self._demod_ref is not None:
+            chan_m.demod_freq(self._demod_ref)
         chan_m.num_averages(self.sequencer.n_averages)
         if not self.sequencer.average_records:
             chan_m.records_per_buffer(self.sequencer.records_per_buffer)
@@ -185,12 +197,12 @@ class ParametricWaveformAnalyser:
             buffer_setpoint_label=self.sequencer.buffer_setpoint_label,
             buffer_setpoint_unit=self.sequencer.buffer_setpoint_unit)
         # this is a problem, can't I get magnitude and phase at the same time?
-        chan_p = deepcopy(chan_m)
+#        chan_p = deepcopy(chan_m)
         chan_m.demod_type('magnitude')
-        chan_p.demod_type('phase')
+#        chan_p.demod_type('phase')
         # data is MultidimParameter
         self.alazar_controller.channels.append(chan_m)
-        self.alazar_controller.channels.append(chan_p)
+#        self.alazar_controller.channels.append(chan_p)
         self.alazar_channels = self.alazar_controller.channels
 
     # def get(self):
