@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 matplotlib.use('Qt5Agg')
 
 from broadbean import Element, BluePrint
-from pulsbuilding import joinElements, const, zero, make_drive_waveform, make_readout_waveform, joint_builder
-
+from pulsbuilding import joinElements, make_drive_waveform, make_readout_waveform, joint_builder, waveform_builder_from_file
+from custom_pulse_atoms import const, zero
 
 
 def test_joining_elements():
@@ -55,8 +55,16 @@ def test_joint_builder():
     jb = joint_builder(make_drive_waveform, make_readout_waveform)
     return jb(**pulse_parameters)
 
-elem = test_joint_builder()
-print(elem)
-# cur_fig = plt.gcf()
-# cur_fig.show()
-# input("test") wl
+def test_waveform_builder_from_file():
+    # testdict = {delay: 1 }
+    testdict = {'readout_delay': 1,
+                'readout_duration': 2,
+                'readout_frequency': 10,
+                'readout_amplitude': 12,
+                'readout_stage_duration': 4 ,
+                'readout_basename': 'readout_basename_val'}
+    func = waveform_builder_from_file('./experimental_puls_description.yml', 'simple_readout')
+    print(func(**testdict))
+
+
+test_waveform_builder_from_file()

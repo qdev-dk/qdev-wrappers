@@ -1,22 +1,21 @@
 import io
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, suppress, contextmanager
+from functools import partial
 import textwrap
 import broadbean as bb
 from broadbean import Element, PulseAtoms, BluePrint
+from custom_pulse_atoms import const, zero
+import custom_pulse_atoms
 from typing import Dict
 
 
-# atom elements
-def const(val, SR, npts):
-    return PulseAtoms.ramp(val, val, SR, npts)
-
-def zero(SR, npts):
-    return PulseAtoms.ramp(0, 0, SR, npts)
 
 # broadbean addtions
 
 # TODO:
 # add a test for negative durations
+# document insertSegment better -1 for insert
+
 
 # in element
 def pushElement(self, element: Element) -> None:
@@ -104,6 +103,75 @@ def applyChannelMap(self: Element, channel_map:Dict) -> None:
 
 # def join_pulses(pulses):
 #     return lambda x(parameters): joinElements(puls(parameters) for puls in pulses)
+import yaml
+def waveform_builder_from_file(filename, waveform_name):
+    with open(filename, 'r') as f:
+        collection = yaml.load(f)
+        wave_description = collection[waveform_name]
+    # this is the naïve way of building the blueprint
+    # might needs replacement for speed
+    def builder(**kwargs):
+        def val(field, prefix=''):
+            if type(field) in (float, int):
+                return field
+            else:
+                return kwargs[prefix + field]
+            
+        @contextmanager
+        def prefixed_val(val, additional_prefix):
+            yield lambda field, prefix='': val(field, prefix=additional_prefix+prefix)
+
+        def get_prefix(the_dict, default, prefix='prefix'):
+            if prefix in the_dict:
+                ret = the_dict[prefix]
+                if ret is not None:
+                    ret += '_'
+                else:
+                    ret = ''
+            else:
+                ret = default + '_'
+            return ret
+            
+        elem = Element()
+
+        with prefixed_val(val, get_prefix(wave_description, default=waveform_name)) as val:
+            for channel in wave_description['channels']:
+                name_args = channel.get('name_args', None)
+                name_args = val(name_args) if name_args else None
+                channel_name = channel['name'].format(name_args)
+                # create BluePrint
+                bp = BluePrint()
+                with prefixed_val(val, get_prefix(channel, default=channel_name)) as val:
+                    segments = channel['segments']
+                    # change out the fill property:
+                    i_fill_segment = [i for i,s in enumerate(segments) if 'fill' in s]
+                    if len(i_fill_segment) > 1:
+                        raise Exception("There can only be one fill segment")
+                    elif len(i_fill_segment) == 1:
+                        fill_segment = segments[i_fill_segment[0]]
+                        if 'dur' in fill_segment:
+                            raise Exception("You cannot specify a duration for a fill segment")
+
+                        total_dur = sum(val(s['dur']) for s in segments if 'fill' not in s)
+                        fill_segment['dur'] = val(wave_description['dur']) - total_dur
+                        del fill_segment['fill']
+
+                    # build blueprint for every segment
+                    for segment in channel['segments']:
+                        name = segment['atom']
+                        with suppress(AttributeError):
+                            atom_function = getattr(PulseAtoms, name, None)
+                            atom_function = getattr(custom_pulse_atoms, name, atom_function)
+                        if atom_function is None:
+                            raise Exception(("Could not find pulse atom {}, neither in "
+                                            "Broadbean pulse atoms nor in custom "
+                                            "pulse atoms").format(name))
+                        args = {k:val(v) for k,v in segment.items() if k not in ('atom', 'dur', 'fill')}
+                        bp.insertSegment(pos=-1, func=atom_function, args=args, dur=val(segment['dur']))
+                elem.addBluePrint(channel_name, bp)
+        return elem
+
+    return builder
 
 
 def make_readout_waveform(readout_channel_name:str,
