@@ -77,7 +77,7 @@ class StationConfigurator:
             with suppress(KeyError):
                 instr = Instrument.find_instrument(identifier)
                 # remove parameters related to this instrument from the monitor list
-                self.monitor_parameters = {k:v for k,v in self.monitor_parameters.items() if v.get_root_instrument() is not instr}
+                self.monitor_parameters = {k:v for k,v in self.monitor_parameters.items() if v.root_instrument is not instr}
                 instr.close()
 
         # instantiate instrument
@@ -148,11 +148,8 @@ class StationConfigurator:
         # add the instrument to the station
         self.station.add_component(instr)
 
-        # restart the monitor to apply the changes
-        self._restart_monitor()
+        # restart Monitor
+        Monitor(*self.monitor_parameters.values())
+
         return instr
 
-    def _restart_monitor(self):
-        if Monitor.running:
-            Monitor.running.stop()
-        Monitor(*self.monitor_parameters.values())

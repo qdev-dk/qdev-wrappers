@@ -20,8 +20,8 @@ instruments:
     auto_reconnect: true
     # constant arguments passed to the init function
     init:
-    #   terminator: \n
-    #   update_currents: false
+      terminator: \n
+      update_currents: false
     # new parameters, that get created and attached to the instrument
     new_parameters:
     # for example, here we define a DAC channel used for driving a
