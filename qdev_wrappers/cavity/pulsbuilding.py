@@ -1,4 +1,5 @@
 import io
+import inspect
 from contextlib import redirect_stdout, suppress, contextmanager
 from functools import partial
 import textwrap
@@ -59,12 +60,12 @@ def joinElements(elem1: Element,
     If the channels specified in the two elements differ
     one can choose to do zero padding
     |-~-| |~--| |-~-~--|
-     +|~--|=|---~--|
+         +|~--|=|---~--|
     |---|       |------|
     If the channels are disjunct an overlap can be introduced
     |-~-|       |-~--|
-      |~--| |-~--|
-     +|~--|=|-~--|
+          |~--| |-~--|
+         +|~--|=|-~--|
     |---|       |----|
     It should also be possible at some point to join elements
     with overlap that share a common channel
@@ -105,6 +106,19 @@ def applyChannelMap(self: Element, channel_map:Dict) -> None:
 #     return lambda x(parameters): joinElements(puls(parameters) for puls in pulses)
 import yaml
 def waveform_builder_from_file(filename, waveform_name):
+    """
+    An alternative faster way of doing things is to define a base_waveform and
+    then alter parameters
+    make mapping like this:
+    poss = [1, 1]
+    channels = [1, 1]
+    names = ['varyme', 'varyme']
+    args = ['start', 'stop']
+    iters = [[1, 0.75, 0.5], [1, 0.75, 0.5]]
+    how to deal with fill? do it manually
+    list parameters
+     - param1 -> [(segmentx, paramy), ...], durations
+    """
     with open(filename, 'r') as f:
         collection = yaml.load(f)
         wave_description = collection[waveform_name]
@@ -141,6 +155,7 @@ def waveform_builder_from_file(filename, waveform_name):
                 channel_name = channel['name'].format(name_args)
                 # create BluePrint
                 bp = BluePrint()
+                bp.setSR(1e9)
                 with prefixed_val(val, get_prefix(channel, default=channel_name)) as val:
                     segments = channel['segments']
                     # change out the fill property:
@@ -166,8 +181,14 @@ def waveform_builder_from_file(filename, waveform_name):
                             raise Exception(("Could not find pulse atom {}, neither in "
                                             "Broadbean pulse atoms nor in custom "
                                             "pulse atoms").format(name))
+                        # broadbean does not support named arguments we
+                        # have to do this ourselves
+                        atom_spec = inspect.getargspec(atom_function)
+                        calc_args = [arg for arg in atom_spec.args if arg not in ('SR', 'npts')]
                         args = {k:val(v) for k,v in segment.items() if k not in ('atom', 'dur', 'fill')}
-                        bp.insertSegment(pos=-1, func=atom_function, args=args, dur=val(segment['dur']))
+                        # args = (val(v) for k,v in segment.items() if k in )
+                        passed_args = tuple(args[k] for k in calc_args if k in args)
+                        bp.insertSegment(pos=-1, func=atom_function, args=passed_args, dur=val(segment['dur']))
                 elem.addBluePrint(channel_name, bp)
         return elem
 

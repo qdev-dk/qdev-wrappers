@@ -6,44 +6,56 @@ simple_readout:
       name_args: basename
       prefix: 
       segments: 
+        - {atom: const, val: 0, dur: delay}
+        - {atom: const, dur: duration, val: amplitude}
+        - {atom: const, val: 0, fill: true}
+    - name: "{}_Q"
+      name_args: basename
+      prefix: 
+      segments: 
         - {atom: zero, dur: delay}
         - {atom: const, dur: duration, val: amplitude}
         - {atom: zero, fill: true}
-
-sideband_readout:
-  prefix: readout
-  dur: stage_duration
-  channels:
-    - name: "{}_I"
-      name_args: basename
-      prefix: 
+# sideband_readout:
+#   prefix: readout
+#   dur: stage_duration
+#   channels:
+#     - name: "{}_I"
+#       name_args: basename
+#       prefix: 
       segments: &sideband_readout_segments
-        - {atom: zero, dur: delay}
-        - {atom: sine, dur: duration, freq: frequency, ampl: amplitude}
-        - {atom: zero, fill: true}
-    - name: Q
-      prefix:
-      segments: *sideband_readout_segments
+        - group:
+          - zero: {dur: delay}
+          - sine: {dur: duration, freq: frequency, ampl: amplitude}
+          - zero: {fill: true}
+        - group:
+            
+#       marker:
+#         - channel: 1
+            
+#     - name: Q
+#       prefix:
+#       segments: *sideband_readout_segments
 
-rabi: &rabi
-  # autoprefix with {name}_
-  dur: drive_stage_duration
-  channels:
-    - name: I
-      segments:
-        - {atom: zero, dur: fill}
-        - {atom: const, dur: pulse_duration, ampl: amplitude}
-        - {atom: zero, dur: post_delay}
+# rabi: &rabi
+#   # autoprefix with {name}_
+#   dur: drive_stage_duration
+#   channels:
+#     - name: I
+#       segments:
+#         - {atom: zero, dur: fill}
+#         - {atom: const, dur: pulse_duration, ampl: amplitude}
+#         - {atom: zero, dur: post_delay}
 
-T1: *rabi# same as rabi
+# T1: *rabi# same as rabi
 
-ramsey: 
-  dur: drive_stage_duration
-  channels:
-    - name: I
-      Segments:
-        - {atom: zero, dur: fill}
-        - {atom: const, dur: pulse1_duration, ampl: pulse1_amplitude}
-        - {atom: zero, dur: mid_delay}
-        - {atom: const, dur: pulse2_duration, ampl: pulse2_amplitude}
-        - {atom: zero, dur: post_delay}
+# ramsey: 
+#   dur: drive_stage_duration
+#   channels:
+#     - name: I
+#       Segments:
+#         - {atom: zero, dur: fill}
+#         - {atom: const, dur: pulse1_duration, ampl: pulse1_amplitude}
+#         - {atom: zero, dur: mid_delay}
+#         - {atom: const, dur: pulse2_duration, ampl: pulse2_amplitude}
+#         - {atom: zero, dur: post_delay}
