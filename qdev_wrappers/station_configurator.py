@@ -93,7 +93,6 @@ class StationConfigurator:
 
         # local function to refactor common code from defining new parameter
         # and setting existing one
-        p is a test
         def setup_parameter_from_dict(parameter, options_dict):
             for attr, val in options_dict.items():
                 if attr in self.PARAMETER_ATTRIBUTES:
