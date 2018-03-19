@@ -31,7 +31,7 @@ class StationConfigurator:
 
     def __init__(self, filename: str, station: Optional[Station] = None) -> None:
         self.monitor_parameters = {}
-        # self.station = station if is not None else Station.default if is not None else Station()
+
         if station is None:
             station = Station.default or Station()
         self.station = station
@@ -47,7 +47,6 @@ class StationConfigurator:
             def snapshot(self, update=True):
                 return self.data
 
-        # self.station.add_component(ConfigComponent(self.config), 'Config')
         self.station.components['StationConfigurator'] = ConfigComponent(self.config)
 
     def load_instrument(self, identifier: str,
@@ -94,28 +93,29 @@ class StationConfigurator:
 
         # local function to refactor common code from defining new parameter
         # and setting existing one
-        def setup_parameter_from_dict(p, options):
-            for attr, val in options.items():
+        p is a test
+        def setup_parameter_from_dict(parameter, options_dict):
+            for attr, val in options_dict.items():
                 if attr in self.PARAMETER_ATTRIBUTES:
                     # set the attributes of the parameter, that map 1 to 1
-                    setattr(p, attr, val)
+                    setattr(parameter, attr, val)
                     # extra attributes that need parsing
                 elif attr == 'limits':
                     lower, upper = [float(x) for x in val.split(',')]
-                    p.vals = validators.Numbers(lower, upper)
+                    parameter.vals = validators.Numbers(lower, upper)
                 elif attr == 'monitor' and val is True:
-                    self.monitor_parameters[id(p)] = p
+                    self.monitor_parameters[id(parameter)] = parameter
                 elif attr == 'alias':
-                    setattr(instr, val, p)
+                    setattr(instr, val, parameter)
                 elif attr == 'value':
                     # skip value attribute so that it gets set last
                     # when everything else has been set up
                     pass
                 else:
                     log.warning(f'Attribute {attr} no recognized when'
-                                f' instatiating parameter \"{p.name}\"')
-            if 'value' in options:
-                p.set(options['value'])
+                                f' instatiating parameter \"{parameter.name}\"')
+            if 'value' in options_dict:
+                parameter.set(options_dict['value'])
 
         # setup existing parameters
         for name, options in instr_cfg.get('parameters', {}).items():
