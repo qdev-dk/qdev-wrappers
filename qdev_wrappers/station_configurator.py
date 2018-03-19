@@ -10,12 +10,13 @@ from qcodes.station import Station
 import qcodes.utils.validators as validators
 from qcodes.instrument.parameter import Parameter
 from qcodes.monitor.monitor import Monitor
-
+from .parameters import DelegateParameter
 
 log = logging.getLogger(__name__)
 
 # config from the qcodesrc.json file (working directory, home or qcodes dir)
 auto_reconnect_instrument = qcodes.config["user"]["auto_reconnect_instrument"]
+
 
 class StationConfigurator:
     """
@@ -134,9 +135,8 @@ class StationConfigurator:
                 for level in source.split('.'):
                     source_p = getattr(source_p, level)
                 instr.add_parameter(name,
-                                    Parameter,
-                                    get_cmd=source_p.get,
-                                    set_cmd=source_p.set)
+                                    DelegateParameter,
+                                    source=source_p)
             else:
                 instr.add_parameter(name, Parameter)
             p = getattr(instr, name)
@@ -151,4 +151,3 @@ class StationConfigurator:
         Monitor(*self.monitor_parameters.values())
 
         return instr
-
