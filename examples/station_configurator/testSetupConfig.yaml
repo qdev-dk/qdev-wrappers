@@ -1,0 +1,63 @@
+# list of instruments instances, i.e. there can be two entries for
+# two instruments of the same type if you want to specify two different use
+# cases e.g. dmm1-readout and dmm1-calibration
+# this file gets snapshotted and can be read back from the snapshot.json for
+# every experiment run
+instruments:
+
+  qdac:
+    driver: qcodes.instrument_drivers.QDev.QDac_channels
+    type: QDac
+    # visa address
+    address: ASRL4::INSTR
+    # all following fields are optional:
+
+    # if true any existing connection will be closed when instatiated
+    # default (if left out) is false
+    auto_reconnect: true
+    # constant arguments passed to the init function
+    init:
+      terminator: \n
+      update_currents: false
+    # new parameters, that get created and attached to the instrument
+  sr830:
+    driver: qcodes.instrument_drivers.stanford_research.SR830
+    type: SR830
+    address: 'GPIB0::8::INSTR'
+
+  keysightgen_left:
+
+    driver: qcodes.instrument_drivers.Keysight.KeysightAgilent_33XXX
+    type: WaveformGenerator_33XXX
+    address: 'TCPIP0::192.168.15.108::inst0::INSTR'
+    auto_reconnect: true
+    #parameters:
+      #ch1.frequency: {monitor: true}
+
+  keysightdmm_left:
+
+    driver: qcodes.instrument_drivers.Keysight.Keysight_34465A
+    type: Keysight_34465A
+    address: 'TCPIP0::192.168.15.115::inst0::INSTR'
+    auto_reconnect: true
+
+  keysightdmm_right:
+
+    driver: qcodes.instrument_drivers.Keysight.Keysight_34465A
+    type: Keysight_34465A
+    address: 'TCPIP0::192.168.15.110::inst0::INSTR'
+    auto_reconnect: true
+
+  Keithley_2600_left:
+    driver: qcodes.instrument_drivers.tektronix.Keithley_2600_channels
+    type: Keithley_2600
+    address: 'TCPIP0::192.168.15.114::inst0::INSTR'
+    auto_reconnect: true
+    #parameters:
+      #smua.volt: {monitor: true}
+
+  Keithley_2600_right:
+    driver: qcodes.instrument_drivers.tektronix.Keithley_2600_channels
+    type: Keithley_2600
+    address: 'TCPIP0::192.168.15.116::inst0::INSTR'
+    auto_reconnect: true
