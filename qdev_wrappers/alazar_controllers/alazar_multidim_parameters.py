@@ -191,19 +191,19 @@ class Alazar1DParameter(AlazarNDParameter):
             start = 0
             stop = samples/sample_rate
             self.shape = (samples,)
-            self.setpoints = (tuple(np.linspace(start, stop, samples)),)
+            self.setpoints = (tuple(np.linspace(start, stop, samples, endpoint=False)),)
         elif not self._average_records:
             records = self._instrument.records_per_buffer.get()
             start = 0
             stop = records
             self.shape = (records,)
-            self.setpoints = (tuple(np.linspace(start, stop, records)),)
+            self.setpoints = (tuple(np.linspace(start, stop, records, endpoint=False)),)
         elif not self._average_buffers:
             buffers = self._instrument.buffers_per_acquisition.get()
             start = 0
             stop = buffers
             self.shape = (buffers,)
-            self.setpoints = (tuple(np.linspace(start, stop, buffers)),)
+            self.setpoints = (tuple(np.linspace(start, stop, buffers, endpoint=False)),)
 
 
 class Alazar2DParameter(AlazarNDParameter):
@@ -253,20 +253,20 @@ class Alazar2DParameter(AlazarNDParameter):
         samples = self._instrument._parent.samples_per_record.get()
         if self._integrate_samples:
             self.shape = (buffers,records)
-            inner_setpoints = tuple(np.linspace(0, records, records))
-            outer_setpoints = tuple(np.linspace(0, buffers, buffers))
+            inner_setpoints = tuple(np.linspace(0, records, records, endpoint=False))
+            outer_setpoints = tuple(np.linspace(0, buffers, buffers, endpoint=False))
         elif self._average_records:
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
             stop = samples/sample_rate
             self.shape = (buffers,samples)
-            inner_setpoints = tuple(np.linspace(0, stop, samples))
-            outer_setpoints = tuple(np.linspace(0, buffers, buffers))
+            inner_setpoints = tuple(np.linspace(0, stop, samples, endpoint=False))
+            outer_setpoints = tuple(np.linspace(0, buffers, buffers, endpoint=False))
         elif self._average_buffers:
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
             stop = samples/sample_rate
             self.shape = (records,samples)
-            inner_setpoints = tuple(np.linspace(0, stop, samples))
-            outer_setpoints = tuple(np.linspace(0, records, records))
+            inner_setpoints = tuple(np.linspace(0, stop, samples, endpoint=False))
+            outer_setpoints = tuple(np.linspace(0, records, records, endpoint=False))
         else:
             raise RuntimeError("Non supported Array type")
         self.setpoints = (outer_setpoints, tuple(inner_setpoints for _ in range(len(outer_setpoints))))
