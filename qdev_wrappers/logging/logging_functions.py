@@ -21,7 +21,10 @@ def start_python_logger() -> None:
     """
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    filelogginglevel = config.core.file_loglevel
+    try:
+        filelogginglevel = config.core.file_loglevel
+    except KeyError:
+        filelogginglevel = "Info"
     consolelogginglevel = config.core.loglevel
     ch = logging.StreamHandler()
     ch.setLevel(consolelogginglevel)
