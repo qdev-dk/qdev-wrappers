@@ -61,3 +61,22 @@ instruments:
     type: Keithley_2600
     address: 'TCPIP0::192.168.15.116::inst0::INSTR'
     auto_reconnect: true
+
+  RSSMA:
+    driver: qcodes.instrument_drivers.rohde_schwarz.SGS100A
+    type: RohdeSchwarz_SGS100A
+    address: 'TCPIP0::192.168.15.103::inst0::INSTR'
+    auto_reconnect: true
+
+  SR860:
+    driver: qcodes.instrument_drivers.stanford_research.SR860
+    type: SR860
+    address: 'TCPIP0::192.168.15.112::inst0::INSTR'
+    auto_reconnect: true
+
+  ZI:
+    driver: qcodes.instrument_drivers.ZI.ZIUHFLI
+    type: ZIUHFLI
+    init:
+      device_ID: 'dev2235'
+    auto_reconnect: true
