@@ -80,3 +80,9 @@ instruments:
     init:
       device_ID: 'dev2235'
     auto_reconnect: true
+
+  AWG5014:
+    driver: qcodes.instrument_drivers.tektronix.AWG5014
+    type: Tektronix_AWG5014
+    address: 'TCPIP0::192.168.15.107::inst0::INSTR'
+    auto_reconnect: true
