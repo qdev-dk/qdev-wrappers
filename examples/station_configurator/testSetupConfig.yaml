@@ -86,3 +86,9 @@ instruments:
     type: Tektronix_AWG5014
     address: 'TCPIP0::192.168.15.107::inst0::INSTR'
     auto_reconnect: true
+
+  AWG5208:
+    driver: qcodes.instrument_drivers.tektronix.AWG5208
+    type: AWG5208
+    address: 'TCPIP0::192.168.15.118::inst0::INSTR'
+    auto_reconnect: true
