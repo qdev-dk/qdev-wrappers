@@ -1,5 +1,3 @@
-import atexit
-
 from qdev_wrappers.file_setup import my_init
 from qdev_wrappers.device_annotator.device_image import save_device_image
 from qdev_wrappers.show_num import show_num
@@ -10,4 +8,3 @@ from qcodes.instrument.base import Instrument
 from qcodes.utils.helpers import add_to_spyder_UMR_excludelist
 
 add_to_spyder_UMR_excludelist('qdev_wrappers')
-atexit.register(Instrument.close_all)
