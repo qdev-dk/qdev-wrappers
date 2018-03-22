@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from os.path import sep
 from typing import Optional, Tuple, Sequence
+from collections import Iterable
 from pyqtgraph.multiprocess.remoteproxy import ClosedError
 
 import qcodes as qc
@@ -333,6 +334,10 @@ def do2d(inst_set, start, stop, num_points, delay,
 
     for inst in inst_meas:
         if getattr(inst, "setpoints", False):
+            setpoints = inst.setpoints
+            if isinstance(setpoints, Iterable):
+                if all(len(v) == 0 for v in setpoints):
+                    continue
             raise ValueError("3d plotting is not supported")
 
     actions = []
