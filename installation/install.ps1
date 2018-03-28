@@ -22,6 +22,7 @@ $env_bat = "$env:TEMP\create_qcodes_env.bat"
 $miniconda_install_path = "$HOME\miniconda\"
 $git_exe = "$env:TEMP\git.exe"
 $git_url= 'https://git-scm.com/download/win'
+$chickpea_url = "https://github.com/nataliejpg/chickpea"
 
 $qcodes_url = "https://github.com/QCoDeS/Qcodes.git"
 $qdev_wrappers_url = "https://github.com/qdev-dk/qdev-wrappers"
@@ -57,6 +58,7 @@ Write-Host 'cloning qcodes relvant repos'
 git clone $qcodes_url
 git clone $qdev_wrappers_url
 git clone $broadbean_url
+git clone $chickpea_url
 
 # create qcodes virtualenv
 Write-Host 'creating the virtual environment'
@@ -69,6 +71,9 @@ conda install -y spyder
 
 Write-Host 'installing jupyter'
 conda install -y jupyter
+
+Write-Host 'installing other packages'
+conda install -y scipy
 
 Write-Host 'installing qcodes'
 $env_cmd = 'CALL activate qcodes
