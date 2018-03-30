@@ -149,6 +149,8 @@ class StationConfigurator:
         self.station.add_component(instr)
 
         # restart Monitor
+        if Monitor.running is not None:
+            Monitor.running.stop()
         Monitor(*self.monitor_parameters.values())
 
         return instr
