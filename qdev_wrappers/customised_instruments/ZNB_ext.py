@@ -62,13 +62,13 @@ class ZNB_ext(ZNB):
 
     def __init__(self,
                  name,
-                 visa_address,
+                 address,
                  S21=True,
                  spec_mode=False,
                  gen_address=None,
                  timeout=40):
         super().__init__(
-            name, visa_address, init_s_params=False, timeout=timeout)
+            name, address, init_s_params=False, timeout=timeout)
 
         if S21:
             self.add_channel(channel_name='S21')
@@ -125,7 +125,9 @@ class ZNB_ext(ZNB):
                                  channel_name='SPEC',
                                  vna_parameter='B2G1SAM',
                                  readout_freq=6e9,
-                                 readout_power=-60):
+                                 readout_power=-60,
+                                 center_freq=5e9,
+                                 span_freq=10e6):
         """
         Adds a generator and uses it to generate a fixed frequency tone, the
         response at this frequency is read out at port 2 which is also set to
@@ -146,6 +148,8 @@ class ZNB_ext(ZNB):
         # setting default values
         new_channel.readout_freq(readout_freq)
         new_channel.readout_power(readout_power)
+        new_channel.center(center_freq)
+        new_channel.span(span_freq)
 
     def write(self, *args, **kwargs):
         time.sleep(self.WRITE_DELAY)
