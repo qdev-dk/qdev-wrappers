@@ -12,7 +12,7 @@ class LockIn(Instrument):
     and a low pass filter.
     """
 
-    def __init__(self, cavity=None, localos=None,
+    def __init__(self, name, cavity=None, localos=None,
                  pwa=None, demodulation_frequency=None):
         self._cavity = cavity
         self._localos = localos
@@ -44,6 +44,7 @@ class LockIn(Instrument):
         self.IQ_state = self._cavity.IQ_state
         self.pulsemod_state = self._cavity.pulsemod_state
         self.pulsemod_source = self._cavity.pulsemod_source
+        super().__init__(name)
 
     def _set_ref_osc_source(self, ref_osc_source):
         self._cavity.ref_osc_source(ref_osc_source)
