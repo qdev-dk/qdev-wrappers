@@ -89,6 +89,8 @@ class StationConfigurator:
         init_kwargs = {} if init_kwargs is None else init_kwargs
         if 'address' in instr_cfg:
             init_kwargs['address'] = instr_cfg['address']
+        # make explicitly passed arguments overide the ones from the config file
+        init_kwargs.update(kwargs)
         instr = instr_class(identifier, **init_kwargs)
         # setup
 
