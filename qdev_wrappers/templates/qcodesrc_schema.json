@@ -76,7 +76,7 @@
                     "default": "",
                     "description": "Location of experiments"
                 },
-                "auto_reconnect_instrument": {
+                "force_close_existing_instrument": {
                     "type": "boolean",
                     "default": false,
                     "description": "if set to true, on instantiation of an existing instrument, the existing will be disconnected."

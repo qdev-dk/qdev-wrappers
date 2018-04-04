@@ -11,6 +11,6 @@
     "user": {
         "scriptfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/ExperimentScripts",
         "mainfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/Qcodes_test_data",
-        "auto_reconnect_instrument": false
+        "force_close_existing_instrument": false
     }
 }

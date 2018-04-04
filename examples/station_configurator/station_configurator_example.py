@@ -6,7 +6,7 @@ simulated instrument (Agilent_34400A.yaml) into your current path.
 If you don't like to have them there you can change the path in the init
 function of the StationConfigurator, as well as the path in the yaml file(
 everything befor the @-sign).
-You also need to have the otpion 'auto_reconnect_instrument' in your
+You also need to have the otpion 'force_close_existing_instrument' in your
 qcodesrc.json, as it is the case for the example config file in this path.
 
 A handy feature is that you can simply reëxecute the all the code, and should
