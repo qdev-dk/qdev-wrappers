@@ -23,7 +23,7 @@ instruments:
       terminator: \n
       update_currents: false
     # new parameters, that get created and attached to the instrument
-    new_parameters:
+    add_parameters:
     # for example, here we define a DAC channel used for driving a
     # magnetic field.
       Bx: # name of the new parameter eg myDac.Bx(0.1) to set the parameter
@@ -88,7 +88,7 @@ instruments:
     address: ASRL4::INSTR
     init:
       terminator: \n
-    new_parameters:
+    add_parameters:
       Bx: {source: ch01.fine_volt, label: Bx, unit: T, scale: 28, limits: "-1,1", monitor: true}
   # this is a mock instrument from the qcode mocks
   # note the different path for the driver

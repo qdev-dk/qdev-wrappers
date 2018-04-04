@@ -128,7 +128,7 @@ class StationConfigurator:
             setup_parameter_from_dict(p, options)
 
         # setup new parameters
-        for name, options in instr_cfg.get('new_parameters', {}).items():
+        for name, options in instr_cfg.get('add_parameters', {}).items():
             # allow only top level paremeters for now
             # pop source only temporarily
             source = options.pop('source', False)
