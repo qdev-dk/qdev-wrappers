@@ -109,15 +109,15 @@ class StationConfigurator:
                     self.monitor_parameters[id(parameter)] = parameter
                 elif attr == 'alias':
                     setattr(instr, val, parameter)
-                elif attr == 'value':
+                elif attr == 'initial_value':
                     # skip value attribute so that it gets set last
                     # when everything else has been set up
                     pass
                 else:
                     log.warning(f'Attribute {attr} no recognized when'
                                 f' instatiating parameter \"{parameter.name}\"')
-            if 'value' in options_dict:
-                parameter.set(options_dict['value'])
+            if 'initial_value' in options_dict:
+                parameter.set(options_dict['initial_value'])
 
         # setup existing parameters
         for name, options in instr_cfg.get('parameters', {}).items():

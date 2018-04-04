@@ -42,7 +42,7 @@ instruments:
         # set an initial value on creation
         # if the current value is a different the channel will be ramped with
         # the specified delay and step
-        value: 0.01
+        initial_value: 0.01
         # monitor is a boolean field that shows weather this parameter
         # should appear in the monitor
         monitor: true
