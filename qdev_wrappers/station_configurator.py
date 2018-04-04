@@ -30,7 +30,8 @@ class StationConfigurator:
     PARAMETER_ATTRIBUTES = ['label', 'unit', 'scale', 'inter_delay', 'delay',
                             'step']
 
-    def __init__(self, filename: str, station: Optional[Station] = None) -> None:
+    def __init__(self, filename: str,
+                 station: Optional[Station] = None) -> None:
         self.monitor_parameters = {}
 
         if station is None:
@@ -48,6 +49,8 @@ class StationConfigurator:
             def snapshot(self, update=True):
                 return self.data
 
+        # this overwrites any previous station
+        # configurator but does not call the snapshot
         self.station.components['StationConfigurator'] = ConfigComponent(self.config)
 
     def load_instrument(self, identifier: str,
@@ -72,13 +75,16 @@ class StationConfigurator:
         # to report them
 
         # check if instrument is already defined and close connection
-        if instr_cfg.get('force_close_existing_instrument', force_close_existing_instrument):
+        if instr_cfg.get('force_close_existing_instrument',
+                         force_close_existing_instrument):
             # save close instrument and remove from monitor list
             with suppress(KeyError):
                 instr = Instrument.find_instrument(identifier)
                 # remove parameters related to this instrument from the monitor list
                 self.monitor_parameters = {k:v for k,v in self.monitor_parameters.items() if v.root_instrument is not instr}
                 instr.close()
+                # remove instrument from station snapshot
+                self.station.components.pop(instr.name)
 
         # instantiate instrument
         module = importlib.import_module(instr_cfg['driver'])
