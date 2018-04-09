@@ -17,7 +17,7 @@ instruments:
 
     # if true any existing connection will be closed when instatiated
     # default (if left out) is false
-    force_close_existing_instrument: true
+    enable_forced_reconnect: true
     # constant arguments passed to the init function
     init:
       terminator: \n
@@ -67,7 +67,7 @@ instruments:
   dmm1:
     driver: qcodes.instrument_drivers.agilent.Agilent_34400A
     type: Agilent_34400A
-    force_close_existing_instrument: true
+    enable_forced_reconnect: true
     address: GPIB::1::65535::INSTR
     init:
       visalib: 'Agilent_34400A.yaml@sim'
@@ -76,7 +76,7 @@ instruments:
   lakeshore:
     driver: qcodes.instrument_drivers.Lakeshore.Model_336
     type: Model_336
-    force_close_existing_instrument: true
+    enable_forced_reconnect: true
     address: GPIB::2::65535::INSTR
     init:
       # visalib: 'lakeshore_model336.yaml@sim'
@@ -95,11 +95,11 @@ instruments:
   mock_dac:
     driver: qcodes.tests.instrument_mocks
     type: DummyInstrument
-    force_close_existing_instrument: true
+    enable_forced_reconnect: true
     init:
       # to pass an array as a parameter use {}
       gates: {"ch1", "ch2"}
   mock_dac2:
     driver: qcodes.tests.instrument_mocks
     type: DummyInstrument
-    force_close_existing_instrument: true
+    enable_forced_reconnect: true

@@ -15,7 +15,7 @@ from .parameters import DelegateParameter
 log = logging.getLogger(__name__)
 
 # config from the qcodesrc.json file (working directory, home or qcodes dir)
-force_close_existing_instrument = qcodes.config["user"]["force_close_existing_instrument"]
+enable_forced_reconnect = qcodes.config["user"]["enable_forced_reconnect"]
 
 
 class StationConfigurator:
@@ -75,8 +75,8 @@ class StationConfigurator:
         # to report them
 
         # check if instrument is already defined and close connection
-        if instr_cfg.get('force_close_existing_instrument',
-                         force_close_existing_instrument):
+        if instr_cfg.get('enable_forced_reconnect',
+                         enable_forced_reconnect):
             # save close instrument and remove from monitor list
             with suppress(KeyError):
                 instr = Instrument.find_instrument(identifier)
