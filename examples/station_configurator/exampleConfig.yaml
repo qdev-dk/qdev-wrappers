@@ -17,13 +17,13 @@ instruments:
 
     # if true any existing connection will be closed when instatiated
     # default (if left out) is false
-    auto_reconnect: true
+    enable_forced_reconnect: true
     # constant arguments passed to the init function
     init:
       terminator: \n
       update_currents: false
     # new parameters, that get created and attached to the instrument
-    new_parameters:
+    add_parameters:
     # for example, here we define a DAC channel used for driving a
     # magnetic field.
       Bx: # name of the new parameter eg myDac.Bx(0.1) to set the parameter
@@ -32,6 +32,7 @@ instruments:
         # label and unit change these attributes of the parameter
         label: Magnetic Field X-Component
         unit: T
+        # v = 2 Bx
         scale: 2
         delay: 0
         step: 0.0001
@@ -41,7 +42,7 @@ instruments:
         # set an initial value on creation
         # if the current value is a different the channel will be ramped with
         # the specified delay and step
-        value: 0.01
+        initial_value: 0.01
         # monitor is a boolean field that shows weather this parameter
         # should appear in the monitor
         monitor: true
@@ -66,7 +67,7 @@ instruments:
   dmm1:
     driver: qcodes.instrument_drivers.agilent.Agilent_34400A
     type: Agilent_34400A
-    auto_reconnect: true
+    enable_forced_reconnect: true
     address: GPIB::1::65535::INSTR
     init:
       visalib: 'Agilent_34400A.yaml@sim'
@@ -75,7 +76,7 @@ instruments:
   lakeshore:
     driver: qcodes.instrument_drivers.Lakeshore.Model_336
     type: Model_336
-    auto_reconnect: true
+    enable_forced_reconnect: true
     address: GPIB::2::65535::INSTR
     init:
       # visalib: 'lakeshore_model336.yaml@sim'
@@ -87,18 +88,18 @@ instruments:
     address: ASRL4::INSTR
     init:
       terminator: \n
-    new_parameters:
+    add_parameters:
       Bx: {source: ch01.fine_volt, label: Bx, unit: T, scale: 28, limits: "-1,1", monitor: true}
   # this is a mock instrument from the qcode mocks
   # note the different path for the driver
   mock_dac:
     driver: qcodes.tests.instrument_mocks
     type: DummyInstrument
-    auto_reconnect: true
+    enable_forced_reconnect: true
     init:
       # to pass an array as a parameter use {}
       gates: {"ch1", "ch2"}
   mock_dac2:
     driver: qcodes.tests.instrument_mocks
     type: DummyInstrument
-    auto_reconnect: true
+    enable_forced_reconnect: true
