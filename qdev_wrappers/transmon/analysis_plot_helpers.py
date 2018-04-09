@@ -205,8 +205,10 @@ def save_fig(plot_to_save, name='analysis', counter=None, pulse=False):
     if counter is None and name is 'analysis':
         raise AttributeError('No name or counter specified will result'
                              ' in non unique plot name')
-
-    full_name = '{0:03d}'.format(counter) + '_' + name + '.png'
+    elif counter is None:
+        full_name = name + '.png'
+    else:
+        full_name = '{0:03d}'.format(counter) + '_' + name + '.png'
 
     if pulse:
         location = get_pulse_location()
