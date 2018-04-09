@@ -6,6 +6,9 @@ from qdev_wrappers.sweep_functions import do0d, do1d, do2d, do1dDiagonal
 
 from qcodes.monitor.monitor import Monitor
 from qcodes.instrument.base import Instrument
-from qcodes.utils.helpers import add_to_spyder_UMR_excludelist
 
-add_to_spyder_UMR_excludelist('qdev_wrappers')
+try:
+    from qcodes.utils.helpers import add_to_spyder_UMR_excludelist
+    add_to_spyder_UMR_excludelist('qdev_wrappers')
+except ImportError:
+    pass
