@@ -95,10 +95,11 @@ class PiPulseDur(Parameter):
             return 0
 
 class T1(Parameter):
-    def __init__(self, name, alazar_ctrl, initial_fit_params=[0.05, 1e-6, 0.01]):
+    def __init__(self, name, alazar_ctrl, error_limit=0.5, initial_fit_params=[0.05, 1e-6, 0.01]):
         super().__init__(name, unit='S')
         self._alazar_ctrl = alazar_ctrl
         self.initial_fit_params = initial_fit_params
+        self.error_limit = error_limit
 
     def get_raw(self):
         t1_trace = self._alazar_ctrl.acquisition
@@ -109,18 +110,19 @@ class T1(Parameter):
                                    p0=self.initial_fit_params)
             t1_err = np.sqrt(pcov[1, 1])
             t1 = popt[1]
-            if  0 < t1_err < 0.5e6:
+            if t1_err < self.error_limit * t1:
                 return t1   
             else:
-                raise RuntimeEroror
+                return 0
         except Exception:
             return 0
 
 class T2(Parameter):
-    def __init__(self, name, alazar_ctrl, initial_fit_params=[0.003, 1e-7, 10e7, 0, 0.01]):
+    def __init__(self, name, alazar_ctrl, error_limit=0.5, initial_fit_params=[0.003, 1e-7, 10e7, 0, 0.01]):
         super().__init__(name, unit='S')
         self._alazar_ctrl = alazar_ctrl
         self.initial_fit_params = initial_fit_params
+        self.error_limit = error_limit
 
     def get_raw(self):
         t2_trace = self._alazar_ctrl.acquisition
@@ -129,11 +131,11 @@ class T2(Parameter):
         try:
             popt, pcov = curve_fit(exp_decay_sin, time, mag_array,
                                    p0=self.initial_fit_params)
-            t2_err = np.sqrt(pcov[2, 2])
-            t2 = popt[2]
-            if  0 < t2_err < 0.5e6:
+            t2_err = np.sqrt(pcov[1, 1])
+            t2 = popt[1]
+            if t2_err < self.error_limit * t2:
                 return t2   
             else:
-                raise RuntimeEroror
+                return 0
         except Exception:
             return 0
