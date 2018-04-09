@@ -1,7 +1,8 @@
 from qcodes.instrument.base import Instrument
 from qcodes import ManualParameter
 from qcodes.utils import validators as vals
-
+import logging
+from qdev_wrappers.parameters import DelegateParameter
 
 # TODO: name help pleaaase!
 class LockIn(Instrument):
@@ -12,10 +13,13 @@ class LockIn(Instrument):
     and a low pass filter.
     """
 
-    def __init__(self, name, cavity=None, localos=None,
-                 pwa=None, demodulation_frequency=None):
+    def __init__(self, name, cavity=None, localos=None, pwa=None, demodulation_frequency=None):
         self._cavity = cavity
         self._localos = localos
+        if cavity is None or localos is None:
+            raise RuntimeError('must initialise with mocrowave sources for cavity and local oscillator')
+        super().__init__(name)
+
         self._pwa = pwa
         self.add_parameter(name='frequency',
                            set_cmd=self._set_drive_frequency,
@@ -23,7 +27,6 @@ class LockIn(Instrument):
                            vals=vals.Numbers(1e6, 20e9))
         self.add_parameter(name='demodulation_frequency',
                            set_cmd=self._set_demod_frequency,
-                           parameter_class=ManualParameter,
                            initial_value=demodulation_frequency,
                            vals=vals.Numbers(1e6, 200e6))
         self.add_parameter(name='status',
@@ -31,34 +34,62 @@ class LockIn(Instrument):
                            get_cmd=self._get_status)
         self.add_parameter(name='ref_osc_source',
                            set_cmd=self._set_ref_osc_source,
+                           get_cmd=self._get_ref_osc_source,
                            vals=vals.Enum('INT', 'EXT'))
         self.add_parameter(name='ref_osc_external_freq',
-                           set_cmd=self._set_ref_osc_extermal_freq,
+                           set_cmd=self._set_ref_osc_external_freq,
+                           get_cmd=self._get_ref_osc_external_freq,
                            vals=vals.Enum('10MHz', '100MHz', '1000MHz'))
-
-        if demodulation_frequency is not None:
-            self._set_demod_frequency(demodulation_frequency)
-        # TODO: is this a horrible way to achieve this?
-        self.power = self._cavity.power
-        self.localos_power = self.localos.power
-        self.IQ_state = self._cavity.IQ_state
-        self.pulsemod_state = self._cavity.pulsemod_state
-        self.pulsemod_source = self._cavity.pulsemod_source
-        super().__init__(name)
+        self.add_parameter(name='power',
+                           parameter_class=DelegateParameter,
+                           source=self._cavity.power)
+        self.add_parameter(name='localos_power',
+                           parameter_class=DelegateParameter,
+                           source=self._localos.power)
+        self.add_parameter(name='IQ_state',
+                   parameter_class=DelegateParameter,
+                   source=self._cavity.IQ_state)
+        self.add_parameter(name='pulsemod_state',
+           parameter_class=DelegateParameter,
+           source=self._cavity.pulsemod_state)
+        self.add_parameter(name='pulsemod_source',
+           parameter_class=DelegateParameter,
+           source=self._cavity.pulsemod_source)
 
     def _set_ref_osc_source(self, ref_osc_source):
         self._cavity.ref_osc_source(ref_osc_source)
         self._localos.ref_osc_source(ref_osc_source)
 
-    def _set_ref_osc_extermal_freq(self, ref_osc_external_freq):
+    def _get_ref_osc_source(self):
+        cav_source = self._cavity.ref_osc_source()
+        lo_source = self._localos.ref_osc_source()
+        if cav_source == lo_source:
+            return cav_source
+        else:
+            logging.warning(
+                'cavity and local oscillator do not have the '
+                'same reference source: {}, {}'.format(cav_source, lo_source))
+
+
+    def _set_ref_osc_external_freq(self, ref_osc_external_freq):
         self._cavity.ref_osc_external_freq(ref_osc_external_freq)
         self._localos.ref_osc_external_freq(ref_osc_external_freq)
 
+    def _get_ref_osc_external_freq(self):
+        cav_source_freq = self._cavity.ref_osc_external_freq()
+        lo_source_freq = self._localos.ref_osc_external_freq()
+        if cav_source_freq == lo_source_freq:
+            return cav_source_freq
+        else:
+            logging.warning(
+                'cavity and local oscillator do not have the '
+                'same reference source frequency: {}, {}'.format(cav_source_freq, lo_source_freq))
+
     def _set_status(self, status):
-        if status in [True, 1, 'on']:
+        if str(status).upper() in ['TRUE', '1', 'ON']:
             self._cavity.status('on')
             self._localos.status('on')
-        elif status in [False, 0, 'off']:
+        elif str(status) in ['FALSE', '0', 'OFF']:
             self._cavity.status('off')
             self._localos.status('off')
         else:
@@ -73,16 +104,22 @@ class LockIn(Instrument):
 
     def _set_demod_frequency(self, frequency):
         self._localos.frequency(self._cavity.frequency() + frequency)
-        self._pwa.set_demod_freq(frequency)
+        if self._pwa is not None:
+            self._pwa.set_demod_freq(frequency)
+        else:
+            logging.warning(
+                'Attempt to set demodulation frequency on heterodyne readout setup'
+                'without setting demodulation frequency for software demodulation.')
 
     # TODO: pulsemod source
     def reset(self):
         self._cavity.reset()
         self._localos.reset()
-        self.IQ_state('on')
-        # self._localos.pulsemod_source('')
-        # self.pulsemod_source('')
-        self.pulsemod_state('off')
+        self._cavity.IQ_state('on')
+        self._localos.IQ_state('off')
+        self._localos.pulsemod_source('INT')
+        self._cavity.pulsemod_source('INT')
+        self._cavity.pulsemod_state('off')
         self._localos.pulsemod_state('off')
         self.ref_osc_source('EXT')
         self.ref_osc_external_freq('10MHz')
