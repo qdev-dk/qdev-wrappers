@@ -19,7 +19,7 @@ class ParametricSequencer:
     def __init__(self,
                  builder: Callable,
                  builder_parms: Dict=None, 
-                 default_parameters: Dict[str, float] = None,
+                 default_parms: Dict[str, float] = None,
                  integration_delay: float = 0,
                  integration_time: float = 1e-6,
                  average_time: bool = True,
@@ -40,10 +40,10 @@ class ParametricSequencer:
         self.record_setpoints = record_setpoints
         self.buffer_setpoints = buffer_setpoints
         self.record_setpoint_name = record_setpoint_name
-        self.record_setpoint_label = record_setpoint_label
+        self.record_setpoint_label = record_setpoint_label or record_setpoint_name
         self.record_setpoint_unit = record_setpoint_unit
         self.buffer_setpoint_name = buffer_setpoint_name
-        self.buffer_setpoint_label = buffer_setpoint_label
+        self.buffer_setpoint_label = buffer_setpoint_label or buffer_setpoint_name
         self.buffer_setpoint_unit = buffer_setpoint_unit
         self.builder = builder
         self.builder_parms = builder_parms
@@ -60,13 +60,6 @@ class ParametricSequencer:
 #        self.check_parameters()
 
     def check_parameters(self):
-        # check buffer setpoints with parameters
-        if not self.average_buffers:
-            if (len(self.parameters) > 1 and
-                    len(self._buffer_setpoints) != len(self.parameters)):
-                raise RuntimeError(
-                    'Number of buffers implied by parameter '
-                    'list does not match buffer_setpoints.')
 
         # check record setpoints with parameters
         if not self.average_records:
@@ -199,6 +192,7 @@ class ParametricWaveformAnalyser(Instrument):
         # this is a problem, can't I get magnitude and phase at the same time?
 #        chan_p = deepcopy(chan_m)
         chan_m.demod_type('magnitude')
+        chan_m.data.label = 'Cavity Response' 
 #        chan_p.demod_type('phase')
         # data is MultidimParameter
         self.alazar_controller.channels.append(chan_m)
