@@ -380,10 +380,10 @@ class GS200_cQED(GS200):
 
 class AlazarTech_ATS9360_cQED(AlazarTech_ATS9360):
     def __init__(self, name, seq_mode='off'):
-        if seq_mode is 'on':
+        if seq_mode == 'on':
             io_mode = 'AUX_IN_TRIGGER_ENABLE'
             io_param = 'TRIG_SLOPE_POSITIVE'
-        elif seq_mode is 'off':
+        elif seq_mode == 'off':
             io_mode = 'AUX_IN_AUXILIARY'
             io_param = 'NONE'
         else:
@@ -420,24 +420,24 @@ class AlazarTech_ATS9360_cQED(AlazarTech_ATS9360):
                            )
 
     def _get_seq_mod(self):
-        if (self.aux_io_mode() is 'AUX_IN_TRIGGER_ENABLE' and
-                self.aux_io_param() is 'TRIG_SLOPE_POSITIVE'):
+        if (self.aux_io_mode() == 'AUX_IN_TRIGGER_ENABLE' and
+                self.aux_io_param() == 'TRIG_SLOPE_POSITIVE'):
             return 'on'
-        elif (self.aux_io_mode() is 'AUX_IN_AUXILIARY' and
-              self.aux_io_param() is 'NONE'):
+        elif (self.aux_io_mode() == 'AUX_IN_AUXILIARY' and
+              self.aux_io_param() == 'NONE'):
             return 'off'
         else:
             raise ValueError('aux_io_mode: {}, aux_io_param: {} '
                              'do not correspond to seq_mode on or off')
 
     def _set_seq_mode(self, mode):
-        if mode is 'on':
+        if mode == 'on':
             self.config(sample_rate=self.sample_rate(),
                           clock_edge=self.clock_edge(),
                           clock_source=self.clock_source(),
                           aux_io_mode='AUX_IN_TRIGGER_ENABLE',
                           aux_io_param='TRIG_SLOPE_POSITIVE')
-        elif mode is 'off':
+        elif mode == 'off':
             self.config(sample_rate=self.sample_rate(),
                           clock_edge=self.clock_edge(),
                           clock_source=self.clock_source(),
@@ -449,13 +449,13 @@ class AlazarTech_ATS9360_cQED(AlazarTech_ATS9360):
 
 class ATS9360Controller_cQED(ATS9360Controller):
     def __init__(self, name, alazar, ctrl_type='ave'):
-        if ctrl_type is 'samp':
+        if ctrl_type == 'samp':
             integrate_samples = False
             average_records = True
-        elif ctrl_type is 'ave':
+        elif ctrl_type == 'ave':
             integrate_samples = True
             average_records = True
-        elif ctrl_type is 'rec':
+        elif ctrl_type == 'rec':
             integrate_samples = True
             average_records = False
         else:

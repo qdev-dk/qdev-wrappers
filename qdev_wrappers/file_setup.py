@@ -5,9 +5,13 @@ from os.path import sep
 import logging
 import qcodes as qc
 import sys
+import warnings
 
 from qdev_wrappers.device_annotator.qcodes_device_annotator import DeviceImage
 from qdev_wrappers.configreader import Config
+from qdev_wrappers.logging.logging_functions import (
+    start_python_logger,
+    start_command_history_logger)
 
 log = logging.getLogger(__name__)
 CURRENT_EXPERIMENT = {}
@@ -15,6 +19,28 @@ CURRENT_EXPERIMENT["logging_enabled"] = False
 CURRENT_EXPERIMENT["init"] = False
 pdfdisplay = {}
 
+# aliases for keeping logging functions compatible
+def _set_up_ipython_logging():
+    warnings.warn("The function _set_up_ipython_logging is deprecated and " +
+                  "will be removed in the " +
+                  "future. For general logging simply import the wrappers " +
+                  "logging module via:\n" +
+                  ">>> from qdev_wrappers import logging\n" +
+                  "as the first line of your script.\n" +
+                  "For only command histroy logging call:\n"
+                  "start_command_history_logger")
+    start_command_history_logger()
+
+def init_python_logger() -> None:
+    warnings.warn("This function init_python_logger is deprecated and will " +
+                  "be removed in the " +
+                  "future. For general logging simply import the wrappers " +
+                  "logging module via:\n" +
+                  ">>> from qdev_wrappers import logging\n" +
+                  "as the first line of your script.\n" +
+                  "For only python logging call:\n"
+                  "start_python_logger")
+    start_python_logger()
 
 def close_station(station):
     for comp in station.components:
@@ -91,48 +117,6 @@ def _init_device_image(station):
     CURRENT_EXPERIMENT['device_image'] = di
     log.info('device image initialised')
 
-
-def _set_up_ipython_logging():
-    ipython = get_ipython()
-    # turn on logging only if in ipython
-    # else crash and burn
-    if ipython is None:
-        raise RuntimeWarning("History can't be saved. "
-                             "-Refusing to proceed (use IPython/jupyter)")
-    else:
-        exp_folder = CURRENT_EXPERIMENT["exp_folder"]
-        logfile = "{}{}".format(exp_folder, "commands.log")
-        CURRENT_EXPERIMENT['logfile'] = logfile
-        if not CURRENT_EXPERIMENT["logging_enabled"]:
-            log.debug("Logging commands to: t{}".format(logfile))
-            ipython.magic("%logstart -t -o {} {}".format(logfile, "append"))
-            CURRENT_EXPERIMENT["logging_enabled"] = True
-        else:
-            log.debug("Logging already started at {}".format(logfile))
-
-
-def init_python_logger() -> None:
-    """
-    This sets up logging to a time based logging.
-    This means that all logging messages on or above
-    filelogginglevel will be written to pythonlog.log
-    All logging messages on or above consolelogginglevel
-    will be written to stderr.
-    """
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    filelogginglevel = logging.INFO
-    consolelogginglevel = qc.config.core.loglevel
-    ch = logging.StreamHandler()
-    ch.setLevel(consolelogginglevel)
-    ch.setFormatter(formatter)
-    fh1 = logging.handlers.TimedRotatingFileHandler('pythonlog.log', when='midnight')
-    fh1.setLevel(filelogginglevel)
-    fh1.setFormatter(formatter)
-    logging.basicConfig(handlers=[ch, fh1], level=logging.DEBUG)
-    # capture any warnings from the warnings module
-    logging.captureWarnings(capture=True)
-    logging.info("QCoDes python logger setup")
 
 def _set_up_pdf_preferences(subfolder_name: str = 'pdf', display_pdf=True,
                             display_individual_pdf=False):

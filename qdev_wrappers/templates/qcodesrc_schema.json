@@ -47,7 +47,7 @@
                 },
                 "loglevel": {
                     "type": "string",
-                    "default": "DEBUG",
+                    "default": "INFO",
                     "description": "control logging  level",
                     "enum": [
                         "CRITICAL",
@@ -56,7 +56,20 @@
                         "INFO",
                         "DEBUG"
                     ]
+                },
+                "file_loglevel": {
+                    "type": "string",
+                    "default": "INFO",
+                    "description": "control logging level of log file",
+                    "enum": [
+                        "CRITICAL",
+                        "ERROR",
+                        "WARNING",
+                        "INFO",
+                        "DEBUG"
+                    ]
                 }
+
             },
             "description": "controls core settings of qcodes",
             "required": [
