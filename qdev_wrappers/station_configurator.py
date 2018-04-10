@@ -116,7 +116,15 @@ class StationConfigurator:
         if 'address' in instr_cfg:
             init_kwargs['address'] = instr_cfg['address']
         # make explicitly passed arguments overide the ones from the config file
-        init_kwargs.update(kwargs)
+        # the intuitive line:
+        # init_kwargs.update(kwargs)
+        # fails for some mystirious reason with the alazar controllers while
+        # init_kwargs = {**kwargs , **init_kwargs}
+        # does not.
+        # temporary quick fix for update:
+        for k, v in kwargs:
+            init_kwargs[k] = v
+
         instr = instr_class(identifier, **init_kwargs)
         # setup
 
