@@ -11,6 +11,10 @@
     "user": {
         "scriptfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/ExperimentScripts",
         "mainfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/Qcodes_test_data",
-        "enable_forced_reconnect": false
+    },
+    "station_configurator": {
+        "enable_forced_reconnect": false,
+        "default_folder": "C:\\Users\\a-dovoge\\repos\\qdev-wrappers\\examples\\station_configurator",
+        "default_file": "testSetupConfig.yaml"
     }
 }

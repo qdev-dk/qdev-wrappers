@@ -3,6 +3,7 @@ from typing import Optional
 import importlib
 import logging
 import yaml
+import os
 
 import qcodes
 from qcodes.instrument.base import Instrument
@@ -15,7 +16,9 @@ from .parameters import DelegateParameter
 log = logging.getLogger(__name__)
 
 # config from the qcodesrc.json file (working directory, home or qcodes dir)
-enable_forced_reconnect = qcodes.config["user"]["enable_forced_reconnect"]
+enable_forced_reconnect = qcodes.config["station_configurator"]["enable_forced_reconnect"]
+default_folder = qcodes.config["station_configurator"]["default_folder"]
+default_file = qcodes.config["station_configurator"]["default_file"]
 
 
 class StationConfigurator:
@@ -30,7 +33,7 @@ class StationConfigurator:
     PARAMETER_ATTRIBUTES = ['label', 'unit', 'scale', 'inter_delay', 'delay',
                             'step']
 
-    def __init__(self, filename: str,
+    def __init__(self, filename: Optional[str] = None,
                  station: Optional[Station] = None) -> None:
         self.monitor_parameters = {}
 
@@ -38,9 +41,26 @@ class StationConfigurator:
             station = Station.default or Station()
         self.station = station
 
-        with open(filename, 'r') as f:
-            self.config = yaml.load(f)
-            self._instrument_config = self.config['instruments']
+        self.load_file(filename)
+
+    def load_file(self, filename: Optional[str] = None):
+        if filename is None:
+            filename = default_file
+        try:
+            with open(filename, 'r') as f:
+                self.config = yaml.load(f)
+        except FileNotFoundError as e:
+            if not os.path.isabs(filename) and default_folder is not None:
+                try:
+                    with open(os.path.join(default_folder, filename),
+                              'r') as f:
+                        self.config = yaml.load(f)
+                except FileNotFoundError:
+                    raise e
+            else:
+                raise e
+
+        self._instrument_config = self.config['instruments']
 
         class ConfigComponent:
             def __init__(self, data):
@@ -54,7 +74,7 @@ class StationConfigurator:
         self.station.components['StationConfigurator'] = ConfigComponent(self.config)
 
     def load_instrument(self, identifier: str,
-                          **kwargs) -> Instrument:
+                        **kwargs) -> Instrument:
         """
         Creates an instrument driver as described by the loaded config file.
 
