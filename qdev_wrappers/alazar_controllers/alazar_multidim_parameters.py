@@ -206,7 +206,7 @@ class Alazar1DParameter(AlazarNDParameter):
             start = 0
             stop = samples / sample_rate
             self.shape = (samples,)
-            self.setpoints = (tuple(np.linspace(start, stop, samples, endpoint=False))),)
+            self.setpoints = (tuple(np.linspace(start, stop, samples, endpoint=False)),)
             self.setpoint_names = ('time',)
             self.setpoint_labels = ('Time',)
             self.setpoint_units = ('S',)
