@@ -24,7 +24,7 @@ def start_python_logger() -> None:
     try:
         filelogginglevel = config.core.file_loglevel
     except KeyError:
-        filelogginglevel = "Info"
+        filelogginglevel = "INFO"
     consolelogginglevel = config.core.loglevel
     ch = logging.StreamHandler()
     ch.setLevel(consolelogginglevel)
