@@ -99,9 +99,9 @@ def get_config_file(cfg_name):
         raise KeyError("{}_config not found in CURRENT_EXPERIMENT, "
                        "check that _set_up_config_file has been run in the"
                        " init function".format(cfg_name))
-    if cfg_type is 'general':
+    if cfg_type == 'general':
         return get_general_config_file(cfg_name)
-    elif cfg_type is 'local':
+    elif cfg_type == 'local':
         return get_local_config_file(cfg_name)
     else:
         raise RuntimeError('Unexpected cfg_type: expected "local" or "general"'

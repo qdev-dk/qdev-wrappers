@@ -82,7 +82,7 @@ def line_cut(dataset, key, vals, axis='y'):
     y_label = '{} ({})'.format(getattr(array, "set_arrays")[
         0].label, getattr(array, "set_arrays")[0].unit)
     z_label = array.name
-    if axis is 'x':
+    if axis == 'x':
         z_data = np.zeros((len(vals), len(y_data)))
         for i, v in enumerate(vals):
             x_index = np.where(x_data == v)
@@ -93,7 +93,7 @@ def line_cut(dataset, key, vals, axis='y'):
                                     v, x_label) for v in vals],
                                 axes_labels=[y_label, z_label])
 
-    elif axis is 'y':
+    elif axis == 'y':
         z_data = np.zeros((len(vals), len(x_data)))
         for i, v in enumerate(vals):
             y_index = np.where(y_data == v)
@@ -202,7 +202,7 @@ def save_fig(plot_to_save, name='analysis', counter=None, pulse=False):
 
     fig = getattr(plot_to_save, 'figure', plot_to_save) or plot_to_save
 
-    if counter is None and name is 'analysis':
+    if counter == None and name == 'analysis':
         raise AttributeError('No name or counter specified will result'
                              ' in non unique plot name')
     elif counter is None:
