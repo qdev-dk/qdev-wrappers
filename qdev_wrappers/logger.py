@@ -58,7 +58,7 @@ def start_command_history_logger():
     ipython.magic("%logstop")
     filename = os.path.join(config.user.mainfolder,
                             logging_dir,
-                            python_log_name)
+                            history_log_name)
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     ipython.magic("%logstart -t -o {} {}".format(filename, "append"))
     log.info("Started logging IPython history")
