@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
+from qcodes.instrument.channel import MultiChannelInstrumentParameter
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 
 
@@ -38,8 +39,11 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
             k: -
         """
         color = 'C' + str(counter_two)
-        parent_instr_name = (i._instrument.name + '_') if i._instrument else ''
-        inst_meas_name = "{}{}".format(parent_instr_name, name)
+        if issubclass(i.__class__, MultiChannelInstrumentParameter):
+            inst_meas_name = name
+        else:            
+            parent_instr_name = (i._instrument.name + '_') if i._instrument else ''
+            inst_meas_name = "{}{}".format(parent_instr_name, name)
         try:
             inst_meas_data = getattr(data, inst_meas_name)
         except AttributeError:
@@ -120,7 +124,10 @@ def _save_individual_plots(data, inst_meas, display_plot=True):
         color = 'C' + str(counter_two)
         counter_two += 1
         plot = MatPlot()
-        inst_meas_name = "{}_{}".format(i._instrument.name, name)
+        if issubclass(i.__class__, MultiChannelInstrumentParameter):
+            inst_meas_name = name
+        else:
+            inst_meas_name = "{}_{}".format(i._instrument.name, name)
         inst_meas_data = getattr(data, inst_meas_name)
         try:
             inst_meas_data = getattr(data, inst_meas_name)
