@@ -46,7 +46,7 @@ class ParametricSequencer:
         self.buffer_setpoint_label = buffer_setpoint_label or buffer_setpoint_name
         self.buffer_setpoint_unit = buffer_setpoint_unit
         self.builder = builder
-        self.builder_parms = builder_parms
+        self.builder_parms = builder_parms or {}
 
         self.average_records = self.record_setpoints is None
         self.average_buffers = self.buffer_setpoints is None
@@ -70,7 +70,7 @@ class ParametricSequencer:
                     'Number of records per buffer implied by '
                     'parameter list is not consistent between buffers')
             if (record_paremeter_lengths[0] > 1 and
-                    len(self._record_setpoints) != record_paremeter_lengths[0]):
+                    len(self.record_setpoints) != record_paremeter_lengths[0]):
                 raise RuntimeError(
                     'Number of records implied by parameter '
                     'list does not match record_setpoints.')
@@ -137,58 +137,56 @@ class ParametricWaveformAnalyser(Instrument):
         self._demod_ref = None
 
     # implementations
-    def update_sequencer(self, sequencer):
+    def set_up_sequence(self, sequencer, save_sequence=True, update_alazar=True):
         self.sequencer = sequencer
         # see how this needs to be converted, to and from the json config
 #        self.station.components['sequencer'] = self.sequencer.serialize()
-        seq = self.sequencer.create_sequence()
-
-        make_save_send_load_awg_file(self.awg, seq, seq.name+'.awg')
+        sequence = self.sequencer.create_sequence()
+        unwrapped_seq = sequence.unwrap()[0]
+        if save_sequence:
+            self.awg.make_and_save_awg_file(*unwrapped_seq, filename=sequence.name+'.awg')
+        self.awg.make_send_and_load_awg_file(*unwrapped_seq)
         self.awg.all_channels_on()
         self.awg.run()
+        if update_alazar:
+            self.clear_alazar_channels()
+            self.alazar_controller.int_time(self.sequencer.integration_time)
+            self.alazar_controller.int_delay(self.sequencer.integration_delay)
+            self.add_alazar_channel(sequencer)
+
 
     def set_demod_freq(self, f_demod):
         for ch in self.alazar_channels:
             ch.demod_freq(f_demod)
         self._demod_ref = f_demod
 
-    def setup_alazar(self):
-        # Magnitude, phase,I, Q?
-        # need to be called when setting a new sequencer
-        # set alazar in the right averaging mode
-        if self.alazar_channels is not None:
-            del self.alazar_channels
-            self.alazar_channels = None
-            # TODO: try to remove it from the channel list
-            # self.alazar_controller.channels.remove(chan_m)
-            # remove all channels
-        # setup controller
-        self.alazar_controller.int_time(self.sequencer.integration_time)
-        self.alazar_controller.int_delay(self.sequencer.integration_delay)
-        # setup channels
+
+    def add_alazar_channel(self, sequencer, name=None):
+        chan_num = len(self.alazar_channels)
+        # TODO: should name be based on seqeucne name?
         chan_m = AlazarChannel(self.alazar_controller,
-                               'alazar_channel_m',
+                               name or 'alazar_channel_{}'.format(chan_num),
                                demod=self._demod_ref is not None,
-                               average_buffers=self.sequencer.average_buffers,
-                               average_records=self.sequencer.average_records,
-                               integrate_samples=self.sequencer.average_time)
+                               average_buffers=sequencer.average_buffers,
+                               average_records=sequencer.average_records,
+                               integrate_samples=sequencer.average_time)
         if self._demod_ref is not None:
             chan_m.demod_freq(self._demod_ref)
-        chan_m.num_averages(self.sequencer.n_averages)
-        if not self.sequencer.average_records:
-            chan_m.records_per_buffer(self.sequencer.records_per_buffer)
-        if not self.sequencer.average_buffers:
+        chan_m.num_averages(sequencer.n_averages)
+        if not sequencer.average_records:
+            chan_m.records_per_buffer(sequencer.records_per_buffer)
+        if not sequencer.average_buffers:
             chan_m.buffers_per_acquisition(
-                self.sequencer.buffers_per_acquisition)
+                sequencer.buffers_per_acquisition)
         chan_m.prepare_channel(
-            record_setpoints=self.sequencer.record_setpoints,
-            buffer_setpoints=self.sequencer.buffer_setpoints,
-            record_setpoint_name=self.sequencer.record_setpoint_name,
-            record_setpoint_label=self.sequencer.record_setpoint_label,
-            record_setpoint_unit=self.sequencer.record_setpoint_unit,
-            buffer_setpoint_name=self.sequencer.buffer_setpoint_name,
-            buffer_setpoint_label=self.sequencer.buffer_setpoint_label,
-            buffer_setpoint_unit=self.sequencer.buffer_setpoint_unit)
+            record_setpoints=sequencer.record_setpoints,
+            buffer_setpoints=sequencer.buffer_setpoints,
+            record_setpoint_name=sequencer.record_setpoint_name,
+            record_setpoint_label=sequencer.record_setpoint_label,
+            record_setpoint_unit=sequencer.record_setpoint_unit,
+            buffer_setpoint_name=sequencer.buffer_setpoint_name,
+            buffer_setpoint_label=sequencer.buffer_setpoint_label,
+            buffer_setpoint_unit=sequencer.buffer_setpoint_unit)
         # this is a problem, can't I get magnitude and phase at the same time?
 #        chan_p = deepcopy(chan_m)
         chan_m.demod_type('magnitude')
@@ -197,7 +195,13 @@ class ParametricWaveformAnalyser(Instrument):
         # data is MultidimParameter
         self.alazar_controller.channels.append(chan_m)
 #        self.alazar_controller.channels.append(chan_p)
-        self.alazar_channels = self.alazar_controller.channels
+
+
+    def clear_alazar_channels(self):
+        if self.alazar_channels is not None:
+            for ch in list(self.alazar_channels):
+                self.alazar_channels.remove(ch)
+
 
     # def get(self):
     #     # must have called update_sequence before
