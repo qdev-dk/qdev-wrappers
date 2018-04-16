@@ -89,7 +89,7 @@ class HeterodyneSource(Instrument):
         if str(status).upper() in ['TRUE', '1', 'ON']:
             self._cavity.status('on')
             self._localos.status('on')
-        elif str(status) in ['FALSE', '0', 'OFF']:
+        elif str(status).upper() in ['FALSE', '0', 'OFF']:
             self._cavity.status('off')
             self._localos.status('off')
         else:
