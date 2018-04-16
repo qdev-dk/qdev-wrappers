@@ -1,3 +1,7 @@
+# import as a first module logging, and start logging
+from qdev_wrappers.logger import start_logging()
+start_logging()
+
 # import modules you might want to use
 import qcodes as qc
 import time

@@ -9,7 +9,7 @@ import warnings
 
 from qdev_wrappers.device_annotator.qcodes_device_annotator import DeviceImage
 from qdev_wrappers.configreader import Config
-from qdev_wrappers.logger.logging_functions import (
+from qdev_wrappers.logger import (
     start_python_logger,
     start_command_history_logger)
 
