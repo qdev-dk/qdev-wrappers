@@ -5,7 +5,7 @@ import logging
 from qdev_wrappers.parameters import DelegateParameter
 
 # TODO: name help pleaaase!
-class LockIn(Instrument):
+class HeterodyneSource(Instrument):
     """
     This driver is a wrapper used to set two SGS100A microwave sources
     for use as part of a lock in amplifier together with an Alazar
