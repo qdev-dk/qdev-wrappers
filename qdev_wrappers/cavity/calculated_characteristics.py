@@ -27,11 +27,10 @@ class ReadoutFrequency(Parameter):
         return freadout
 
 class DriveFrequencyVNA(Parameter):
-    def __init__(self, name, vna, extr='min', initial_val=5e9):
+    def __init__(self, name, vna, extr='min'):
         super().__init__(name, unit='Hz')
         self._vna = vna
         self.extr = extr
-        self._save_val(initial_val)
 
     def get_raw(self):
         SPEC_trace = self._vna.SPEC.trace
@@ -54,7 +53,6 @@ class DriveFrequencyAlazarOld(Parameter):
         super().__init__(name, unit='Hz')
         self._alazar_ctrl = alazar_ctrl
         self.extr = extr
-        self._save_val(initial_val)
 
     def get_raw(self):
         spec_trace = self._alazar_ctrl.acquisition
@@ -76,7 +74,6 @@ class DriveFrequencyAlazarNew(Parameter):
         super().__init__(name, unit='Hz')
         self._alazar_ctrl_ch = alazar_ctrl_ch
         self.extr = extr
-        self._save_val(initial_val)
 
     def get_raw(self):
         spec_trace = self._alazar_ctrl_ch.data
@@ -112,19 +109,19 @@ class PiPulseDurOld(Parameter):
             if  5e-9 < pi_pulse_dur < 100e-9:
                 return pi_pulse_dur   
             else:
-                raise RuntimeEroror
+                raise RuntimeError
         except Exception:
             return 0
 
 
 class PiPulseDurNew(Parameter):
-    def __init__(self, name, alazar_ctrl, initial_fit_params=[0.003, 1e-7, 10e7, 0, 0.01]):
+    def __init__(self, name, alazar_ctrl_ch, initial_fit_params=[0.003, 1e-7, 10e7, 0, 0.01]):
         super().__init__(name, unit='S')
-        self._alazar_ctrl = alazar_ctrl
+        self._alazar_ctrl_ch = alazar_ctrl_ch
         self.initial_fit_params = initial_fit_params
 
     def get_raw(self):
-        rabi_trace = self._alazar_ctrl.acquisition
+        rabi_trace = self._alazar_ctrl_ch.data
         mag_array = rabi_trace.get_latest()
         time = rabi_trace.setpoints[0]
         try:
@@ -135,53 +132,53 @@ class PiPulseDurNew(Parameter):
             if  5e-9 < pi_pulse_dur < 100e-9:
                 return pi_pulse_dur   
             else:
-                raise RuntimeEroror
+                raise RuntimeError
         except Exception:
             return 0
 
 
-# class T1(Parameter):
-#     def __init__(self, name, alazar_ctrl, error_limit=0.5, initial_fit_params=[0.05, 1e-6, 0.01]):
-#         super().__init__(name, unit='S')
-#         self._alazar_ctrl = alazar_ctrl
-#         self.initial_fit_params = initial_fit_params
-#         self.error_limit = error_limit
+class T1(Parameter):
+    def __init__(self, name, alazar_ctrl, error_limit=0.5, initial_fit_params=[0.05, 1e-6, 0.01]):
+        super().__init__(name, unit='S')
+        self._alazar_ctrl = alazar_ctrl
+        self.initial_fit_params = initial_fit_params
+        self.error_limit = error_limit
 
-#     def get_raw(self):
-#         t1_trace = self._alazar_ctrl.acquisition
-#         mag_array = t1_trace.get_latest()[1][0]
-#         time = t1_trace.setpoints[0][0]
-#         try:
-#             popt, pcov = curve_fit(exp_decay, time, mag_array,
-#                                    p0=self.initial_fit_params)
-#             t1_err = np.sqrt(pcov[1, 1])
-#             t1 = popt[1]
-#             if t1_err < self.error_limit * t1:
-#                 return t1   
-#             else:
-#                 return 0
-#         except Exception:
-#             return 0
+    def get_raw(self):
+        t1_trace = self._alazar_ctrl.acquisition
+        mag_array = t1_trace.get_latest()[1][0]
+        time = t1_trace.setpoints[0][0]
+        try:
+            popt, pcov = curve_fit(exp_decay, time, mag_array,
+                                   p0=self.initial_fit_params)
+            t1_err = np.sqrt(pcov[1, 1])
+            t1 = popt[1]
+            if t1_err < self.error_limit * t1:
+                return t1   
+            else:
+                return 0
+        except Exception:
+            return 0
 
-# class T2(Parameter):
-#     def __init__(self, name, alazar_ctrl, error_limit=0.5, initial_fit_params=[0.003, 1e-7, 10e7, 0, 0.01]):
-#         super().__init__(name, unit='S')
-#         self._alazar_ctrl = alazar_ctrl
-#         self.initial_fit_params = initial_fit_params
-#         self.error_limit = error_limit
+class T2(Parameter):
+    def __init__(self, name, alazar_ctrl, error_limit=0.5, initial_fit_params=[0.003, 1e-7, 10e7, 0, 0.01]):
+        super().__init__(name, unit='S')
+        self._alazar_ctrl = alazar_ctrl
+        self.initial_fit_params = initial_fit_params
+        self.error_limit = error_limit
 
-#     def get_raw(self):
-#         t2_trace = self._alazar_ctrl.acquisition
-#         mag_array = t2_trace.get_latest()[1][0]
-#         time = t2_trace.setpoints[0][0]
-#         try:
-#             popt, pcov = curve_fit(exp_decay_sin, time, mag_array,
-#                                    p0=self.initial_fit_params)
-#             t2_err = np.sqrt(pcov[1, 1])
-#             t2 = popt[1]
-#             if t2_err < self.error_limit * t2:
-#                 return t2   
-#             else:
-#                 return 0
-#         except Exception:
-#             return 0
+    def get_raw(self):
+        t2_trace = self._alazar_ctrl.acquisition
+        mag_array = t2_trace.get_latest()[1][0]
+        time = t2_trace.setpoints[0][0]
+        try:
+            popt, pcov = curve_fit(exp_decay_sin, time, mag_array,
+                                   p0=self.initial_fit_params)
+            t2_err = np.sqrt(pcov[1, 1])
+            t2 = popt[1]
+            if t2_err < self.error_limit * t2:
+                return t2   
+            else:
+                return 0
+        except Exception:
+            return 0
