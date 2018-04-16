@@ -39,7 +39,7 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
             k: -
         """
         color = 'C' + str(counter_two)
-        if issubclass(i.__class__, MultiChannelInstrumentParameter):
+        if issubclass(i.__class__, MultiChannelInstrumentParameter) or i._instrument is None:
             inst_meas_name = name
         else:            
             parent_instr_name = (i._instrument.name + '_') if i._instrument else ''
@@ -124,7 +124,7 @@ def _save_individual_plots(data, inst_meas, display_plot=True):
         color = 'C' + str(counter_two)
         counter_two += 1
         plot = MatPlot()
-        if issubclass(i.__class__, MultiChannelInstrumentParameter):
+        if issubclass(i.__class__, MultiChannelInstrumentParameter) or i._instrument is None:
             inst_meas_name = name
         else:
             inst_meas_name = "{}_{}".format(i._instrument.name, name)
