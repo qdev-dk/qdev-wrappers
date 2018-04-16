@@ -1,4 +1,6 @@
 import logging
+import logging.handlers
+
 import os
 from IPython import get_ipython
 from qcodes import config
@@ -24,7 +26,7 @@ def start_python_logger() -> None:
     try:
         filelogginglevel = config.core.file_loglevel
     except KeyError:
-        filelogginglevel = "Info"
+        filelogginglevel = "INFO"
     consolelogginglevel = config.core.loglevel
     ch = logging.StreamHandler()
     ch.setLevel(consolelogginglevel)

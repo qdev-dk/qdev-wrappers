@@ -9,7 +9,7 @@ import warnings
 
 from qdev_wrappers.device_annotator.qcodes_device_annotator import DeviceImage
 from qdev_wrappers.configreader import Config
-from qdev_wrappers.logging.logging_functions import (
+from qdev_wrappers.logger import (
     start_python_logger,
     start_command_history_logger)
 
@@ -25,7 +25,7 @@ def _set_up_ipython_logging():
                   "will be removed in the " +
                   "future. For general logging simply import the wrappers " +
                   "logging module via:\n" +
-                  ">>> from qdev_wrappers import logging\n" +
+                  ">>> from qdev_wrappers import logger\n" +
                   "as the first line of your script.\n" +
                   "For only command histroy logging call:\n"
                   "start_command_history_logger")
@@ -36,7 +36,7 @@ def init_python_logger() -> None:
                   "be removed in the " +
                   "future. For general logging simply import the wrappers " +
                   "logging module via:\n" +
-                  ">>> from qdev_wrappers import logging\n" +
+                  ">>> from qdev_wrappers import logger\n" +
                   "as the first line of your script.\n" +
                   "For only python logging call:\n"
                   "start_python_logger")
