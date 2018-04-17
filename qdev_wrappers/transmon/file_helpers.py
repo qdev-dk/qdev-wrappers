@@ -22,6 +22,10 @@ def get_current_qubit():
         return None
 
 
+def get_data_num(dataset):
+    return int(dataset.location[-3:])
+
+
 def set_current_qubit(val: int):
     if not getattr(CURRENT_EXPERIMENT, "init", True):
         raise RuntimeError("Experiment not initalized")
@@ -57,6 +61,7 @@ def get_subfolder_location(subfolder_name: str):
 
 
 def get_logfile():
+    warnings.warn("The function get_logfile is deprecated. Use a proper logger instead")
     if not getattr(CURRENT_EXPERIMENT, "init", True):
         raise RuntimeError("Experiment not initalized")
     if not getattr(CURRENT_EXPERIMENT, "logging_enabled"):
@@ -95,9 +100,9 @@ def get_config_file(cfg_name):
         raise KeyError("{}_config not found in CURRENT_EXPERIMENT, "
                        "check that _set_up_config_file has been run in the"
                        " init function".format(cfg_name))
-    if cfg_type is 'general':
+    if cfg_type == 'general':
         return get_general_config_file(cfg_name)
-    elif cfg_type is 'local':
+    elif cfg_type == 'local':
         return get_local_config_file(cfg_name)
     else:
         raise RuntimeError('Unexpected cfg_type: expected "local" or "general"'

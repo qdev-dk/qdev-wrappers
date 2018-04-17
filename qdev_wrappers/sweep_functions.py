@@ -1,11 +1,13 @@
 import matplotlib.pyplot as plt
 from os.path import sep
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Sequence
+from collections import Iterable
 from pyqtgraph.multiprocess.remoteproxy import ClosedError
 
 import qcodes as qc
 from qcodes.instrument.visa import VisaInstrument
 from qcodes.plots.pyqtgraph import QtPlot
+from qcodes.actions import Task
 from qcodes.data.data_set import DataSet
 from qcodes.loops import Loop
 from qcodes.measure import Measure
@@ -90,10 +92,8 @@ def _do_measurement_single(measurement: Measure, meas_params: tuple,
         else:
             plot = None
 
-        # add the measurement ID to the logfile
-        with open(CURRENT_EXPERIMENT['logfile'], 'a') as fid:
-            print("#[QCoDeS]# Saved dataset to: {}".format(data.location),
-                  file=fid)
+        log.info("#[QCoDeS]# Saved dataset to: {}".format(data.location))
+
         if interrupted:
             raise KeyboardInterrupt
     except:
@@ -170,10 +170,7 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
             log.debug('Saving device image')
             save_device_image(tuple(sp[0] for sp in set_params))
 
-        # add the measurement ID to the logfile
-        with open(CURRENT_EXPERIMENT['logfile'], 'a') as fid:
-            print("#[QCoDeS]# Saved dataset to: {}".format(data.location),
-                  file=fid)
+        log.info("#[QCoDeS]# Saved dataset to: {}".format(data.location))
         if interrupted:
             raise KeyboardInterrupt
     except:
@@ -295,7 +292,11 @@ def do1dDiagonal(inst_set, inst2_set, start, stop, num_points,
 
 def do2d(inst_set, start, stop, num_points, delay,
          inst_set2, start2, stop2, num_points2, delay2,
-         *inst_meas, do_plots=True, use_threads=False):
+         *inst_meas, do_plots=True, use_threads=False,
+         set_before_sweep: Optional[bool]=False,
+         innerloop_repetitions: Optional[int]=1,
+         innerloop_pre_tasks: Optional[Sequence]=None,
+         innerloop_post_tasks: Optional[Sequence]=None):
     """
 
     Args:
@@ -314,6 +315,12 @@ def do2d(inst_set, start, stop, num_points, delay,
             Data is still saved and can be displayed with show_num.
         use_threads: If True and if multiple things are being measured,
             multiple threads will be used to parallelise the waiting.
+        set_before_sweep: if True the outer parameter is set to its first value
+            before the inner parameter is swept to its next value.
+        innerloop_pre_tasks: Tasks to execute before each iteration of the
+            outer loop
+        innerloop_post_tasks: Tasks to execute after each iteration of the
+            outer loop
 
     Returns:
         plot, data : returns the plot and the dataset
@@ -322,16 +329,34 @@ def do2d(inst_set, start, stop, num_points, delay,
 
     for inst in inst_meas:
         if getattr(inst, "setpoints", False):
+            setpoints = inst.setpoints
+            if isinstance(setpoints, Iterable):
+                if all(len(v) == 0 for v in setpoints):
+                    continue
             raise ValueError("3d plotting is not supported")
 
-    innerloop = qc.Loop(inst_set2.sweep(start2,
-                                        stop2,
-                                        num=num_points2),
-                        delay2).each(*inst_meas)
+    actions = []
+    for i_rep in range(innerloop_repetitions):
+        innerloop = qc.Loop(inst_set2.sweep(start2,
+                                            stop2,
+                                            num=num_points2),
+                            delay2).each(*inst_meas)
+        if set_before_sweep:
+            ateach = [innerloop, Task(inst_set2, start2)]
+        else:
+            ateach = [innerloop]
+
+        if innerloop_pre_tasks is not None:
+            ateach = list(innerloop_pre_tasks) + ateach
+        if innerloop_post_tasks is not None:
+            ateach = ateach + list(innerloop_post_tasks)
+
+        actions += ateach
+
     outerloop = qc.Loop(inst_set.sweep(start,
                                        stop,
                                        num=num_points),
-                        delay).each(innerloop)
+                        delay).each(*actions)
 
     set_params = ((inst_set, start, stop),
                   (inst_set2, start2, stop2))

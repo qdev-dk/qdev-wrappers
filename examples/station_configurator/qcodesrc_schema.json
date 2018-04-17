@@ -47,7 +47,7 @@
                 },
                 "loglevel": {
                     "type": "string",
-                    "default": "INFO",
+                    "default": "DEBUG",
                     "description": "control logging  level",
                     "enum": [
                         "CRITICAL",
@@ -56,20 +56,7 @@
                         "INFO",
                         "DEBUG"
                     ]
-                },
-                "file_loglevel": {
-                    "type": "string",
-                    "default": "INFO",
-                    "description": "control logging level of log file",
-                    "enum": [
-                        "CRITICAL",
-                        "ERROR",
-                        "WARNING",
-                        "INFO",
-                        "DEBUG"
-                    ]
                 }
-
             },
             "description": "controls core settings of qcodes",
             "required": [
@@ -88,6 +75,11 @@
                     "type": "string",
                     "default": "",
                     "description": "Location of experiments"
+                },
+                "enable_forced_reconnect": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "if set to true, on instantiation of an existing instrument, the existing will be disconnected."
                 }
             },
             "description": "controls user settings of qcodes"
@@ -114,6 +106,7 @@
             },
             "description": "Setting for the StationConfigurator module in qdev-wrappers"
         }
+
     },
     "description": "schema for a qcodes config file",
     "required": [

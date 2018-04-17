@@ -1,3 +1,7 @@
+# import as a first module logging, and start logging
+from qdev_wrappers.logger import start_logging()
+start_logging()
+
 # import modules you might want to use
 import qcodes as qc
 import time
@@ -38,8 +42,6 @@ mpl.rcParams['font.size'] = 10
 
 
 if __name__ == '__main__':
-    # this line should be the first line, no matter what
-    init_python_logger()
     # Close existing connections if present
     if qc.Station.default:
         close_station(qc.Station.default)
@@ -135,16 +137,6 @@ if __name__ == '__main__':
         mercury.x_fld, mercury.z_fld, keith.By,
         mag_sphere.radius, mag_sphere.theta, mag_sphere.phi
     ]
-
-    # Get parameter values to populate monitor initially
-    print('Querying all instrument parameters for metadata.'
-          'This may take a while...')
-    start = time.time()
-    for param in param_monitor_list:
-        param.get()
-
-    end = time.time()
-    print("done Querying all instruments took {}".format(end - start))
 
     # Put parameters into monitor
     qc.Monitor(*param_monitor_list)

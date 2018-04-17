@@ -2,12 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import qcodes as qc
 
-from . import get_title, get_pulse_location, get_analysis_location
+from . import get_title, get_pulse_location, get_analysis_location, get_data_num
 
 # TODO extend 'plot_with_markers' to 2d
 
 
-def plot_cf_data(data_list, data_num=None,
+def plot_cf_data(data_list,
                  subplot=None, xdata=None,
                  legend_labels=[], axes_labels=[]):
     """
@@ -15,9 +15,6 @@ def plot_cf_data(data_list, data_num=None,
 
     Args:
         data_list: list of arrays to be compared
-        data_num (int): number to ascribe to the data optional, should
-            match the name under which the
-            dataset to reference is saved
         subplot (matplotlib AxesSubplot): optional subplot which this data
             should be plotted on default None will create new one
         xdata (array): optional x axis data, default None results in indices
@@ -33,9 +30,12 @@ def plot_cf_data(data_list, data_num=None,
         fig, sub = plt.subplots()
     else:
         fig, sub = subplot.figure, subplot
-    if data_num is not None:
-        fig.data_num = data_num
-        sub.set_title(get_title(data_num))
+    nums = [get_data_num(d) for d in data_list]
+    title = ""
+    for n in nums[:-1]:
+        title += '{0:03d}_'.format(n)
+    title += get_title(nums[-1])
+    sub.set_title(title)
     if (len(legend_labels) == 0) or (len(legend_labels) != len(data_list)):
         legend_labels = [[]] * len(data_list)
     if (len(axes_labels) == 0) or (len(axes_labels) != 2):
@@ -82,30 +82,26 @@ def line_cut(dataset, key, vals, axis='y'):
     y_label = '{} ({})'.format(getattr(array, "set_arrays")[
         0].label, getattr(array, "set_arrays")[0].unit)
     z_label = array.name
-    data_num = dataset.data_num
-    if axis is 'x':
+    if axis == 'x':
         z_data = np.zeros((len(vals), len(y_data)))
         for i, v in enumerate(vals):
             x_index = np.where(x_data == v)
             z_data[i] = array[:, x_index]
         fig, sub = plot_cf_data(z_data,
                                 xdata=y_data,
-                                data_num=data_num,
                                 legend_labels=["{} {}".format(
                                     v, x_label) for v in vals],
                                 axes_labels=[y_label, z_label])
 
-    elif axis is 'y':
+    elif axis == 'y':
         z_data = np.zeros((len(vals), len(x_data)))
         for i, v in enumerate(vals):
             y_index = np.where(y_data == v)
             z_data[i] = array[y_index, :]
         fig, sub = plot_cf_data(z_data,
                                 xdata=x_data,
-                                data_num=data_num,
                                 legend_labels=[str(v) + y_label for v in vals],
                                 axes_labels=[x_label, z_label])
-    fig.data_num = data_num
     return sub
 
 
@@ -143,7 +139,7 @@ def plot_subset(dataset, key, x_start=None, x_stop=None,
                           x_indices[0]:x_indices[-1]])
     plt.xlabel(x_label)
     plt.ylabel(y_label)
-    plt.title(get_title(dataset.data_num))
+    plt.title(get_title(get_data_num(dataset)))
     return pl
 
 
@@ -169,33 +165,22 @@ def plot_with_markers(dataset, indices, subplot=None, x_key="set", y_key="mag",
         subplot (matplotlib AxesSubplot): plot of results
     """
     if subplot is None:
-        fig = plt.figure()
         subplot = plt.subplot(111)
-        try:
-            fig.data_num = dataset.data_num
-        except AttributeError as e:
-            print('dataset has no data_num set: {}'.format(e))
-
     try:
         setpoints = next(getattr(dataset, k)
                          for k in dataset.arrays.keys() if x_key in k)
         magnitude = next(getattr(dataset, k)
                          for k in dataset.arrays.keys() if y_key in k)
     except Exception:
-        raise Exception('could not get {} and {} arrays from dataset, check dataset '
-                        'has these keys array names'.format(x_key, y_key))
+        raise Exception('could not get {} and {} arrays from dataset, check '
+                        'dataset has these keys array '
+                        'names'.format(x_key, y_key))
     subplot.plot(setpoints, magnitude, 'b')
     subplot.plot(setpoints[indices], magnitude[indices], 'gs')
     subplot.set_xlabel('frequency(Hz)')
     subplot.set_ylabel('S21')
 
-    try:
-        num = dataset.data_num
-    except AttributeError:
-        num = dataset.location_provider.counter
-        print('warning: check title, could be wrong datanum')
-
-    pl_title = str(num) + (' ' + title if title is not None else '')
+    pl_title = (title or '') + get_title(get_data_num(dataset))
     subplot.figure.suptitle(pl_title, fontsize=12)
     return subplot
 
@@ -207,8 +192,8 @@ def save_fig(plot_to_save, name='analysis', counter=None, pulse=False):
 
     Args:
         plot_to_save (matplotlib AxesSubplot or Figure)
-        name  (str): plot will be saved with '{data_num}_{name}.png'
-            so data_num and/or name must be unique, default 'analysis'
+        name  (str): plot will be saved with '{counter}_{name}.png'
+            so counter and/or name must be unique, default 'analysis'
         counter (int): counter for fig naming as above, if not specified
             will try to use one from the plot.
         pulse (bool): if true saves fig in pulse_lib folder from config,
@@ -217,19 +202,13 @@ def save_fig(plot_to_save, name='analysis', counter=None, pulse=False):
 
     fig = getattr(plot_to_save, 'figure', plot_to_save) or plot_to_save
 
-    if counter is None:
-        try:
-            str_counter = '{0:03d}'.format(fig.data_num)
-        except AttributeError:
-            str_counter = ''
-            if name is 'analysis':
-                raise AttributeError('No name specified and fig has '
-                                     'no data_num: please specify a '
-                                     'name for the plot')
+    if counter == None and name == 'analysis':
+        raise AttributeError('No name or counter specified will result'
+                             ' in non unique plot name')
+    elif counter is None:
+        full_name = name + '.png'
     else:
-        str_counter = '{0:03d}'.format(counter)
-
-    full_name = str_counter + '_' + name + '.png'
+        full_name = '{0:03d}'.format(counter) + '_' + name + '.png'
 
     if pulse:
         location = get_pulse_location()
