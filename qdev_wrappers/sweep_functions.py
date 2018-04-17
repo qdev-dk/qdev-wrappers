@@ -92,10 +92,8 @@ def _do_measurement_single(measurement: Measure, meas_params: tuple,
         else:
             plot = None
 
-        # add the measurement ID to the logfile
-        with open(CURRENT_EXPERIMENT['logfile'], 'a') as fid:
-            print("#[QCoDeS]# Saved dataset to: {}".format(data.location),
-                  file=fid)
+        log.info("#[QCoDeS]# Saved dataset to: {}".format(data.location))
+
         if interrupted:
             raise KeyboardInterrupt
     except:
@@ -172,10 +170,7 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
             log.debug('Saving device image')
             save_device_image(tuple(sp[0] for sp in set_params))
 
-        # add the measurement ID to the logfile
-        with open(CURRENT_EXPERIMENT['logfile'], 'a') as fid:
-            print("#[QCoDeS]# Saved dataset to: {}".format(data.location),
-                  file=fid)
+        log.info("#[QCoDeS]# Saved dataset to: {}".format(data.location))
         if interrupted:
             raise KeyboardInterrupt
     except:

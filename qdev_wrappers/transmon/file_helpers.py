@@ -61,6 +61,7 @@ def get_subfolder_location(subfolder_name: str):
 
 
 def get_logfile():
+    warnings.warn("The function get_logfile is deprecated. Use a proper logger instead")
     if not getattr(CURRENT_EXPERIMENT, "init", True):
         raise RuntimeError("Experiment not initalized")
     if not getattr(CURRENT_EXPERIMENT, "logging_enabled"):
