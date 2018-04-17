@@ -122,8 +122,8 @@ class StationConfigurator:
         # init_kwargs = {**kwargs , **init_kwargs}
         # does not.
         # temporary quick fix for update:
-        for k, v in kwargs:
-            init_kwargs[k] = v
+        for k in kwargs:
+            init_kwargs[k] = kwargs[k]
 
         instr = instr_class(identifier, **init_kwargs)
         # setup
