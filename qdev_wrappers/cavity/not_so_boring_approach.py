@@ -1,5 +1,6 @@
 from typing import Callable, Dict, List
 from copy import deepcopy
+import re
 from qcodes import Station, Instrument
 from qdev_wrappers.alazar_controllers.ATSChannelController import ATSChannelController
 from qdev_wrappers.alazar_controllers.alazar_channel import AlazarChannel
@@ -18,7 +19,7 @@ class ParametricSequencer:
 
     def __init__(self,
                  builder: Callable,
-                 builder_parms: Dict=None, 
+                 builder_parms: Dict=None,
                  default_parms: Dict[str, float] = None,
                  integration_delay: float = 0,
                  integration_time: float = 1e-6,
@@ -60,7 +61,6 @@ class ParametricSequencer:
 #        self.check_parameters()
 
     def check_parameters(self):
-
         # check record setpoints with parameters
         if not self.average_records:
             record_paremeter_lengths = [len(rec_p)
@@ -89,7 +89,7 @@ class ParametricSequencer:
                     'Not able to set buffer setpoint name,'
                     ' label or unit as no buffer setpoints are specified.')
 
-    def create_sequence(self):# -> bb.Sequence:
+    def create_sequence(self):  # -> bb.Sequence:
         return self.builder(**self.builder_parms)
 #        # this is the simple and naïve way, without any repeat elements
 #        # but one can simply add them here
@@ -134,17 +134,18 @@ class ParametricWaveformAnalyser(Instrument):
         self.alazar_controller = ATSChannelController(
             'pwa_controller', alazar.name)
         self.alazar_channels = self.alazar_controller.channels
-        self._demod_ref = None
+        self._demod_refs = None
 
-    # implementations
-    def set_up_sequence(self, sequencer, save_sequence=True, update_alazar=True):
+    def set_up_sequence(self, sequencer, save_sequence=True,
+                        update_alazar=True):
         self.sequencer = sequencer
         # see how this needs to be converted, to and from the json config
 #        self.station.components['sequencer'] = self.sequencer.serialize()
         sequence = self.sequencer.create_sequence()
         unwrapped_seq = sequence.unwrap()[0]
         if save_sequence:
-            self.awg.make_and_save_awg_file(*unwrapped_seq, filename=sequence.name+'.awg')
+            self.awg.make_and_save_awg_file(
+                *unwrapped_seq, filename=sequence.name + '.awg')
         self.awg.make_send_and_load_awg_file(*unwrapped_seq)
         self.awg.all_channels_on()
         self.awg.run()
@@ -152,33 +153,35 @@ class ParametricWaveformAnalyser(Instrument):
             self.clear_alazar_channels()
             self.alazar_controller.int_time(self.sequencer.integration_time)
             self.alazar_controller.int_delay(self.sequencer.integration_delay)
-            self.add_alazar_channel(sequencer)
+            self.set_alazar_channels()
 
+    @classmethod
+    def name_stripper(name):
+        return re.search(r'(.*)_(\d*)_([a-z])', name).groups()
 
-    def set_demod_freq(self, f_demod):
-        for ch in self.alazar_channels:
-            ch.demod_freq(f_demod)
-        self._demod_ref = f_demod
+    def set_demod_freq(self, *f_demods, update_alazar=True):
+        self._demod_refs = f_demods
+        if update_alazar:
+            self.clear_alazar_channels()
+            self.set_alazar_channels()
 
-
-    def add_alazar_channel(self, sequencer, name=None):
-        chan_num = len(self.alazar_channels)
-        # TODO: should name be based on seqeucne name?
-        chan_m = AlazarChannel(self.alazar_controller,
-                               name or 'alazar_channel_{}'.format(chan_num),
-                               demod=self._demod_ref is not None,
-                               average_buffers=sequencer.average_buffers,
-                               average_records=sequencer.average_records,
-                               integrate_samples=sequencer.average_time)
-        if self._demod_ref is not None:
-            chan_m.demod_freq(self._demod_ref)
-        chan_m.num_averages(sequencer.n_averages)
+    def add_alazar_channel_single(self, sequencer, dtype='m', demod_index=0):
+        chan = AlazarChannel(self.alazar_controller,
+                             '{}_{}_{}'.format(
+                                 sequencer.name, demod_index, dtype),
+                             demod=self._demod_ref is not None,
+                             average_buffers=sequencer.average_buffers,
+                             average_records=sequencer.average_records,
+                             integrate_samples=sequencer.average_time)
+        if self._demod_refs is not None:
+            chan.demod_freq(self._demod_ref[demod_index])
+        chan.num_averages(sequencer.n_averages)
         if not sequencer.average_records:
-            chan_m.records_per_buffer(sequencer.records_per_buffer)
+            chan.records_per_buffer(sequencer.records_per_buffer)
         if not sequencer.average_buffers:
-            chan_m.buffers_per_acquisition(
+            chan.buffers_per_acquisition(
                 sequencer.buffers_per_acquisition)
-        chan_m.prepare_channel(
+        chan.prepare_channel(
             record_setpoints=sequencer.record_setpoints,
             buffer_setpoints=sequencer.buffer_setpoints,
             record_setpoint_name=sequencer.record_setpoint_name,
@@ -187,21 +190,28 @@ class ParametricWaveformAnalyser(Instrument):
             buffer_setpoint_name=sequencer.buffer_setpoint_name,
             buffer_setpoint_label=sequencer.buffer_setpoint_label,
             buffer_setpoint_unit=sequencer.buffer_setpoint_unit)
-        # this is a problem, can't I get magnitude and phase at the same time?
-#        chan_p = deepcopy(chan_m)
-        chan_m.demod_type('magnitude')
-        chan_m.data.label = 'Cavity Response' 
-#        chan_p.demod_type('phase')
-        # data is MultidimParameter
-        self.alazar_controller.channels.append(chan_m)
-#        self.alazar_controller.channels.append(chan_p)
+        if dtype == 'm':
+            chan.demod_type('magnitude')
+            chan.data.label = 'Cavity Magnitude Response'
+        elif dtype == 'p':
+            chan.demod_type('phase')
+            chan.data.label = 'Cavity Phase Response'
+        else:
+            raise NotImplementedError(
+                'only magnitude and phase currently implemented')
+        self.alazar_controller.channels.append(chan)
 
+    def set_alazar_channels(self):
+        for i in range(len(self._demod_refs)):
+            self.add_alazar_channel_single(
+                self.sequencer, dtype='m', demod_index=i)
+            self.add_alazar_channel_single(
+                self.sequencer, dtype='p', demod_index=i)
 
     def clear_alazar_channels(self):
         if self.alazar_channels is not None:
             for ch in list(self.alazar_channels):
                 self.alazar_channels.remove(ch)
-
 
     # def get(self):
     #     # must have called update_sequence before
