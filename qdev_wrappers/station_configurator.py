@@ -125,7 +125,7 @@ class StationConfigurator:
         for k, v in kwargs:
             init_kwargs[k] = v
 
-        instr = instr_class(identifier, **init_kwargs)
+        instr = instr_class(name=identifier, **init_kwargs)
         # setup
 
         # local function to refactor common code from defining new parameter
