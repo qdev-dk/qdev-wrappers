@@ -40,8 +40,9 @@ class StationConfigurator:
         if station is None:
             station = Station.default or Station()
         self.station = station
+        self.filename = filename
 
-        self.load_file(filename)
+        self.load_file(self.filename)
 
     def load_file(self, filename: Optional[str] = None):
         if filename is None:
@@ -85,7 +86,10 @@ class StationConfigurator:
                 __init__-method of the instrument to be added.
         """
 
-        # load config
+        # load file
+        self.load_file(self.filename)
+
+        # load from config
         if identifier not in self._instrument_config.keys():
             raise RuntimeError('Instrument {} not found in config.'
                                .format(identifier))
