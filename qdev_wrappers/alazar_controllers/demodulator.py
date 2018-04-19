@@ -150,7 +150,7 @@ class Demodulator:
         magnitude = abs(complex_mat)
         phase = np.angle(complex_mat, deg=True)
 
-        return magnitude, phase
+        return magnitude, phase, re_limited, im_limited
 
     @staticmethod
     def verify_demod_freq(value, sample_rate, int_time):

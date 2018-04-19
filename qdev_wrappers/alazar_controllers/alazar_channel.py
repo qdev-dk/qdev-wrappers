@@ -52,7 +52,7 @@ class AlazarChannel(InstrumentChannel):
             self.add_parameter('demod_type',
                                label='demod type',
                                initial_value='magnitude',
-                               vals=vals.Enum('magnitude', 'phase'),
+                               vals=vals.Enum('magnitude', 'phase', 'x', 'y'),
                                get_cmd=None, set_cmd=None)
 
         self.add_parameter('alazar_channel',
