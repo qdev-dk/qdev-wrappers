@@ -106,7 +106,7 @@ class Demodulator:
         demod_length = len(self.demod_freqs)
         volt_rec_mat = np.outer(np.ones(demod_length), volt_rec).reshape(self.mat_shape)
         re_mat = np.multiply(volt_rec_mat, self.cos_mat)
-        im_mat = np.multiply(volt_rec_mat, self.sin_mat)*0
+        im_mat = np.multiply(volt_rec_mat, self.sin_mat)
 
         # filter out higher freq component
         cutoff = max(self.demod_freqs)/10
