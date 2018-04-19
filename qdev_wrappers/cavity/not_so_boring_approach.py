@@ -1,13 +1,14 @@
 from typing import Callable, Dict, List
 from copy import deepcopy
 import re
+from os.path import sep
 from qcodes import Station, Instrument
 from qdev_wrappers.alazar_controllers.ATSChannelController import ATSChannelController
 from qdev_wrappers.alazar_controllers.alazar_channel import AlazarChannel
-from qdev_wrappers.transmon.awg_helpers import make_save_send_load_awg_file
+from qdev_wrappers.transmon.file_helpers import get_subfolder_location
 
 
-class ParametricSequencer:
+class ParametricSequencer():
     """
     Take a step back to make it more general, and keep the
     ParametricWaveforms in the background
@@ -143,10 +144,13 @@ class ParametricWaveformAnalyser(Instrument):
 #        self.station.components['sequencer'] = self.sequencer.serialize()
         sequence = self.sequencer.create_sequence()
         unwrapped_seq = sequence.unwrap()[0]
+        awg_file = self.awg.make_awg_file(*unwrapped_seq)
+        filename = sequence.name + '.awg'
+        self.awg.send_and_load_awg_file(awg_file, filename)
         if save_sequence:
-            self.awg.make_and_save_awg_file(
-                *unwrapped_seq, filename=sequence.name + '.awg')
-        self.awg.make_send_and_load_awg_file(*unwrapped_seq)
+            local_filename = sep.join([get_subfolder_location('waveforms'), filename])
+            with open(local_filename, 'wb') as fid:
+                fid.write(awg_file)
         self.awg.all_channels_on()
         self.awg.run()
         if update_alazar:
