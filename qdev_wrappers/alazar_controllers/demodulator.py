@@ -98,8 +98,8 @@ class Demodulator:
                                   to ifantegration limits shape = (samples_taken, )
 
         Returns:
-            magnitude (numpy array): shape = (demod_length, samples_after_limiting)
-            phase (numpy array): shape = (demod_length, samples_after_limiting)
+            re_limited (numpy array): shape = (demod_length, samples_after_limiting)
+            im_limited (numpy array): shape = (demod_length, samples_after_limiting)
         """
 
         # volt_rec to matrix and multiply with demodulation signal matrices
@@ -145,12 +145,7 @@ class Demodulator:
             re_limited = re_filtered
             im_limited = im_filtered
 
-        # convert to magnitude and phase
-        complex_mat = re_limited + im_limited * 1j
-        magnitude = abs(complex_mat)
-        phase = np.angle(complex_mat, deg=True)
-
-        return magnitude, phase, re_limited, im_limited
+        return re_limited, im_limited
 
     @staticmethod
     def verify_demod_freq(value, sample_rate, int_time):

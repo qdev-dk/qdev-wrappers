@@ -318,20 +318,21 @@ class ATSChannelController(AcquisitionController):
                     data.append(np.squeeze(recordA))
             # do demodulation
             if demod_freqs:
-                magA, phaseA, x, y= self.demodulators[channel_number].demodulate(recordA, self.int_delay(), self.int_time())
+                re_limited, im_limited = self.demodulators[channel_number].demodulate(recordA, self.int_delay(), self.int_time())
                 for i, type in enumerate(demod_types):
-                    if type=='magnitude':
-                        mydata = np.squeeze(magA[i])
-                    elif type == 'phase':
-                        mydata = np.squeeze(phaseA[i])
-                    elif type == 'x':
-                        mydata = np.squeeze(x[i])
-                    elif type == 'y':
-                        mydata = np.squeeze(y[i])
-                    else:
-                        raise RuntimeError("unknown demodulator type")
+                    Real_data = np.squeeze(re_limited[i])
+                    Imag_data = np.squeeze(im_limited[i])
                     if settings['integrate_samples']:
-                        mydata = np.mean(mydata, axis=-1)
+                        Real_data = np.mean(Real_data, axis=-1)
+                        Imag_data = np.mean(Imag_data, axis=-1)
+                    if type=='magnitude':
+                        mydata = abs(Real_data+1j*Imag_data)
+                    elif type == 'phase':
+                        mydata = np.angle(Real_data+1j*Imag_data, deg=True)
+                    elif type == 'x':
+                        mydata = Real_data
+                    elif type == 'y':
+                        mydata = Imag_data
                     data.append(mydata)
             return data
 
