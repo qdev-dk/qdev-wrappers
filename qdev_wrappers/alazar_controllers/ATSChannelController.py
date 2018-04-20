@@ -319,20 +319,22 @@ class ATSChannelController(AcquisitionController):
             # do demodulation
             if demod_freqs:
                 re_limited, im_limited = self.demodulators[channel_number].demodulate(recordA, self.int_delay(), self.int_time())
-                for i, type in enumerate(demod_types):
+                for i, demodtype in enumerate(demod_types):
                     Real_data = np.squeeze(re_limited[i])
                     Imag_data = np.squeeze(im_limited[i])
                     if settings['integrate_samples']:
                         Real_data = np.mean(Real_data, axis=-1)
                         Imag_data = np.mean(Imag_data, axis=-1)
-                    if type=='magnitude':
+                    if demodtype=='magnitude':
                         mydata = abs(Real_data+1j*Imag_data)
-                    elif type == 'phase':
+                    elif demodtype == 'phase':
                         mydata = np.angle(Real_data+1j*Imag_data, deg=True)
-                    elif type == 'x':
+                    elif demodtype == 'x':
                         mydata = Real_data
-                    elif type == 'y':
+                    elif demodtype == 'y':
                         mydata = Imag_data
+                    else:
+                        raise RuntimeError(f"Unknown demodulator type {demodtype} supplied")
                     data.append(mydata)
             return data
 
