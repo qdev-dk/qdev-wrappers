@@ -122,7 +122,7 @@ class StationConfigurator:
         # init_kwargs = {**kwargs , **init_kwargs}
         # does not.
         # temporary quick fix for update:
-        for k, v in kwargs:
+        for k, v in kwargs.items():
             init_kwargs[k] = v
 
         instr = instr_class(name=identifier, **init_kwargs)
