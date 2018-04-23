@@ -148,9 +148,9 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                 # Save figure
                 if savepng:
                     if len(ids) == 1:
-                        title_png = samplefolder+CURRENT_EXPERIMENT['png_subfolder']+sep+'{}'.format(ids[0])
+                        title_png = samplefolder+'png'+sep+'{}'.format(ids[0])
                     else:
-                        title_png = samplefolder+CURRENT_EXPERIMENT['png_subfolder']+sep+'{}-{}'.format(ids[0],ids[-1])
+                        title_png = samplefolder+'png'+sep+'{}-{}'.format(ids[0],ids[-1])
                     if l>1:
                         num = '{}'.format(j+1)
                     plt.savefig(title_png+'_{}_{}.png'.format(num,avg_sub),dpi=500)
