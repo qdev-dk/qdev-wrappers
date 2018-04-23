@@ -121,6 +121,14 @@ instruments:
   AlazarController:
     driver: qdev_wrappers.alazar_controllers.ATSChannelController
     type: ATSChannelController
+    enable_forced_reconnect: true
     init:
       alazar_name: 'Alazar'
     auto_reconnect: true
+
+  AlazarSampleChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      integrate_samples: false
