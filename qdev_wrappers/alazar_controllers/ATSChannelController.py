@@ -329,9 +329,9 @@ class ATSChannelController(AcquisitionController):
                         mydata = abs(Real_data+1j*Imag_data)
                     elif demodtype == 'phase':
                         mydata = np.angle(Real_data+1j*Imag_data, deg=True)
-                    elif demodtype == 'x':
+                    elif demodtype == 'real':
                         mydata = Real_data
-                    elif demodtype == 'y':
+                    elif demodtype == 'imag':
                         mydata = Imag_data
                     else:
                         raise RuntimeError(f"Unknown demodulator type {demodtype} supplied")
