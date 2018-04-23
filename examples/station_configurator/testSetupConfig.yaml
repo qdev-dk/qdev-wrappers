@@ -92,3 +92,35 @@ instruments:
     type: AWG5208
     address: 'TCPIP0::192.168.15.118::inst0::INSTR'
     enable_forced_reconnect: true
+
+  YokogawaGS200:
+    driver: qcodes.instrument_drivers.yokogawa.GS200
+    type: GS200
+    address: 'USB0::0x0B21::0x0039::91RB18716::INSTR'
+    enable_forced_reconnect: true
+
+  Alazar:
+    driver: qcodes.instrument_drivers.AlazarTech.ATS9360
+    type: AlazarTech_ATS9360
+    enable_forced_reconnect: true
+    parameters:
+      clock_source: {value: 'INTERNAL_CLOCK'}
+      sample_rate: {value: 1_000_000_000}
+      trigger_operation: {value: 'TRIG_ENGINE_OP_J'}
+      trigger_engine1: {value: 'TRIG_ENGINE_J'}
+      trigger_source1: {value: 'EXTERNAL'}
+      trigger_slope1: {value: 'TRIG_SLOPE_POSITIVE'}
+      trigger_level1: {value: 160}
+      trigger_engine2: {value: 'TRIG_ENGINE_K'}
+      trigger_source2: {value: 'DISABLE'}
+      external_trigger_coupling: {value: 'DC'}
+      external_trigger_range: {value: 'ETR_2V5'}
+      trigger_delay: {value: 0}
+      timeout_ticks: {value: 0}
+
+  AlazarController:
+    driver: qdev_wrappers.alazar_controllers.ATSChannelController
+    type: ATSChannelController
+    init:
+      alazar_name: 'Alazar'
+    auto_reconnect: true
