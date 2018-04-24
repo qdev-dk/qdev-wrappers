@@ -1,61 +1,75 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.animation as anim
 from qcodes.dataset.measurements import Measurement
 from qcodes.dataset.plotting import plot_by_id
 from qcodes.dataset.data_set import load_by_id
-from time import sleep, time
-import matplotlib.animation as animation
+from qcodes.dataset import experiment_container
 
+
+def make_title(dataset):
+    '''Make a descriptive title for the dataset.'''
+    experiment = experiment_container.load_experiment(dataset.exp_id)
+    title = '{} on {} - {}.{} ({})'
+    title = title.format(experiment.name, experiment.sample_name,
+                         experiment.exp_id, dataset.counter, dataset.run_id)
+    return title
         
-def load_axes(run_id):
-    data = load_by_id(run_id)
-    if data:
-        axes, cbaxes = plot_by_id(run_id)
-        return axes, cbaxes
-    else:
-        return None, None
 
-    
-def redraw(run_id, axes, cbaxes=None):
+def redraw(run_id, axes, cbars):
+    '''Call plot_by_id to plot the available data on axes.'''
     pause_time = 0.001
-    for axis in axes:
-        axis.clear()
-    for cbaxis in cbaxes:
-        if cbaxis is not None:
-            cbaxis.remove()
-    axes, cbaxes = plot_by_id(run_id, axes)
-    plt.pause(pause_time)
-    return axes, cbaxes
+    dataset = load_by_id(run_id)
+    if not dataset: # there is not data available yet
+        axes, cbars = [], []
+    elif not axes: # there is data available but no plot yet
+        axes, cbars = plot_by_id(run_id)
+    else: # there is a plot already
+        for axis in axes:
+            axis.clear()
+        for cbar in cbars:
+            if cbar is not None:
+                cbar.remove()
+        axes, cbars = plot_by_id(run_id, axes)
+        title = make_title(dataset)
+        for axis in axes:
+            axis.set_title(title)
+        plt.pause(pause_time)
+    return axes, cbars
 
 
 def do0d(*param_meas):
+    '''Measure param_meas, with basic real-time plotting.
+    
+    .. todo:: Refactor plot_by_id and retrieve not the whole axes but only
+    the data. This way you could zoom in and manipulate the plot without it
+    being resized every frame.'''
+    
     meas = Measurement()
+    meas.write_period = 1. # update rate in s
     output = []
     for parameter in param_meas:
         meas.register_parameter(parameter, setpoints=())
         output.append([parameter, None])
 
-    axes = None
+    axes, cbars = [], []
     with meas.run() as datasaver:
         run_id = datasaver.run_id
         for i, parameter in enumerate(param_meas):
             output[i][1] = parameter.get()
         datasaver.add_result(*output)
-        if axes is None:
-            axes, cbaxes = load_axes(run_id)
-        else:
-            axes, cbaxes = redraw(run_id, axes, cbaxes)
+        axes, cbars = redraw(run_id, axes, cbars)
     return run_id
 
 
 def do1d(param_set, start, stop, num_points, delay, *param_meas):
-    '''
-    do1D enforces a simple relationship between measured parameters
-    and set parameters. For anything more complicated this should be
-    reimplemented from scratch.
-    '''
+    '''Scan param_set and measure param_meas, with basic real-time plotting.
+    
+    .. todo:: Refactor plot_by_id and retrieve not the whole axes but only
+    the data. This way you could zoom in and manipulate the plot without it
+    being resized every frame.'''
+    
     meas = Measurement()
+    meas.write_period = 1. # update rate in s
     meas.register_parameter(param_set)
     output = []
     param_set.post_delay = delay
@@ -63,7 +77,7 @@ def do1d(param_set, start, stop, num_points, delay, *param_meas):
         meas.register_parameter(parameter, setpoints=(param_set,))
         output.append([parameter, None])
 
-    axes = None
+    axes, cbars = [], []
     with meas.run() as datasaver:
         run_id = datasaver.run_id
         for set_point in np.linspace(start, stop, num_points):
@@ -72,17 +86,21 @@ def do1d(param_set, start, stop, num_points, delay, *param_meas):
                 output[i][1] = parameter.get()
             datasaver.add_result((param_set, set_point),
                                  *output)
-            if axes is None:
-                axes, cbaxes = load_axes(run_id)
-            else:
-                axes, cbaxes = redraw(run_id, axes, cbaxes)
+            axes, cbars = redraw(run_id, axes, cbars)
     return run_id
 
 
 def do2d(param_set1, start1, stop1, num_points1, delay1,
          param_set2, start2, stop2, num_points2, delay2,
          *param_meas):
+    '''Scan param_set and measure param_meas, with basic real-time plotting.
+    
+    .. todo:: Refactor plot_by_id and retrieve not the whole axes but only
+    the data. This way you could zoom in and manipulate the plot without it
+    being resized every frame.'''
+    
     meas = Measurement()
+    meas.write_period = 1. # update rate in s
     meas.register_parameter(param_set1)
     param_set1.post_delay = delay1
     meas.register_parameter(param_set2)
@@ -92,7 +110,7 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
         meas.register_parameter(parameter, setpoints=(param_set1, param_set2))
         output.append([parameter, None])
 
-    axes = None
+    axes, cbars = [], []
     with meas.run() as datasaver:
         run_id = datasaver.run_id
         for set_point1 in np.linspace(start1, stop1, num_points1):
@@ -104,9 +122,5 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
                 datasaver.add_result((param_set1, set_point1),
                                      (param_set2, set_point2),
                                      *output)
-                if axes is None:
-                    axes, cbaxes = load_axes(run_id)
-                else:
-                    axes, cbaxes = redraw(run_id, axes, cbaxes)
-    dataid = datasaver.run_id
-    return dataid
+                axes, cbars = redraw(run_id, axes, cbars)
+    return run_id
