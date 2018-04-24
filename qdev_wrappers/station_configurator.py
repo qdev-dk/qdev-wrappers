@@ -114,7 +114,7 @@ class StationConfigurator:
         # somebody might have a empty init section in the config
         init_kwargs = {} if init_kwargs is None else init_kwargs
         if 'address' in instr_cfg:
-            init_kwargs['address'] = instr_cfg['address']        
+            init_kwargs['address'] = instr_cfg['address']
         if 'port' in instr_cfg:
             init_kwargs['port'] = instr_cfg['port']
         # make explicitly passed arguments overide the ones from the config file
@@ -124,7 +124,7 @@ class StationConfigurator:
         # init_kwargs = {**kwargs , **init_kwargs}
         # does not.
         # temporary quick fix for update:
-        for k, v in kwargs:
+        for k, v in kwargs.items():
             init_kwargs[k] = v
 
         instr = instr_class(name=identifier, **init_kwargs)
