@@ -132,3 +132,41 @@ instruments:
     init:
       demod: false
       integrate_samples: false
+
+  AlazarRecordChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      average_records: false
+
+  AlazarBufferChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      average_buffers: false
+
+  AlazarSampleRecordChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      integrate_samples: false
+      average_records: false
+
+  AlazarSampleBufferChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      integrate_samples: false
+      average_buffers: false
+
+  AlazarRecordBufferChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      average_records: false
+      average_buffers: false
