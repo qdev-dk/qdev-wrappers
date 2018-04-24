@@ -104,19 +104,19 @@ instruments:
     type: AlazarTech_ATS9360
     enable_forced_reconnect: true
     parameters:
-      clock_source: {value: 'INTERNAL_CLOCK'}
-      sample_rate: {value: 1_000_000_000}
-      trigger_operation: {value: 'TRIG_ENGINE_OP_J'}
-      trigger_engine1: {value: 'TRIG_ENGINE_J'}
-      trigger_source1: {value: 'EXTERNAL'}
-      trigger_slope1: {value: 'TRIG_SLOPE_POSITIVE'}
-      trigger_level1: {value: 160}
-      trigger_engine2: {value: 'TRIG_ENGINE_K'}
-      trigger_source2: {value: 'DISABLE'}
-      external_trigger_coupling: {value: 'DC'}
-      external_trigger_range: {value: 'ETR_2V5'}
-      trigger_delay: {value: 0}
-      timeout_ticks: {value: 0}
+      clock_source: {initial_value: 'INTERNAL_CLOCK'}
+      sample_rate: {initial_value: 1_000_000_000}
+      trigger_operation: {initial_value: 'TRIG_ENGINE_OP_J'}
+      trigger_engine1: {initial_value: 'TRIG_ENGINE_J'}
+      trigger_source1: {initial_value: 'EXTERNAL'}
+      trigger_slope1: {initial_value: 'TRIG_SLOPE_POSITIVE'}
+      trigger_level1: {initial_value: 160}
+      trigger_engine2: {initial_value: 'TRIG_ENGINE_K'}
+      trigger_source2: {initial_value: 'DISABLE'}
+      external_trigger_coupling: {initial_value: 'DC'}
+      external_trigger_range: {initial_value: 'ETR_2V5'}
+      trigger_delay: {initial_value: 0}
+      timeout_ticks: {initial_value: 0}
 
   AlazarController:
     driver: qdev_wrappers.alazar_controllers.ATSChannelController
