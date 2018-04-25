@@ -103,11 +103,13 @@ class HeterodyneSource(Instrument):
     def _set_drive_frequency(self, frequency):
         self._cavity.frequency(frequency)
         self._localos.frequency(frequency + self.demodulation_frequency())
+        if self._pwa is not None:
+            self._pwa.update_carrier_frequency(frequency)
 
     def _set_demod_frequency(self, frequency):
         self._localos.frequency(self._cavity.frequency() + frequency)
         if self._pwa is not None:
-            self._pwa.base_demodulation_frequency(frequency)
+            self._pwa.update_base_demod_freq(frequency)
         else:
             logging.warning(
                 'Attempt to set demodulation frequency on heterodyne '
