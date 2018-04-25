@@ -1,10 +1,11 @@
 from qcodes.instrument.base import Instrument
-from qcodes import ManualParameter
 from qcodes.utils import validators as vals
 import logging
 from qdev_wrappers.parameters import DelegateParameter
 
 # TODO: name help pleaaase!
+
+
 class HeterodyneSource(Instrument):
     """
     This driver is a wrapper used to set two SGS100A microwave sources
@@ -13,11 +14,13 @@ class HeterodyneSource(Instrument):
     and a low pass filter.
     """
 
-    def __init__(self, name, cavity=None, localos=None, pwa=None, demodulation_frequency=None):
+    def __init__(self, name, cavity=None, localos=None, pwa=None,
+                 demodulation_frequency=None):
         self._cavity = cavity
         self._localos = localos
         if cavity is None or localos is None:
-            raise RuntimeError('must initialise with mocrowave sources for cavity and local oscillator')
+            raise RuntimeError('must initialise with microwave sources '
+                               'for cavity and local oscillator')
         super().__init__(name)
 
         self._pwa = pwa
@@ -47,14 +50,14 @@ class HeterodyneSource(Instrument):
                            parameter_class=DelegateParameter,
                            source=self._localos.power)
         self.add_parameter(name='IQ_state',
-                   parameter_class=DelegateParameter,
-                   source=self._cavity.IQ_state)
+                           parameter_class=DelegateParameter,
+                           source=self._cavity.IQ_state)
         self.add_parameter(name='pulsemod_state',
-           parameter_class=DelegateParameter,
-           source=self._cavity.pulsemod_state)
+                           parameter_class=DelegateParameter,
+                           source=self._cavity.pulsemod_state)
         self.add_parameter(name='pulsemod_source',
-           parameter_class=DelegateParameter,
-           source=self._cavity.pulsemod_source)
+                           parameter_class=DelegateParameter,
+                           source=self._cavity.pulsemod_source)
 
     def _set_ref_osc_source(self, ref_osc_source):
         self._cavity.ref_osc_source(ref_osc_source)
@@ -70,7 +73,6 @@ class HeterodyneSource(Instrument):
                 'cavity and local oscillator do not have the '
                 'same reference source: {}, {}'.format(cav_source, lo_source))
 
-
     def _set_ref_osc_external_freq(self, ref_osc_external_freq):
         self._cavity.ref_osc_external_freq(ref_osc_external_freq)
         self._localos.ref_osc_external_freq(ref_osc_external_freq)
@@ -81,9 +83,9 @@ class HeterodyneSource(Instrument):
         if cav_source_freq == lo_source_freq:
             return cav_source_freq
         else:
-            logging.warning(
-                'cavity and local oscillator do not have the '
-                'same reference source frequency: {}, {}'.format(cav_source_freq, lo_source_freq))
+            logging.warning('cavity and local oscillator do '
+                            'not have the same reference source frequency: '
+                            '{}, {}'.format(cav_source_freq, lo_source_freq))
 
     def _set_status(self, status):
         if str(status).upper() in ['TRUE', '1', 'ON']:
@@ -105,11 +107,12 @@ class HeterodyneSource(Instrument):
     def _set_demod_frequency(self, frequency):
         self._localos.frequency(self._cavity.frequency() + frequency)
         if self._pwa is not None:
-            self._pwa.set_base_demod_freq(frequency)
+            self._pwa.base_demodulation_frequency(frequency)
         else:
             logging.warning(
-                'Attempt to set demodulation frequency on heterodyne readout setup'
-                'without setting demodulation frequency for software demodulation.')
+                'Attempt to set demodulation frequency on heterodyne '
+                'readout setup without setting demodulation frequency '
+                'for software demodulation.')
 
     # TODO: pulsemod source
     def reset(self):
