@@ -331,7 +331,7 @@ class ParametricWaveformAnalyser(Instrument):
                 self.alazar_channels.remove(ch)
 
     def get_alazar_data(self, alazar_ch_get_fn_to_check):
-        if not self._rouge mode:
+        if not self._rouge_mode:
             if not self._sequence_up_to_date:
                 raise RuntimeError(
                     'sequencer not up to date, run "update_sequencer"')
