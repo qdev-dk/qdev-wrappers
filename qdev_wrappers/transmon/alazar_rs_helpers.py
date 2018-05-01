@@ -303,7 +303,7 @@ def set_cavity_from_calib_dict(cavity, localos, acq_ctrls, num_avg=1000):
 
 
 def sweep2d_ssb(qubit, acq_ctrl, centre_freq, sweep_param,
-                start, stop, step, delay=0.01, do_plots=True):
+                start, stop, step, delay=0.01, do_plots=True, sb_span=200e6):
     """
     Function which sets up a ssb spectroscopy 'hardware controlled sweep'
     +-100MHz around cenre_freq on one axis and sweeps another parameter on
@@ -325,19 +325,19 @@ def sweep2d_ssb(qubit, acq_ctrl, centre_freq, sweep_param,
     Returns:
         sweep1d result
     """
-    qubit.frequency(centre_freq + 100e6)
+    qubit.frequency(centre_freq)
     acq_ctrl.acquisition.set_base_setpoints(
         base_name='ssb_qubit_drive_freq',
         base_label='Qubit Drive Frequency',
         base_unit='Hz',
-        setpoints_start=centre_freq + 100e6,
-        setpoints_stop=centre_freq - 100e6)
+        setpoints_start=centre_freq + sb_span / 2,
+        setpoints_stop=centre_freq - sb_span / 2)
     return sweep1d(acq_ctrl.acquisition, sweep_param, start,
                    stop, step, delay=delay, do_plots=do_plots)
 
 
 def measure_ssb(qubit, acq_ctrl, centre_freq,
-                do_plots=True):
+                do_plots=True, sb_span=200e6):
     """
     Function which does a 'hardware controlled sweep' for single sideband
     spectroscopy uploaded to the awg +-100MHz around the centre_freq.
@@ -353,11 +353,11 @@ def measure_ssb(qubit, acq_ctrl, centre_freq,
     Returns:
         measure result
     """
-    qubit.frequency(centre_freq + 100e6)
+    qubit.frequency(centre_freq)
     acq_ctrl.acquisition.set_base_setpoints(
         base_name='ssb_qubit_drive_freq',
         base_label='Qubit Drive Frequency',
         base_unit='Hz',
-        setpoints_start=centre_freq + 100e6,
-        setpoints_stop=centre_freq - 100e6)
+        setpoints_start=centre_freq + sb_span / 2,
+        setpoints_stop=centre_freq - sb_span / 2)
     return measure(acq_ctrl.acquisition)

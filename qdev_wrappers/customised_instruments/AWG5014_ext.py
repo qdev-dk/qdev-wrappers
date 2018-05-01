@@ -11,5 +11,34 @@ class AWG5014_ext(Tektronix_AWG5014):
                            initial_value=None,
                            label='Uploaded sequence index',
                            vals=vals.Ints())
+        self.add_parameter(name='seq_mode',
+                           set_cmd=self._set_seq_mode,
+                           get_cmd=self._get_seq_mode)
         self.ref_source('EXT')
         self.clear_message_queue()
+
+    def _set_seq_mode(self, status):
+        if str(status).upper() in ['TRUE', '1', 'ON']:
+            for i in range(self.sequence_length()):
+                self.set_sqel_loopcnt(i, 1)
+        elif str(status).upper() in ['FALSE', '0', 'OFF']:
+            for i in range(self.sequence_length()):
+                self.set_sqel_loopcnt_to_inf(i)
+
+    def _get_seq_mode(self):
+        if self.set_sqel_loopcnt() == '1':
+            return False
+        else:
+            print(self.set_sqel_loopcnt())
+            return True
+
+    def send_and_load_awg_file(self, awg_file, filename):
+        self.visa_handle.write('MMEMory:CDIRectory ' +
+                               '"C:\\Users\\OEM\\Documents"')
+
+        self.send_awg_file(filename, awg_file)
+        currentdir = self.visa_handle.query('MMEMory:CDIRectory?')
+        currentdir = currentdir.replace('"', '')
+        currentdir = currentdir.replace('\n', '\\')
+        loadfrom = '{}{}'.format(currentdir, filename)
+        self.load_awg_file(loadfrom)

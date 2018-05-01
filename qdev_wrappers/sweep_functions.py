@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from os.path import sep
 from typing import Optional, Tuple, Sequence
+from collections import Iterable
 from pyqtgraph.multiprocess.remoteproxy import ClosedError
 
 import qcodes as qc
@@ -91,10 +92,8 @@ def _do_measurement_single(measurement: Measure, meas_params: tuple,
         else:
             plot = None
 
-        # add the measurement ID to the logfile
-        with open(CURRENT_EXPERIMENT['logfile'], 'a') as fid:
-            print("#[QCoDeS]# Saved dataset to: {}".format(data.location),
-                  file=fid)
+        log.info("#[QCoDeS]# Saved dataset to: {}".format(data.location))
+
         if interrupted:
             raise KeyboardInterrupt
     except:
@@ -171,10 +170,7 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
             log.debug('Saving device image')
             save_device_image(tuple(sp[0] for sp in set_params))
 
-        # add the measurement ID to the logfile
-        with open(CURRENT_EXPERIMENT['logfile'], 'a') as fid:
-            print("#[QCoDeS]# Saved dataset to: {}".format(data.location),
-                  file=fid)
+        log.info("#[QCoDeS]# Saved dataset to: {}".format(data.location))
         if interrupted:
             raise KeyboardInterrupt
     except:
@@ -333,6 +329,10 @@ def do2d(inst_set, start, stop, num_points, delay,
 
     for inst in inst_meas:
         if getattr(inst, "setpoints", False):
+            setpoints = inst.setpoints
+            if isinstance(setpoints, Iterable):
+                if all(len(v) == 0 for v in setpoints):
+                    continue
             raise ValueError("3d plotting is not supported")
 
     actions = []

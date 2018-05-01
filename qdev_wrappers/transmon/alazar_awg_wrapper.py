@@ -35,7 +35,7 @@ def set_up_sequence(awg, alazar, acq_controllers, sequence, seq_mode='on'):
     awg.current_seq(num)
     alazar.seq_mode(seq_mode)
     record_num = len(sequence)
-    if seq_mode is 'on':
+    if seq_mode == 'on':
         for ctrl in acq_controllers:
             try:
                 ctrl.records_per_buffer(record_num)
@@ -98,7 +98,7 @@ def set_up_sequence_multi_qubit(awg_list, alazar, acq_controllers, sequence,
     save_sequence(sequence, seq_file_name)
     alazar.seq_mode(seq_mode)
     record_num = len(sequence)
-    if seq_mode is 'on':
+    if seq_mode == 'on':
         for ctrl in acq_controllers:
             try:
                 ctrl.records_per_buffer(record_num)
