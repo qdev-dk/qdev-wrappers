@@ -31,6 +31,18 @@ def _flush_buffers(*params):
     _flush_buffers(inst_set, *inst_meas)
     """
 
+    instrument_names = set()
+    for param in params:
+        if hasattr(param, '_instrument'):
+            instrument_names.add(param._instrument.root_instrument.name)
+        elif isinstance(param, VisaInstrument):
+            instrument_names.add(param.root_instrument.name)
+
+    for name in instrument_names:
+        instr = qc.Instrument.find_instrument(name)
+        if isinstance(instr, qc.VisaInstrument):
+            instr.device_clear()
+
     for param in params:
         if hasattr(param, '_instrument'):
             inst = param._instrument
@@ -40,13 +52,6 @@ def _flush_buffers(*params):
                     log.warning("Cleared visa buffer on "
                                 "{} with status code {}".format(inst.name,
                                                                 status_code))
-        elif isinstance(param, VisaInstrument):
-            inst = param
-            status_code = inst.visa_handle.clear()
-            if status_code is not None:
-                log.warning("Cleared visa buffer on "
-                            "{} with status code {}".format(inst.name,
-                                                            status_code))
 
 
 def _select_plottables(tasks):
