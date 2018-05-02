@@ -30,7 +30,6 @@ def _flush_buffers(*params):
     Supposed to be called inside doNd like so:
     _flush_buffers(inst_set, *inst_meas)
     """
-
     instrument_names = set()
     for param in params:
         if hasattr(param, '_instrument'):
@@ -42,16 +41,6 @@ def _flush_buffers(*params):
         instr = qc.Instrument.find_instrument(name)
         if isinstance(instr, qc.VisaInstrument):
             instr.device_clear()
-
-    for param in params:
-        if hasattr(param, '_instrument'):
-            inst = param._instrument
-            if hasattr(inst, 'visa_handle'):
-                status_code = inst.visa_handle.clear()
-                if status_code is not None:
-                    log.warning("Cleared visa buffer on "
-                                "{} with status code {}".format(inst.name,
-                                                                status_code))
 
 
 def _select_plottables(tasks):
