@@ -30,10 +30,13 @@ def _flush_buffers(*params):
     Supposed to be called inside doNd like so:
     _flush_buffers(inst_set, *inst_meas)
     """
-    for name in set(p.root_instrument.name
-                    for p in params
-                    if p.root_instrument is not None):
+    instr_names = set(p.root_instrument.name
+                      for p in params
+                      if p.root_instrument is not None)
+    for name in instr_names:
         instr = qc.Instrument.find_instrument(name)
+        # suppress for non visa instruments, that do not implement this
+        # method
         with suppress(AttributeError):
             instr.device_clear()
 
