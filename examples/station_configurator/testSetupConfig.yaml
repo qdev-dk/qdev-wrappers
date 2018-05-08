@@ -71,7 +71,25 @@ instruments:
   SR860:
     driver: qcodes.instrument_drivers.stanford_research.SR860
     type: SR860
-    address: 'TCPIP0::192.168.15.112::inst0::INSTR'
+    address: 'TCPIP0::192.168.15.119::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  SR860_2:
+    driver: qcodes.instrument_drivers.stanford_research.SR860
+    type: SR860
+    address: 'TCPIP0::192.168.15.120::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  SR860_3:
+    driver: qcodes.instrument_drivers.stanford_research.SR860
+    type: SR860
+    address: 'TCPIP0::192.168.15.121::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  SR860_4:
+    driver: qcodes.instrument_drivers.stanford_research.SR860
+    type: SR860
+    address: 'TCPIP0::192.168.15.122::inst0::INSTR'
     enable_forced_reconnect: true
 
   ZI:
@@ -170,3 +188,17 @@ instruments:
       demod: false
       average_records: false
       average_buffers: false
+
+# SR860_1 192.168.15.119  00:19:B3:0A:0C:EB 
+# KS33622A  192.168.15.115  80:09:02:03:53:35 
+# KS33522B  192.168.15.108  80:09:02:03:E2:22 
+# KS34465A_1  192.168.15.110  80:09:02:02:8D:B3 
+# Keithley2614B_1 192.168.15.114  08:00:11:1C:AD:A2 
+# Keithley2614B_2 192.168.15.116  08:00:11:1C:E4:5B 
+# SGS100A 192.168.15.103  00:90:B8:1F:27:85 
+# AWG5014 192.168.15.107  00:0B:AB:8B:87:02 
+# MININT-QFHJUPG  192.168.15.117  54:E1:AD:81:9E:51 
+# AWG5208 192.168.15.118  00:04:5F:9E:44:89 
+# SR860_2 192.168.15.120  00:19:B3:0A:0C:2B 
+# SR860_3 192.168.15.121  00:19:B3:0A:0C:82 
+# SR860_4 192.168.15.122  00:19:B3:0A:0C:30
