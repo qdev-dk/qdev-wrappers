@@ -4,7 +4,7 @@ import importlib
 import logging
 import yaml
 import os
-
+from copy import deepcopy
 import qcodes
 from qcodes.instrument.base import Instrument
 from qcodes.station import Station
@@ -40,8 +40,9 @@ class StationConfigurator:
         if station is None:
             station = Station.default or Station()
         self.station = station
+        self.filename = filename
 
-        self.load_file(filename)
+        self.load_file(self.filename)
 
     def load_file(self, filename: Optional[str] = None):
         if filename is None:
@@ -85,7 +86,10 @@ class StationConfigurator:
                 __init__-method of the instrument to be added.
         """
 
-        # load config
+        # load file
+        self.load_file(self.filename)
+
+        # load from config
         if identifier not in self._instrument_config.keys():
             raise RuntimeError('Instrument {} not found in config.'
                                .format(identifier))
@@ -115,17 +119,20 @@ class StationConfigurator:
         init_kwargs = {} if init_kwargs is None else init_kwargs
         if 'address' in instr_cfg:
             init_kwargs['address'] = instr_cfg['address']
+        if 'port' in instr_cfg:
+            init_kwargs['port'] = instr_cfg['port']
         # make explicitly passed arguments overide the ones from the config file
         # the intuitive line:
-        # init_kwargs.update(kwargs)
-        # fails for some mystirious reason with the alazar controllers while
-        # init_kwargs = {**kwargs , **init_kwargs}
-        # does not.
-        # temporary quick fix for update:
-        for k, v in kwargs:
-            init_kwargs[k] = v
 
-        instr = instr_class(identifier, **init_kwargs)
+        # We are mutating the dict below
+        # so make a copy to ensure that any changes
+        # does not leek into the station config object
+        # specifically we may be passing non pickleable
+        # instrument instances via kwargs
+        instr_kwargs = deepcopy(init_kwargs)
+        instr_kwargs.update(kwargs)
+
+        instr = instr_class(name=identifier, **instr_kwargs)
         # setup
 
         # local function to refactor common code from defining new parameter

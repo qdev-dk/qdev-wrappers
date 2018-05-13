@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from os.path import sep
 from typing import Optional, Tuple, Sequence
 from collections import Iterable
+from contextlib import suppress
 from pyqtgraph.multiprocess.remoteproxy import ClosedError
 
 import qcodes as qc
@@ -17,7 +18,6 @@ from qdev_wrappers.plot_functions import _plot_setup, \
     _save_individual_plots
 from qdev_wrappers.device_annotator.device_image import save_device_image
 
-
 import logging
 log = logging.getLogger(__name__)
 
@@ -30,23 +30,15 @@ def _flush_buffers(*params):
     Supposed to be called inside doNd like so:
     _flush_buffers(inst_set, *inst_meas)
     """
-
-    for param in params:
-        if hasattr(param, '_instrument'):
-            inst = param._instrument
-            if hasattr(inst, 'visa_handle'):
-                status_code = inst.visa_handle.clear()
-                if status_code is not None:
-                    log.warning("Cleared visa buffer on "
-                                "{} with status code {}".format(inst.name,
-                                                                status_code))
-        elif isinstance(param, VisaInstrument):
-            inst = param
-            status_code = inst.visa_handle.clear()
-            if status_code is not None:
-                log.warning("Cleared visa buffer on "
-                            "{} with status code {}".format(inst.name,
-                                                            status_code))
+    instr_names = set(p.root_instrument.name
+                      for p in params
+                      if p.root_instrument is not None)
+    for name in instr_names:
+        instr = qc.Instrument.find_instrument(name)
+        # suppress for non visa instruments, that do not implement this
+        # method
+        with suppress(AttributeError):
+            instr.device_clear()
 
 
 def _select_plottables(tasks):

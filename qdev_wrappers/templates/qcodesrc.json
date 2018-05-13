@@ -11,7 +11,7 @@
     },
     "user": {
         "scriptfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/ExperimentScripts",
-        "mainfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/Qcodes_test_data",
+        "mainfolder": "/Users/natalie/Documents/PhD/Qdev/QcodesRelated/QcodesExperiments/Qcodes_test_data"
     },
     "station_configurator": {
         "enable_forced_reconnect": false,
