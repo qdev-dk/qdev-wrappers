@@ -76,10 +76,10 @@ class ZNB_ext(ZNB):
         if spec_mode:
             if gen_address is not None:
                 self.add_spectroscopy_channel(gen_address)
+                self.channels.autoscale()
             else:
                 log.warning('spec mode not added as ' +
                             'no generator ip address provided')
-            self.channels.autoscale()
 
 
     # spectroscopy
