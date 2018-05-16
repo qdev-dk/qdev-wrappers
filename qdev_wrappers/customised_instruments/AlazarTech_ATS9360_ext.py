@@ -3,14 +3,12 @@ from qcodes.utils import validators as vals
 
 
 class AlazarTech_ATS9360_ext(AlazarTech_ATS9360):
-    def __init__(self, name, seq_mode='off'):
+    def __init__(self, name):
         super().__init__(name=name)
         self.add_parameter(name='seq_mode',
                            get_cmd=self._get_seq_mod,
                            set_cmd=self._set_seq_mode,
-                           value=seq_mode,
-                           vals=vals.Enum('on', 'off')
-                           )
+                           vals=vals.Enum('on', 'off'))
 
     def _get_seq_mod(self):
         if (self.aux_io_mode() == 'AUX_IN_TRIGGER_ENABLE' and
