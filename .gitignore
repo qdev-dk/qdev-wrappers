@@ -39,4 +39,4 @@ tmp/
 .idea
 
 # qcodes
-experiment.db
+experiments.db
