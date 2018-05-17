@@ -30,5 +30,13 @@ __pycache__/
 *.md~
 *.py~
 tmp/
+.mypy_cache/
+.pytest_cache/
+
+# editors
+.vscode
 
 .idea
+
+# qcodes
+experiment.db
