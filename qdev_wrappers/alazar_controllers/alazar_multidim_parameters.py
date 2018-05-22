@@ -24,6 +24,7 @@ class Alazar0DParameter(Parameter):
         super().__init__(name,
                          unit=unit,
                          label=label,
+                         snapshot_get=False,
                          instrument=instrument)
 
     def get_raw(self) -> float:
