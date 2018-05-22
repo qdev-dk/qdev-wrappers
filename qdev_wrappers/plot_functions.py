@@ -23,6 +23,9 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
     if useQT:
         plot = QtPlot(fig_x_position=CURRENT_EXPERIMENT['plot_x_position'])
     else:
+        for i in plt.get_fignums()[0:-10]:
+            log.info(f'Closing matplolib figure with handle {i}')
+            plt.close(i)
         plot = MatPlot(subplots=(1, num_subplots))
 
     def _create_plot(plot, i, name, data, counter_two, j, k):
