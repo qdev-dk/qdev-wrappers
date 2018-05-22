@@ -56,7 +56,6 @@ def _select_plottables(tasks):
 
     return tuple(plottables)
 
-
 def _do_measurement_single(measurement: Measure, meas_params: tuple,
                            do_plots: Optional[bool]=True,
                            use_threads: bool=True) -> Tuple[QtPlot, DataSet]:
@@ -137,6 +136,8 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
                 plot, _ = _plot_setup(data, meas_params, startranges=startranges)
             except (ClosedError, ConnectionError):
                 log.warning('Remote process crashed png will not be saved')
+                # if remote process crashed continue without plots
+                do_plots = False
         else:
             plot = None
         try:
@@ -154,6 +155,8 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
                 plot.save()
             except (ClosedError, ConnectionError):
                 log.warning('Remote process crashed png will not be saved')
+                # if remote process crashed continue without plots
+                do_plots = False
 
             if 'pdf_subfolder' in CURRENT_EXPERIMENT or 'png_subfolder' in CURRENT_EXPERIMENT:
                 _do_MatPlot(data,meas_params)
