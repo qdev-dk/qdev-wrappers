@@ -307,7 +307,7 @@ class ParametricWaveformAnalyser(Instrument):
         if len(self.sidebanded_readout_channels) > 0:
             for demod_ch, i in enumerate(self.sidebanded_readout_channels):
                 m_name = '{}_{}_{}'.format(self.sequencer.name, i, 'm')
-                p_name = '{}_{}_{}'.format(self.sequencer.name, i, 'm')
+                p_name = '{}_{}_{}'.format(self.sequencer.name, i, 'p')
                 self.add_alazar_channel_single(
                     m_name, self.sequencer, dtype='m',
                     demod_freq=demod_ch.demodulation_frequency())
@@ -316,7 +316,7 @@ class ParametricWaveformAnalyser(Instrument):
                     demod_freq=demod_ch.demodulation_frequency())
         else:
             m_name = '{}_{}'.format(self.sequencer.name, 'm',)
-            p_name = '{}_{}'.format(self.sequencer.name, 'm')
+            p_name = '{}_{}'.format(self.sequencer.name, 'p')
             self.add_alazar_channel_single(
                 m_name, self.sequencer, dtype='m',
                 demod_freq=self._base_demod_freq)
