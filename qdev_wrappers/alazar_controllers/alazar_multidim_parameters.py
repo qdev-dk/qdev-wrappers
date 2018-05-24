@@ -79,15 +79,25 @@ class AlazarNDParameter(ArrayParameter):
                  instrument,
                  label: str,
                  unit: str,
-                 setpoint_names: Optional[Sequence[str]] = None,
-                 setpoint_labels: Optional[Sequence[str]]=None,
-                 setpoint_units: Optional[Sequence[str]]=None,
                  average_buffers: bool=True,
                  average_records: bool=True,
                  integrate_samples: bool=True) -> None:
         self._integrate_samples = integrate_samples
         self._average_records = average_records
         self._average_buffers = average_buffers
+
+        if not integrate_samples:
+            setpoint_names = ('time',)
+            setpoint_labels = ('time',)
+            setpoint_units = ('s',)
+        if not average_records:
+            setpoint_names = ('records',)
+            setpoint_labels = ('Records',)
+            setpoint_units = ('',)
+        if not average_buffers:
+            setpoint_names = ('buffers',)
+            setpoint_labels = ('Buffers',)
+            setpoint_units = ('',)
         super().__init__(name,
                          shape=shape,
                          instrument=instrument,
@@ -158,18 +168,6 @@ class Alazar1DParameter(AlazarNDParameter):
                  integrate_samples: bool=True,
                  shape: Sequence[int] = (1,)):
 
-        if not integrate_samples:
-            setpoint_names = ('time',)
-            setpoint_labels = ('time',)
-            setpoint_units = ('s',)
-        if not average_records:
-            setpoint_names = ('records',)
-            setpoint_labels = ('Records',)
-            setpoint_units = ('',)
-        if not average_buffers:
-            setpoint_names = ('buffers',)
-            setpoint_labels = ('Buffers',)
-            setpoint_units = ('',)
         super().__init__(name,
                          unit=unit,
                          instrument=instrument,
@@ -188,9 +186,8 @@ class Alazar1DParameter(AlazarNDParameter):
                                  buffer_setpoint_name=None,
                                  buffer_setpoint_label=None,
                                  buffer_setpoint_unit=None) -> None:
-        # int_time = self._instrument.int_time.get() or 0
-        # int_delay = self._instrument.int_delay.get() or 0
-        # total_time = int_time + int_delay
+
+
         r_checklist = [record_setpoint_name, record_setpoint_label,
                        record_setpoint_unit, record_setpoints]
         b_checklist = [buffer_setpoint_name, buffer_setpoint_label,
@@ -217,7 +214,7 @@ class Alazar1DParameter(AlazarNDParameter):
                     'or units when averaging over buffers')
             records = self._instrument.records_per_buffer.get()
             if record_setpoints is None:
-                record_setpoints = np.linspace(0, records, records, endpoint=False)
+                record_setpoints = np.arange(records)
             self.shape = (records,)
             self.setpoints = (tuple(record_setpoints),)
             self.setpoint_names = (record_setpoint_name or 'records',)
@@ -230,7 +227,7 @@ class Alazar1DParameter(AlazarNDParameter):
                     'or units when averaging over records')
             buffers = self._instrument.buffers_per_acquisition.get()
             if buffer_setpoints is None:
-                buffer_setpoints = np.linspace(0, buffers, buffers, endpoint=None)
+                buffer_setpoints = np.arange(buffers)
             self.shape = (buffers,)
             self.setpoints = (tuple(buffer_setpoints),)
             self.setpoint_names = (buffer_setpoint_name or 'buffers',)
@@ -281,11 +278,11 @@ class Alazar2DParameter(AlazarNDParameter):
         if self._integrate_samples:
             self.shape = (buffers, records)
             if record_setpoints is None:
-                inner_setpoints = tuple(np.linspace(0, records, records, endpoint=False))
+                inner_setpoints = tuple(np.arange(records))
             else:
                 inner_setpoints = record_setpoints
             if buffer_setpoints is None:
-                outer_setpoints = tuple(np.linspace(0, buffers, buffers, endpoint=False))
+                outer_setpoints = tuple(np.arange(buffers))
             else:
                 outer_setpoints = buffer_setpoints
             setpoint_names = (buffer_setpoint_name or 'buffers',
@@ -304,7 +301,7 @@ class Alazar2DParameter(AlazarNDParameter):
             self.shape = (buffers, samples)
             inner_setpoints = tuple(np.linspace(0, stop, samples, endpoint=False))
             if buffer_setpoints is None:
-                outer_setpoints = tuple(np.linspace(0, buffers, buffers, endpoint=False))
+                outer_setpoints = tuple(np.arange(buffers))
             else:
                 outer_setpoints = buffer_setpoints
             setpoint_names = (buffer_setpoint_name or 'buffers', 'time')
@@ -320,7 +317,7 @@ class Alazar2DParameter(AlazarNDParameter):
             self.shape = (records, samples)
             inner_setpoints = tuple(np.linspace(0, stop, samples, endpoint=False))
             if record_setpoints is None:
-                outer_setpoints = tuple(np.linspace(0, records, records, endpoint=False))
+                outer_setpoints = tuple(np.arange(records))
             else:
                 outer_setpoints = record_setpoints
             setpoint_names = (record_setpoint_name or 'records', 'time')
