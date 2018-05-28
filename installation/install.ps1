@@ -14,19 +14,21 @@
 # To run this installation script, right-click it and select run with PowerShell
 
 
+$chickpea_url = "https://github.com/nataliejpg/chickpea"
+$qcodes_url = "https://github.com/QCoDeS/Qcodes.git"
+$qdev_wrappers_url = "https://github.com/qdev-dk/qdev-wrappers"
+$broadbean_url = "https://github.com/QCoDeS/broadbean"
+
 
 # Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process
 $miniconda_url = "https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe"
 $miniconda_exe = "$env:TEMP\miniconda.exe"
 $env_bat = "$env:TEMP\create_qcodes_env.bat"
+$conda_install_bat = "$env:TEMP\conda_install.bat"
 $miniconda_install_path = "$HOME\miniconda\"
 $git_exe = "$env:TEMP\git.exe"
 $git_url= 'https://git-scm.com/download/win'
-$chickpea_url = "https://github.com/nataliejpg/chickpea"
 
-$qcodes_url = "https://github.com/QCoDeS/Qcodes.git"
-$qdev_wrappers_url = "https://github.com/qdev-dk/qdev-wrappers"
-$broadbean_url = "https://github.com/QCoDeS/broadbean"
 
 
 # install miniconda and update
@@ -56,30 +58,41 @@ cd $Home
 # clone repos
 Write-Host 'cloning qcodes relvant repos'
 git clone $qcodes_url
-git clone $qdev_wrappers_url
-git clone $broadbean_url
-git clone $chickpea_url
+if($qdev_wrappers_url){
+    git clone $qdev_wrappers_url
+}
+if($broadbean_url){
+    git clone $broadbean_url
+}
+if($chickpea_url){
+    git clone $chickpea_url
+}
 
 # create qcodes virtualenv
 Write-Host 'creating the virtual environment'
 conda env create -f "$Home\Qcodes\environment.yml"
-Write-Host 'activating the virtual environment'
-activate qcodes
+Write-Host 'activating the virtual environment and installing spyder+jupyter'
 
-Write-Host 'installing spyder'
-conda install -y spyder
-
-Write-Host 'installing jupyter'
-conda install -y jupyter
-
-Write-Host 'installing other packages'
-conda install -y scipy
+$install_cmd = 'CALL activate qcodes
+CALL conda install -y spyder
+CALL conda install -y jupyter
+CALL conda install -y scipy'
+$install_cmd | Set-Content $conda_install_bat
+cmd /c $conda_install_bat
 
 Write-Host 'installing qcodes'
 $env_cmd = 'CALL activate qcodes
-CAll pip install -e %UserProfile%\Qcodes
-CALL pip install -e %UserProfile%\qdev-wrappers
-CALL pip install -e %UserProfile%\broadbean'
+CAll pip install -e %UserProfile%\Qcodes'
+$new_line = "`r`n"
+if($qdev_wrappers_url){
+    $env_cmd += $new_line + 'CALL pip install -e %UserProfile%\qdev-wrappers'
+}
+if($broadbean_url){
+    $env_cmd += $new_line + 'CALL pip install -e %UserProfile%\broadbean'
+}
+if($chickpea_url){
+    $env_cmd += $new_line + 'CALL pip install -e %UserProfile%\chickpea'
+}
 $env_cmd | Set-Content $env_bat
 cmd /c $env_bat
 # &$env_bat | Out-Host
@@ -90,12 +103,18 @@ cmd /c $env_bat
 Write-Host 'creating desktop shortcuts'
 Copy-Item -Path "$Home\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Anaconda3 (64-bit)\Spyder (qcodes).lnk" -Destination "$Home\Desktop\"
 Copy-Item -Path "$Home\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Anaconda3 (64-bit)\Jupyter Notebook (qcodes).lnk" -Destination "$Home\Desktop\"
-Copy-Item -Path "$Home\qdev-wrappers\qdev_wrappers\templates\monitor.cmd" -Destination "$Home\Desktop\"
+if($qdev_wrappers_url){
+    Copy-Item -Path "$Home\qdev-wrappers\qdev_wrappers\templates\monitor.cmd" -Destination "$Home\Desktop\"
+}
 
 # add to quick access bar
 Write-Host 'adding repos to quick access bar'
 $o = new-object -com shell.application
 $o.Namespace("$Home\Qcodes").Self.InvokeVerb("pintohome")
-$o.Namespace("$Home\qdev-wrappers").Self.InvokeVerb("pintohome")
-$o.Namespace("$Home\broadbean").Self.InvokeVerb("pintohome")
+if($qdev_wrappers_url){
+    $o.Namespace("$Home\qdev-wrappers").Self.InvokeVerb("pintohome")
+}
+if($broadbean_url){
+    $o.Namespace("$Home\broadbean").Self.InvokeVerb("pintohome")
+}
 
