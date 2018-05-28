@@ -231,16 +231,7 @@ class ParametricWaveformAnalyser(Instrument):
         self._alazar_up_to_date = False
         self.sequencer.sequence_up_to_date = False
 
-    def check_flags(self):
-        if not self._alazar_up_to_date or not self.sequencer._sequence_up_to_date:
-            raise RuntimeError(
-                '_alazar_up_to_date and _sequence_up_to_date did'
-                ' not both return True,'' try running'
-                ' update_alazar and update_sequencer')
-        else:
-            pass
-
-    def add_alazar_channel(self, demod_ch_num, dtype, averaging_settings=None):
+    def add_alazar_channel(self, demod_ch_num, dtype, num_averages=1, averaging_settings=None):
         """
         adds an alazar channel with the demodulation frequency matching the
         demod_ch with demod_ch_num, dtype is 'm' or 'p' for magnitude or phase
@@ -269,10 +260,6 @@ class ParametricWaveformAnalyser(Instrument):
                              average_buffers=average_buffers,
                              average_records=average_records,
                              integrate_samples=integrate_samples)
-        chan.add_parameter(name='acquisition',
-                           get_cmd=self._check_flags,
-                           parameter_class=DelegateParameter,
-                           source=chan.data)
         chan.demod_freq(
             self.demodulation_channels[demod_ch_num].demodulation_frequency())
         if not average_records:
