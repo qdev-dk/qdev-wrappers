@@ -18,23 +18,27 @@ logger = logging.getLogger(__name__)
 class DemodulationChannel(InstrumentChannel):
     def __init__(self, parent, name: str, drive_frequency=None) -> None:
         """
-        This is a channel which does the logic assuming a carrier microwave source
-        and a local os separated by 'base_demod' which the parent of this channel
-        knows about. The channel then takes care of working out what frequency will actually
-        be output ('drive') if we sideband the carrier byt a 'sideband' and what the total
-        demodulation frequency is in this case 'demodulation'.
+        This is a channel which does the logic assuming a carrier
+        microwave source and a local os separated by 'base_demod'
+        which the parent of this channel knows about. The channel then
+        takes care of working out what frequency will actually be output
+        ('drive') if we sideband the carrier byt a 'sideband' and what the
+        total demodulation frequency is in this case 'demodulation'.
 
-        Note that no actual mocrowave sources are updated and we expect any heterodyne source used
-        with this to do the legwork and update the parent carrier and base_demod
+        Note that no actual mocrowave sources are updated and we expect any
+        heterodyne source used with this to do the legwork and update the
+        parent carrier and base_demod
 
-        Note that no awg is actaully connected so all it does is mark a flag as False
+        Note that no awg is actaully connected so all it does is mark a flag
+        as False
 
-        Note that it DOES however have access to alazar channels so it can update their demod
-        frequency and there is also a channel list so you could get the measurmenemts for everything
-        demodulated at this one frequency which should correspond to measuring one qubit :)
+        Note that it DOES however have access to alazar channels so it can
+        update their demod frequency and there is also a channel list so you
+        could get the measurmenemts for everything demodulated at this one
+        frequency which should correspond to measuring one qubit :)
 
-        # TODO: what about if we have new fancy version with only one microwave source
-        or if we don't sideband?
+        # TODO: what about if we have new fancy version with only one microwave
+        source or if we don't sideband?
         """
         super().__init__(parent, name)
         self._parent.sequencer.sequence_up_to_date = False
@@ -42,9 +46,12 @@ class DemodulationChannel(InstrumentChannel):
             name='sideband_frequency',
             alternative='drive_frequency, heterodyne_source.frequency',
             parameter_class=NonSettableDerivedParameter)
-        self.add_parameter(  # TODO: lose this as a parameter since it already lives on the alazar channels and can always be worked out..?
+        # TODO: lose this as a parameter since it already lives on the alazar
+        # channels and can always be worked out..?
+        self.add_parameter(
             name='demodulation_frequency',
-            alternative='drive_frequency, heterodyne_source.demodulation_frequency',
+            alternative='drive_frequency, '
+            'heterodyne_source.demodulation_frequency',
             parameter_class=NonSettableDerivedParameter)
         self.add_parameter(
             name='drive_frequency',
@@ -53,6 +60,7 @@ class DemodulationChannel(InstrumentChannel):
             self, "Channels", AlazarChannel,
             multichan_paramclass=AlazarMultiChannelParameter)
         self.add_submodule("alazar_channels", channels)
+        # TODO: add check that flags are satisfied here?
         if drive_frequency is not None:
             self.drive_frequency(drive_frequency)
 
@@ -72,8 +80,9 @@ class DemodulationChannel(InstrumentChannel):
 
     def update(self, sideband=None, drive=None):
         """
-        updates everything based on the carrier and base demod of the parent, either 
-        using existing settings or if a new drive is specified will update the sideband
+        updates everything based on the carrier and base demod of
+        the parent, either using existing settings or if a new drive
+        is specified will update the sideband
         or a new sideband specified will cause the drive to be updated
         """
         base_demod = self._parent._base_demod_freq
@@ -100,8 +109,6 @@ class DemodulationChannel(InstrumentChannel):
                 ch.demod_freq(demod)
 
 
-
-
 class ParametricWaveformAnalyser(Instrument):
     """
     The PWA represents a composite instrument. It is similar to a
@@ -110,6 +117,7 @@ class ParametricWaveformAnalyser(Instrument):
     For that functionality it compises an AWG and a Alazar as a high speed ADC.
     """
     # TODO: write code for single microwave source
+
     def __init__(self,
                  name: str,
                  sequencer,
@@ -137,6 +145,7 @@ class ParametricWaveformAnalyser(Instrument):
         demod_channels = ChannelList(self, "Channels", DemodulationChannel)
         self.add_submodule("demodulation_channels", channels)
         self.alazar_channels = self.alazar_controller.alazar_channels
+        # TODO: add check that flags are satisfied here?
 
     def _set_int_delay(self, int_delay):  # TODO: nicer way to do this?
         self._alazar_up_to_date = False
@@ -146,12 +155,11 @@ class ParametricWaveformAnalyser(Instrument):
 
     def _set_seq_mode(self, mode):
         """
-        updated the sequencing mode on the alazar and the awg and reset all the alazar
-        channels so that they average over everything which is a sensible default for 
-        if we are just playing one element on loop
+        updated the sequencing mode on the alazar and the awg and reset all
+        the alazar channels so that they average over everything which is a
+        sensible default for if we are just playing one element on loop
         # TODO: what if we also want statistics or a time trace?
         # TODO: num_averages
-        # TODO: the newest alazar doesn't actually have seq_mode...
         """
         self.sequencer.seq_mode(mode)
         self.alazar.seq_mode(mode)
@@ -174,7 +182,8 @@ class ParametricWaveformAnalyser(Instrument):
         """
         update the demodulation frequency locally and also runs update
         on the demodulation channels to propagate this to the demodulation
-        frequencies after sidebanding which should end up on the alazar channels
+        frequencies after sidebanding which should end up on the alazar
+        channels
         """
         self._base_demod_freq = f_demod
         for demod_ch in self.demodulation_channels:
@@ -184,9 +193,10 @@ class ParametricWaveformAnalyser(Instrument):
         """
         update the carrier frequency locally and also runs update
         on the demodulation channels to propagate this to the demodulation
-        frequencies after sidebanding which should end up on the alazar channels
-        there is option to change the sidebands to keep the resultant drive
-        frequencies the same or to leave them as is and then the drive changes
+        frequencies after sidebanding which should end up on the alazar
+        channels there is option to change the sidebands to keep the resultant
+        drive frequencies the same or to leave them as is and then the drive
+        changes
         """
         self._carrier_freq = carrier_freq
         for demod_ch in self.demodulation_channels:
@@ -221,12 +231,21 @@ class ParametricWaveformAnalyser(Instrument):
         self._alazar_up_to_date = False
         self.sequencer.sequence_up_to_date = False
 
+    def check_flags(self):
+        if not self._alazar_up_to_date or not self.sequencer._sequence_up_to_date:
+            raise RuntimeError(
+                '_alazar_up_to_date and _sequence_up_to_date did'
+                ' not both return True,'' try running'
+                ' update_alazar and update_sequencer')
+        else:
+            pass
+
     def add_alazar_channel(self, demod_ch_num, dtype, averaging_settings=None):
         """
-        adds an alazar channel with the demodulation frequency matching the demod_ch
-        with demod_ch_num, dtype is 'm' or 'p' for magnitude or phase and the
-        averaging settings will default to those defined by the sequencing but
-        you can always choose your own sensible ones
+        adds an alazar channel with the demodulation frequency matching the
+        demod_ch with demod_ch_num, dtype is 'm' or 'p' for magnitude or phase
+        and the averaging settings will default to those defined by the
+        sequencing but you can always choose your own sensible ones
 
         Args: averaging_settings: [int_samples, ave_rec, ave buf]
         """
@@ -250,6 +269,10 @@ class ParametricWaveformAnalyser(Instrument):
                              average_buffers=average_buffers,
                              average_records=average_records,
                              integrate_samples=integrate_samples)
+        chan.add_parameter(name='acquisition',
+                           get_cmd=self._check_flags,
+                           parameter_class=DelegateParameter,
+                           source=chan.data)
         chan.demod_freq(
             self.demodulation_channels[demod_ch_num].demodulation_frequency())
         if not average_records:
@@ -258,7 +281,7 @@ class ParametricWaveformAnalyser(Instrument):
         if not average_buffers:
             chan.buffers_per_acquisition(
                 len(self.sequencer.outer_setpoints()['setpoints']))
-        chan.num_averages(num_averages)
+        chan.num_averages(num_averages) # TODO!!
         chan.prepare_channel(
             record_setpoints=self.sequencer.inner_setpoints()['setpoints'],
             buffer_setpoints=self.sequencer.outer_setpoints()['setpoints'],
@@ -282,8 +305,8 @@ class ParametricWaveformAnalyser(Instrument):
 
     def update_alazar(self):
         """
-        deletes all alazar channels and makes new ones at each demod freq and which
-        match the current sequence
+        deletes all alazar channels and makes new ones at each demod
+        freq and which match the current sequence
         """
         self.clear_alazar_channels()
         for i in range(len(self.demodulation_channels)):
@@ -306,9 +329,10 @@ class ParametricWaveformAnalyser(Instrument):
     def update_sequencer(self, builder=None, inner_setpoints=None,
                          outer_setpoints=None, default_builder_parms=None):
         """
-        a way to update the sequencer through the pwa to update any of the sequencer
-        settings but also updates the sudebands based on the current demodulation
-        channel parameters and runs update_sequence on the sequencer
+        a way to update the sequencer through the pwa to update any of the
+        sequencer settings but also updates the sudebands based on the
+        current demodulation channel parameters and runs update_sequence on
+        the sequencer
         """
         if builder is not None:
             self.sequencer.builder(builder)
