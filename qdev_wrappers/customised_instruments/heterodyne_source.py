@@ -4,6 +4,7 @@ import logging
 from qdev_wrappers.parameters import DelegateParameter
 
 # TODO: name help pleaaase!
+# TODO: should the cavity and local os actually be parameters?
 
 
 class HeterodyneSource(Instrument):

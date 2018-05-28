@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 
 class BuilderParameter(Parameter):
     """
-    a pretty hack param used to save the name of the function used to build the sequence
+    a pretty hack param used to save the name of the function used to build the
+    sequence
     """
 
     def __init__(self,
@@ -37,8 +38,9 @@ class BuilderParameter(Parameter):
 
 class DictWithDefaultParameter(Parameter):
     """
-    is there a better way of doing this? It's my idea for how to make the readable params
-    which go into the builder stored without having to always set all of them
+    is there a better way of doing this? It's my idea for how to make the
+    readable params which go into the builder stored without having to always
+    set all of them
     """
 
     def __init__(self,
@@ -142,7 +144,8 @@ class ParametricSequencer(Instruement):
         else:
             print(self.set_sqel_loopcnt() +
                   'Fix me!! get seq mode of parametric sequencer')
-            # TODO: need to check what it outputs for inf to make the if/else secure
+            # TODO: need to check what it outputs for inf to make the
+            # if/else secure
             awg_val = True
         if awg_val != self.default_builder_parms()['seq_mode']:
             raise RuntimeError('seq mode of awg does not match '
@@ -151,8 +154,9 @@ class ParametricSequencer(Instruement):
 
     def _create_sequence(self):  # -> bb.Sequence:
         """
-        At the moment this makes a list of dictionaries and then gives this list
-        to the function, you wanted this a different way so lets work on it together
+        At the moment this makes a list of dictionaries and then gives this
+        list to the function, you wanted this a different way so lets work
+        on it together
         """
         seq_parms = []
         for setpoint in self.inner_setpoints()['setpoints']:
@@ -163,7 +167,8 @@ class ParametricSequencer(Instruement):
 
     def update_sequence(self):
         """
-        should create a sequence based on the builder fn, default params and setpoints and then
+        should create a sequence based on the builder fn, default params and
+        setpoints and then
         upload it to the awg
         """
         seq = self._create_sequence()
@@ -175,8 +180,9 @@ class ParametricSequencer(Instruement):
             self.awg.all_channels_on()
             self.awg.run()
             if save_sequence:
+                # TODO: remove dependence on file_helpers
                 local_filename = sep.join(
-                    [get_subfolder_location('waveforms'), filename])  # TODO: remove dependence on file_helpers
+                    [get_subfolder_location('waveforms'), filename])
                 with open(local_filename, 'wb') as fid:
                     fid.write(awg_file)
         self._sequence_up_to_date = True
