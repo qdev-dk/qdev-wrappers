@@ -22,7 +22,7 @@ def get_current_seq(awg):
     seq_num = awg.current_seq()
     path = get_pulse_location()
     seq_file_name = next(f for f in listdir(
-        path) if (f[-1] is 'p' and str(seq_num) in f))
+        path) if (f[-1] == 'p' and str(seq_num) in f))
     seq = pickle.load(open(path + seq_file_name, "rb"))
     return seq
 
@@ -34,7 +34,7 @@ def get_current_seq_multi_qubit(awg_list):
                         '{}'.format(seq_nums))
     path = get_pulse_location()
     seq_file_name = next(f for f in listdir(
-        path) if (f[-1] is 'p' and str(seq_nums[0]) in f))
+        path) if (f[-1] == 'p' and str(seq_nums[0]) in f))
     seq = pickle.load(open(path + seq_file_name, "rb"))
     return seq
 

@@ -1,0 +1,204 @@
+# list of instruments instances, i.e. there can be two entries for
+# two instruments of the same type if you want to specify two different use
+# cases e.g. dmm1-readout and dmm1-calibration
+# this file gets snapshotted and can be read back from the snapshot.json for
+# every experiment run
+instruments:
+
+  qdac:
+    driver: qcodes.instrument_drivers.QDev.QDac_channels
+    type: QDac
+    # visa address
+    address: ASRL4::INSTR
+    # all following fields are optional:
+
+    # if true any existing connection will be closed when instatiated
+    # default (if left out) is false
+    enable_forced_reconnect: true
+    # constant arguments passed to the init function
+    init:
+      terminator: \n
+      update_currents: false
+    # new parameters, that get created and attached to the instrument
+  sr830:
+    driver: qcodes.instrument_drivers.stanford_research.SR830
+    type: SR830
+    address: 'GPIB0::8::INSTR'
+
+  keysightgen_left:
+
+    driver: qcodes.instrument_drivers.Keysight.KeysightAgilent_33XXX
+    type: WaveformGenerator_33XXX
+    address: 'TCPIP0::192.168.15.108::inst0::INSTR'
+    enable_forced_reconnect: true
+    #parameters:
+      #ch1.frequency: {monitor: true}
+
+  keysightdmm_left:
+
+    driver: qcodes.instrument_drivers.Keysight.Keysight_34465A
+    type: Keysight_34465A
+    address: 'TCPIP0::192.168.15.115::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  keysightdmm_right:
+
+    driver: qcodes.instrument_drivers.Keysight.Keysight_34465A
+    type: Keysight_34465A
+    address: 'TCPIP0::192.168.15.110::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  Keithley_2600_left:
+    driver: qcodes.instrument_drivers.tektronix.Keithley_2600_channels
+    type: Keithley_2600
+    address: 'TCPIP0::192.168.15.114::inst0::INSTR'
+    enable_forced_reconnect: true
+    #parameters:
+      #smua.volt: {monitor: true}
+
+  Keithley_2600_right:
+    driver: qcodes.instrument_drivers.tektronix.Keithley_2600_channels
+    type: Keithley_2600
+    address: 'TCPIP0::192.168.15.116::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  RSSMA:
+    driver: qcodes.instrument_drivers.rohde_schwarz.SGS100A
+    type: RohdeSchwarz_SGS100A
+    address: 'TCPIP0::192.168.15.103::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  SR860:
+    driver: qcodes.instrument_drivers.stanford_research.SR860
+    type: SR860
+    address: 'TCPIP0::192.168.15.119::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  SR860_2:
+    driver: qcodes.instrument_drivers.stanford_research.SR860
+    type: SR860
+    address: 'TCPIP0::192.168.15.120::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  SR860_3:
+    driver: qcodes.instrument_drivers.stanford_research.SR860
+    type: SR860
+    address: 'TCPIP0::192.168.15.121::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  SR860_4:
+    driver: qcodes.instrument_drivers.stanford_research.SR860
+    type: SR860
+    address: 'TCPIP0::192.168.15.122::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  ZI:
+    driver: qcodes.instrument_drivers.ZI.ZIUHFLI
+    type: ZIUHFLI
+    init:
+      device_ID: 'dev2235'
+    enable_forced_reconnect: true
+
+  AWG5014:
+    driver: qcodes.instrument_drivers.tektronix.AWG5014
+    type: Tektronix_AWG5014
+    address: 'TCPIP0::192.168.15.107::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  AWG5208:
+    driver: qcodes.instrument_drivers.tektronix.AWG5208
+    type: AWG5208
+    address: 'TCPIP0::192.168.15.118::inst0::INSTR'
+    enable_forced_reconnect: true
+
+  YokogawaGS200:
+    driver: qcodes.instrument_drivers.yokogawa.GS200
+    type: GS200
+    address: 'USB0::0x0B21::0x0039::91RB18716::INSTR'
+    enable_forced_reconnect: true
+
+  Alazar:
+    driver: qcodes.instrument_drivers.AlazarTech.ATS9360
+    type: AlazarTech_ATS9360
+    enable_forced_reconnect: true
+    parameters:
+      clock_source: {initial_value: 'INTERNAL_CLOCK'}
+      sample_rate: {initial_value: 1_000_000_000}
+      trigger_operation: {initial_value: 'TRIG_ENGINE_OP_J'}
+      trigger_engine1: {initial_value: 'TRIG_ENGINE_J'}
+      trigger_source1: {initial_value: 'EXTERNAL'}
+      trigger_slope1: {initial_value: 'TRIG_SLOPE_POSITIVE'}
+      trigger_level1: {initial_value: 160}
+      trigger_engine2: {initial_value: 'TRIG_ENGINE_K'}
+      trigger_source2: {initial_value: 'DISABLE'}
+      external_trigger_coupling: {initial_value: 'DC'}
+      external_trigger_range: {initial_value: 'ETR_2V5'}
+      trigger_delay: {initial_value: 0}
+      timeout_ticks: {initial_value: 0}
+
+  AlazarController:
+    driver: qdev_wrappers.alazar_controllers.ATSChannelController
+    type: ATSChannelController
+    enable_forced_reconnect: true
+    init:
+      alazar_name: 'Alazar'
+    auto_reconnect: true
+
+  AlazarSampleChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      integrate_samples: false
+
+  AlazarRecordChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      average_records: false
+
+  AlazarBufferChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      average_buffers: false
+
+  AlazarSampleRecordChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      integrate_samples: false
+      average_records: false
+
+  AlazarSampleBufferChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      integrate_samples: false
+      average_buffers: false
+
+  AlazarRecordBufferChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      average_records: false
+      average_buffers: false
+
+# SR860_1 192.168.15.119  00:19:B3:0A:0C:EB 
+# KS33622A  192.168.15.115  80:09:02:03:53:35 
+# KS33522B  192.168.15.108  80:09:02:03:E2:22 
+# KS34465A_1  192.168.15.110  80:09:02:02:8D:B3 
+# Keithley2614B_1 192.168.15.114  08:00:11:1C:AD:A2 
+# Keithley2614B_2 192.168.15.116  08:00:11:1C:E4:5B 
+# SGS100A 192.168.15.103  00:90:B8:1F:27:85 
+# AWG5014 192.168.15.107  00:0B:AB:8B:87:02 
+# MININT-QFHJUPG  192.168.15.117  54:E1:AD:81:9E:51 
+# AWG5208 192.168.15.118  00:04:5F:9E:44:89 
+# SR860_2 192.168.15.120  00:19:B3:0A:0C:2B 
+# SR860_3 192.168.15.121  00:19:B3:0A:0C:82 
+# SR860_4 192.168.15.122  00:19:B3:0A:0C:30
