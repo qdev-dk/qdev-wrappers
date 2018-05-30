@@ -143,6 +143,91 @@ class MultiQ_PulseBuilder(Instrument):
         # prepare channels
         self.num_averages(self._averages)
 
+    def MultiQ_SSB_Spec_NoOverlap(self, start, stop, npts, pulse_length = 2e-6):
+        qubitf = np.mean([start,stop])
+        self.qubit.frequency(qubitf)
+        self.x_val = lambda: np.linspace(start - qubitf,stop - qubitf,npts) + self.qubit.frequency()
+
+        # Clear AWG
+        self.awg.clearSequenceList()
+        self.awg.clearWaveformList()
+        
+        N = int((self.cycle_time()*self.SR+64) - self.cycle_time()*self.SR%64)
+        N_offset = int(self.marker_offset()*self.SR)
+        time = np.linspace(0, pulse_length, int(pulse_length*self.SR), endpoint=False)
+        
+        # Create triggers
+        ZerosMarker = np.zeros(int(N))
+        TriggerMarker = np.zeros(int(N))
+        TriggerMarker[-int(self.readout_dur()*self.SR-N_offset):-int(self.readout_dur()*self.SR-N_offset-500e-9*self.SR)] = 1
+        
+        # Create Drive tones
+        wfms = [[], []]
+        for i , f in enumerate(self.x_val()-qubitf):
+            # SSB drive tone
+            sine_signal = np.concatenate((np.zeros(N-len(time)-int(self.readout_dur()*self.SR)), 0.5*np.sin(f*2*np.pi*time),np.zeros(int(self.readout_dur()*self.SR))))
+            cosine_signal = np.concatenate((np.zeros(N-len(time)-int(self.readout_dur()*self.SR)), 0.5*np.cos(f*2*np.pi*time),np.zeros(int(self.readout_dur()*self.SR))))
+            if i == 0:
+                wfm_ch1 = np.array([cosine_signal,TriggerMarker,TriggerMarker])
+                wfm_ch2 = np.array([sine_signal,TriggerMarker,TriggerMarker])
+            else:
+                wfm_ch1 = np.array([cosine_signal,ZerosMarker,ZerosMarker])
+                wfm_ch2 = np.array([sine_signal,ZerosMarker,ZerosMarker])
+            wfms[0].append(wfm_ch1)
+            wfms[1].append(wfm_ch2)
+
+        trig_waits = [0 for _ in range(npts)] 
+        nreps = [1 for _ in range(npts)] 
+        event_jumps = [0 for _ in range(npts)]
+        event_jump_to = [0 for _ in range(npts)]
+        go_to = [0 for _ in range(npts)]
+        go_to[-1] = 1 # Make the sequence loop back to first step
+
+        seqx = self.awg.makeSEQXFile(trig_waits,
+                                nreps,
+                                event_jumps,
+                                event_jump_to,
+                                go_to,
+                                wfms,
+                                [1, 1],
+                                self.filename)
+        self.awg.sendSEQXFile(seqx, self.filename + '.seqx')
+        self.awg.loadSEQXFile(self.filename + '.seqx')
+        
+        # Create Readout tones
+        self.update_readout_freqs()
+
+        # Create sequence for readout tones SLISt:SEQuence:NEW <sequence_name>,<number_of_steps> [,<number_of_tracks>]
+        self.awg.write('SLISt:SEQuence:NEW \"Readout_Seq\", {}, 2'.format(npts))
+        self.awg.write('SLISt:SEQuence:STEP{}:GOTO \"Readout_Seq\", 1'.format(npts))
+        # Fill Readout waveforms into sequence
+        for i in range(npts):
+            self.awg.write('SLISt:SEQuence:STEP{}:TASSet1:WAVeform \"Readout_Seq\", \"Readout_I\"'.format(str(i+1)))
+            self.awg.write('SLISt:SEQuence:STEP{}:TASSet2:WAVeform \"Readout_Seq\", \"Readout_Q\"'.format(str(i+1)))
+
+        # Assign waveforms
+        self.awg.ch1.setSequenceTrack(self.filename, 1)
+        self.awg.ch2.setSequenceTrack(self.filename, 2)
+        self.awg.ch3.setSequenceTrack('Readout_Seq', 1)
+        self.awg.ch4.setSequenceTrack('Readout_Seq', 2)
+        self.awg.ch2.state(1)
+        self.awg.play()
+        
+        # ALazar labels
+        self.alazar.seq_mode('on')
+        for ala_chan in self.alazar_ctrl.channels[2:4]:
+            ala_chan.records_per_buffer(npts)
+            ala_chan.data.setpoint_labels = ('SSB Drive frequency',ala_chan.data.setpoint_labels[1])
+            ala_chan.data.setpoint_units = ('Hz',ala_chan.data.setpoint_units[1])
+
+        for n, ala_chan in enumerate(self.alazar_ctrl.channels[12:20]):
+            ala_chan.records_per_buffer(npts)
+            ala_chan.data.setpoint_labels = ('SSB Drive frequency',)
+            ala_chan.data.setpoint_units = ('Hz',)
+
+        # prepare channels
+        self.num_averages(self._averages)
+
     def MultiQ_Rabi(self, start, stop, npts):
 
         self.x_val = lambda: np.linspace(start ,stop ,npts)
