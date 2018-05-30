@@ -78,7 +78,6 @@ class ZNB_ext(ZNB):
             else:
                 log.warning('spec mode not added as ' +
                             'no generator ip address provided')
-        self.channels.autoscale()
 
 
     # spectroscopy

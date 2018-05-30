@@ -111,6 +111,84 @@ instruments:
     address: 'TCPIP0::192.168.15.118::inst0::INSTR'
     enable_forced_reconnect: true
 
+  YokogawaGS200:
+    driver: qcodes.instrument_drivers.yokogawa.GS200
+    type: GS200
+    address: 'USB0::0x0B21::0x0039::91RB18716::INSTR'
+    enable_forced_reconnect: true
+
+  Alazar:
+    driver: qcodes.instrument_drivers.AlazarTech.ATS9360
+    type: AlazarTech_ATS9360
+    enable_forced_reconnect: true
+    parameters:
+      clock_source: {initial_value: 'INTERNAL_CLOCK'}
+      sample_rate: {initial_value: 1_000_000_000}
+      trigger_operation: {initial_value: 'TRIG_ENGINE_OP_J'}
+      trigger_engine1: {initial_value: 'TRIG_ENGINE_J'}
+      trigger_source1: {initial_value: 'EXTERNAL'}
+      trigger_slope1: {initial_value: 'TRIG_SLOPE_POSITIVE'}
+      trigger_level1: {initial_value: 160}
+      trigger_engine2: {initial_value: 'TRIG_ENGINE_K'}
+      trigger_source2: {initial_value: 'DISABLE'}
+      external_trigger_coupling: {initial_value: 'DC'}
+      external_trigger_range: {initial_value: 'ETR_2V5'}
+      trigger_delay: {initial_value: 0}
+      timeout_ticks: {initial_value: 0}
+
+  AlazarController:
+    driver: qdev_wrappers.alazar_controllers.ATSChannelController
+    type: ATSChannelController
+    enable_forced_reconnect: true
+    init:
+      alazar_name: 'Alazar'
+    auto_reconnect: true
+
+  AlazarSampleChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      integrate_samples: false
+
+  AlazarRecordChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      average_records: false
+
+  AlazarBufferChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      average_buffers: false
+
+  AlazarSampleRecordChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      integrate_samples: false
+      average_records: false
+
+  AlazarSampleBufferChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      integrate_samples: false
+      average_buffers: false
+
+  AlazarRecordBufferChannel:
+    driver: qdev_wrappers.alazar_controllers.alazar_channel
+    type: AlazarChannel
+    init:
+      demod: false
+      average_records: false
+      average_buffers: false
+
 # SR860_1 192.168.15.119  00:19:B3:0A:0C:EB 
 # KS33622A  192.168.15.115  80:09:02:03:53:35 
 # KS33522B  192.168.15.108  80:09:02:03:E2:22 
