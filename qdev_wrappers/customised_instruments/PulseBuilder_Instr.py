@@ -392,7 +392,7 @@ class MultiQ_PulseBuilder(Instrument):
             raise ValueError('Number of given readout frequencies has to \
                                 be {}.'.format(self.number_read_freqs))
         for i in range(self.number_read_freqs):
-            ret.append(getattr(self,'readout_freq_{}'.format(i+1))(readout_frequencies[i]))
+            getattr(self,'readout_freq_{}'.format(i+1))(readout_frequencies[i])
         self.update_readout_freqs()
 
     def get_readout_freqs(self):
