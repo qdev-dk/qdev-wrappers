@@ -77,15 +77,16 @@ class StationConfigurator:
                 
                 hashlist = []
                 try:
-                    gitloc = os.path.abspath(qcodes.config.user.codebase)
-                    gits = [os.path.join(gitloc, dn) for dn in os.listdir( gitloc) if os.path.isdir(os.path.join( gitloc, dn, '.git'))]
+                    cbroot = os.path.abspath(qcodes.config.user.codebase)
+                    repolist = [dn for dn in os.listdir(cbroot) if os.path.isdir(os.path.join(cbroot, dn, '.git'))]
 
-                    for gitloc in gits:
+                    for reponame in repolist:
                         try:
-                            ghash = subprocess.check_output([gitcmd, r'-C', gitloc, 'rev-parse', '--verify', 'HEAD'])
+                            repoloc = os.path.join(cbroot, reponame)
+                            ghash = subprocess.check_output([gitcmd, r'-C', repoloc, 'rev-parse', '--verify', 'HEAD'])
                         except:
                             pass
-                        hashlist.append(ghash.rstrip().decode("utf-8"))
+                        hashlist.append(reponame + ":" +ghash.rstrip().decode("utf-8"))
                 except KeyError:
                     pass
                 return hashlist
