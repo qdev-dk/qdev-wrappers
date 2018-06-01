@@ -51,14 +51,17 @@ def close_station(station):
             pass
 
 
-def _set_up_exp_folder(sample_name: str, mainfolder: str= None):
+def _set_up_exp_folder(sample_name: str, mainfolder: str= None, datafolder: str= "", plot_x_position=0.66):
     """
     Args:
-        mainfolder:  base location for the data
-        sample_name:  name of the sample
+        sample_name:  name of the sample (required)
+        mainfolder:  base location for the data. (optional, otherwise pulled from qcodesrc.json)
     """
     if os.path.sep in sample_name:
-        raise TypeError("Use Relative names. That is without {}".format(sep))
+        raise TypeError("Use relative names. That is without {}".format(sep))
+
+    if os.path.sep in datafolder:
+        raise TypeError("Use relative names. That is without {}".format(sep))
 
     if mainfolder is None:
         try:
@@ -76,18 +79,24 @@ def _set_up_exp_folder(sample_name: str, mainfolder: str= None):
     CURRENT_EXPERIMENT["mainfolder"] = mainfolder
     CURRENT_EXPERIMENT["sample_name"] = sample_name
     CURRENT_EXPERIMENT['init'] = True
-    path_to_experiment_folder = sep.join([mainfolder, sample_name, ""])
+
+    if datafolder != "":
+        _set_up_subfolder(datafolder)
+
+    path_to_experiment_folder = sep.join([mainfolder, sample_name, datafolder, ""])
     CURRENT_EXPERIMENT["exp_folder"] = path_to_experiment_folder
-    try:
-        os.makedirs(path_to_experiment_folder)
-    except FileExistsError:
-        pass
+    
+    # try:
+    #     os.makedirs(path_to_experiment_folder)
+    # except FileExistsError:
+    #     pass
 
     loc_provider = qc.FormatLocation(
         fmt=path_to_experiment_folder + '{counter}')
     qc.data.data_set.DataSet.location_provider = loc_provider
     CURRENT_EXPERIMENT["provider"] = loc_provider
 
+    CURRENT_EXPERIMENT['plot_x_position'] = plot_x_position
     log.info("experiment started at {}".format(path_to_experiment_folder))
 
 
@@ -108,7 +117,6 @@ def _set_up_subfolder(subfolder_name: str):
 
 
 def _init_device_image(station):
-
     di = DeviceImage(CURRENT_EXPERIMENT["exp_folder"], station)
 
     success = di.loadAnnotations()
@@ -117,13 +125,12 @@ def _init_device_image(station):
     CURRENT_EXPERIMENT['device_image'] = di
     log.info('device image initialised')
 
-
 def _set_up_pdf_preferences(subfolder_name: str = 'pdf', display_pdf=True,
                             display_individual_pdf=False):
-    _set_up_subfolder(subfolder_name)
-    pdfdisplay['individual'] = display_individual_pdf
-    pdfdisplay['combined'] = display_pdf
-
+    if display_pdf or display_individual_pdf:
+        _set_up_subfolder(subfolder_name)
+        pdfdisplay['individual'] = display_individual_pdf
+        pdfdisplay['combined'] = display_pdf
 
 def _set_up_config_file(cfg_name: str):
     local_cfg_file = sep.join([
@@ -152,13 +159,11 @@ def _set_up_config_file(cfg_name: str):
             log.error('no config file found at {}'
                         ''.format(general_cfg_file))
 
-
 def _set_up_script_folder(scriptfolder: str=None):
     """
-    Makes
+    Add the scriptfolder to the sys.path. This should be dropped ASAP
     Args:
-        mainfolder:  base location for the data
-        sample_name:  name of the sample
+        scriptfolder: Absolute path to a folder containing scripts.
     """
 
     if scriptfolder is None:
@@ -190,20 +195,47 @@ def _set_up_script_folder(scriptfolder: str=None):
 ########################################################################
 
 
-def basic_init(sample_name: str, station, mainfolder: str= None):
-    _set_up_exp_folder(sample_name, mainfolder)
+def basic_init(sample_name: str, station, mainfolder: str= None, datafolder: str= ""):
+    _set_up_exp_folder(sample_name, mainfolder, datafolder)
     _set_up_station(station)
 
 
-def your_init(mainfolder: str, sample_name: str, station, plot_x_position=0.66,
-              annotate_image=True, display_pdf=True,
-              display_individual_pdf=False):
-    basic_init(sample_name, station, mainfolder)
+def all_init(sample_name: str, station, mainfolder: str= None, datafolder: str= "",
+              display_png=True, display_pdf=True, display_individual_pdf=False,
+              annotate_image=False, subfolders=[]):
+    """Advanced experiment initialization.
+    
+    This function allows you to configure the initialization of an experiments.
+    Args:
+        sample_name (str): Will also become the subfolder name under mainfolder and becomes the
+            root of the experiment
+        station (:obj:'qc.Station'): reference to the qc.Station to be used. Can be asked from 
+            the StationConfigurator.
+        mainfolder (str, optional): absolution path to the mainfolder hosting the experiments. Defaults to 
+            the qcodesrc.json directive.
+        datafolder (str, optional): relative location (cannot be a path) of the data. Defaults to the 
+            experiment root folder.
+        display_png (boolean, optional): Whether to create png graphs in the png subfolder.
+        display_pdf (boolean, optional): Whether to create pdf graphs in the pdf subfolder.
+        annotate_image (booloan, optional): Whether to create device annotation images.
+        subfolders (:obj:`list` of :obj:`str` , optional): List of additional subfolders to add. Default to [].
+     """
+    basic_init(sample_name, station, mainfolder, datafolder)
+
+    if display_png:
+        _set_up_subfolder('png')
+        # CURRENT_EXPERIMENT['png_subfolder'] = 'png'
+
     _set_up_pdf_preferences(display_pdf=display_pdf,
                             display_individual_pdf=display_individual_pdf)
-    CURRENT_EXPERIMENT['plot_x_position'] = plot_x_position
+
+    for sf_name in subfolders:
+        _set_up_subfolder(sf_name)
+
     if annotate_image:
         _init_device_image(station)
+
+    CURRENT_EXPERIMENT
 
 
 def my_init(sample_name: str, station, qubit_count=None,

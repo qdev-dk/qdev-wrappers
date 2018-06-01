@@ -182,27 +182,31 @@ def _do_MatPlot(data,meas_params):
     plot.rescale_axis()
     plot.fig.tight_layout(pad=3)
 
+    dsid = DataSet.location_provider.counter
+    exp_root = sep.join([CURRENT_EXPERIMENT["mainfolder"], CURRENT_EXPERIMENT["sample_name"]])
+
     if 'pdf_subfolder' in CURRENT_EXPERIMENT:
-        title_list = plot.get_default_title().split(sep)
-        title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
-        title = sep.join(title_list)
-        plot.save("{}.pdf".format(title))
+        # title_list = plot.get_default_title().split(sep)
+        # title_list.insert(-1, CURRENT_EXPERIMENT['pdf_subfolder'])
+        # title = sep.join(title_list)
+        
+        figfn = sep.join([exp_root, CURRENT_EXPERIMENT["pdf_subfolder"], '{:03d}'.format(dsid)])
+        plot.save("{}.pdf".format(figfn))
 
     if 'png_subfolder' in CURRENT_EXPERIMENT:
-        title_list = plot.get_default_title().split(sep)
-        title_list.insert(-1, CURRENT_EXPERIMENT['png_subfolder'])
-        title = sep.join(title_list)
-        plot.fig.savefig("{}.png".format(title),dpi=500)
+        figfn = sep.join([exp_root, CURRENT_EXPERIMENT["png_subfolder"], '{:03d}'.format(dsid)])
+        plot.fig.savefig("{}.png".format(figfn),dpi=500)
 
     if (pdfdisplay['combined'] or
             (num_subplots == 1 and pdfdisplay['individual'])):
         plot.fig.canvas.draw()
-        plt.show()
+        # plt.show()
     else:
         plt.close(plot.fig)
     if num_subplots > 1:
         _save_individual_plots(data, meas_params,
                                pdfdisplay['individual'])
+    # plt.close()
     plt.ion()
 
 
