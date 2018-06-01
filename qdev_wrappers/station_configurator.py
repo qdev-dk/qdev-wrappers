@@ -4,6 +4,7 @@ import importlib
 import logging
 import yaml
 import os
+import subprocess
 from copy import deepcopy
 import qcodes
 from qcodes.instrument.base import Instrument
@@ -66,6 +67,28 @@ class StationConfigurator:
         class ConfigComponent:
             def __init__(self, data):
                 self.data = data
+                self.data['codebase'] = self.fetch_hashlist()
+
+            def fetch_hashlist(self):
+                try:
+                    gitcmd = qcodes.config.core.gitpath
+                except KeyError:
+                    gitcmd = r'C:\Program Files\Git\bin\git.exe'
+                
+                hashlist = []
+                try:
+                    gitloc = os.path.abspath(qcodes.config.user.codebase)
+                    gits = [os.path.join(gitloc, dn) for dn in os.listdir( gitloc) if os.path.isdir(os.path.join( gitloc, dn, '.git'))]
+
+                    for gitloc in gits:
+                        try:
+                            ghash = subprocess.check_output([gitcmd, r'-C', gitloc, 'rev-parse', '--verify', 'HEAD'])
+                        except:
+                            pass
+                        hashlist.append(ghash.rstrip().decode("utf-8"))
+                except KeyError:
+                    pass
+                return hashlist
 
             def snapshot(self, update=True):
                 return self.data
