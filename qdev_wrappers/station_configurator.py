@@ -92,7 +92,6 @@ class StationConfigurator:
                                 warnings.warn('Active branch of {} is not master, but {}'.format(reponame, gbranch), RuntimeWarning)
                             
                             gstatus = subprocess.check_output([gitcmd, r'-C', repoloc, 'rev-list', gbranch, '--not', 'origin/'+gbranch])
-                            print(gstatus)
                             
                         except:
                             pass
