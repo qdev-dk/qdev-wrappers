@@ -95,7 +95,7 @@ class StationConfigurator:
                             gstatus = gstatus.rstrip().decode("utf-8") # turn \n terminated byte-array into str
                             if gstatus != '':
                                 gstatus = gstatus.split('\n') # turn \n-separated str into list of str
-                                warnings.warn('Active branch ({}) is {} commit(s) ahead of its origin}'.format(gbranch, len(gstatus)), RuntimeWarning)
+                                warnings.warn('Active branch ({}) is {} commit(s) ahead of its origin'.format(gbranch, len(gstatus)), RuntimeWarning)
                         except:
                             pass
                         hashlist.append(reponame + ":" +ghash.rstrip().decode("utf-8"))
