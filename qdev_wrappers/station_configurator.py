@@ -5,6 +5,7 @@ import logging
 import yaml
 import os
 import subprocess
+import warnings
 from copy import deepcopy
 import qcodes
 from qcodes.instrument.base import Instrument
@@ -84,6 +85,15 @@ class StationConfigurator:
                         try:
                             repoloc = os.path.join(cbroot, reponame)
                             ghash = subprocess.check_output([gitcmd, r'-C', repoloc, 'rev-parse', '--verify', 'HEAD'])
+
+                            gbranch = subprocess.check_output([gitcmd, r'-C', repoloc, 'rev-parse', '--abbrev-ref', 'HEAD'])
+                            gbranch = gbranch.rstrip().decode("utf-8")
+                            if gbranch != 'master':
+                                warnings.warn('Active branch of {} is not master, but {}'.format(reponame, gbranch), RuntimeWarning)
+                            
+                            gstatus = subprocess.check_output([gitcmd, r'-C', repoloc, 'rev-list', gbranch, '--not', 'origin/'+gbranch])
+                            print(gstatus)
+                            
                         except:
                             pass
                         hashlist.append(reponame + ":" +ghash.rstrip().decode("utf-8"))
