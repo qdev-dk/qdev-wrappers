@@ -160,9 +160,9 @@ class Legacy_Converter(DataConverter):
             unit = getattr(qc_data, 'unit', '')
             np_data = qc_data.ndarray
             
-            data_dict[variable] = {'name': name,
+            data_dict[variable] = {'name': variable,
                                   'label': label,
-                                   'var_name': variable,
+                                   'var_name': name,
                                   'unit': unit,
                                   'data': np_data}
             
