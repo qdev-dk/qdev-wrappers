@@ -1,8 +1,8 @@
 import qcodes as qc
 import numpy as np
 
-from Fitclasses import T1, T2
-from Converter import SQL_Converter, Legacy_Converter
+from qdev_wrappers.fitting.Converter import SQL_Converter, Legacy_Converter
+from qdev_wrappers.fitting.Fitclasses import T1, T2
 from scipy.optimize import curve_fit
 
 
