@@ -178,10 +178,17 @@ class Fitter():
             #does this needs to be moved so that it specifies which cut the individual sets of parameters are inferred from? 
             fits2d['inferred_from'] = {'xdata': x_dict['name'],  
                                             'ydata': y_dict['name'], 
-                                            'zdata': z_dict['name'], 
+                                            'zdata': z_dict['name'],
                                             'dataset': data['data_id'],
                                             'dependencies': data['dependencies']} #missing sample name
-                    
+
+            if cut == 'horizontal':
+                fits2d['inferred_from']['setpoints'] = 'ydata'
+
+            if cut == 'vertical':
+                fits2d['inferred_from']['setpoints'] = 'xdata'
+
+
             return fits2d            
         
 
