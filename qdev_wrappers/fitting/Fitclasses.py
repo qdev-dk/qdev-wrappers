@@ -20,8 +20,8 @@ class T1(Fitclass):
         self.fun_str = r'$f(x) = a \exp(-x/T) + c$'
         self.p_names = ['$a$', '$T$', '$c$']
         self.p_labels= ['a', 'T', 'c']
-        self.p_units = ['y', 'x', 'y']                   #This units thing doesn't seem to quite work                      
-                                                         #and I think its only used for plotting, so we might consider if this is really how we want to do this
+        self.p_units = ['y', 'x', 'y']                                        
+                                                    
     def fun(self, x, a, T, c):
         val = a*np.exp(-x/T)+c
         return val
