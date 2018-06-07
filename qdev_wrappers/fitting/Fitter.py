@@ -74,8 +74,8 @@ class Fitter():
         elif default_dependencies == False:
             
             for dataname in [x, y, z]:
-                if dataname not in data['variables']:
-                    raise RuntimeError('The specified variable "{}" is not found in the variables for this data dictionary. Variables are {}'.format(dataname, data['variables']))
+                if (dataname not in data['variables']) and (dataname is not None):
+                    raise RuntimeError('X! The specified variable "{}" is not found in the variables for this data dictionary. Variables are {}'.format(dataname, data['variables']))
                     
             x_dict = data[x]
             y_dict = data[y]
