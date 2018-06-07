@@ -84,7 +84,26 @@ class Fitter():
             if z != None:
                 z_dict = data[z]
                 dimensions = 2
-    
+
+        # find parameter units
+        unit_template = fitclass.p_units
+        param_units = []
+        x = x_dict['unit']
+        y = y_dict['unit']
+        if dimensions == 2:
+            z = z_dict['unit']
+
+        for item in unit_template:
+            template = list(item)
+            for i in range(len(template)):
+                if template[i] == 'x':
+                    template[i] = x
+                if template[i] == 'y':
+                    template[i] = y
+                if template[i] == 'z':
+                    template[i] = z
+            unit = "".join(template)
+            param_units.append(unit)
     
         #Do fit for 1D data
         if dimensions == 1:
@@ -100,6 +119,7 @@ class Fitter():
             for parameter in fitclass.p_labels:   #parameters currently missing units, use fitclass.p_units
                 fit1d['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
                 fit1d['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
+                fit1d['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
             
             fit1d['estimator'] = {'method': 'Least squared fit',
                                   'type': fitclass.name, 
@@ -167,6 +187,7 @@ class Fitter():
                 for parameter in fitclass.p_labels:            #parameters currently missing units, use fitclass.p_units
                     fits2d[set_value]['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
                     fits2d[set_value]['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
+                    fits2d[set_value]['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
             
 
             fits2d['estimator'] = {'method': 'Least squared fit',
