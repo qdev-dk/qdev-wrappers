@@ -7,6 +7,15 @@ from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 from qdev_wrappers.show_num import check_experiment_is_initialized
 
 
+def data_to_dict(id, samplefolder=None, datatype='SQL'):
+    if datatype == 'qcodes_legacy':
+        converter = Legacy_Converter()
+
+    if datatype == 'SQL':
+        converter = SQL_Converter()
+
+    return converter.convert(id, samplefolder)
+
 
 class DataConverter():
     
