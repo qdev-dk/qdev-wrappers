@@ -1,5 +1,4 @@
 '''This module plots measurement runs in real time.
-
 To start the plotting daemon, run this module on a stand-alone Python terminal.
 It will not work on a Spyder console because of multiprocessing voodoo.'''
 
@@ -17,7 +16,8 @@ import time
 from qcodes.config.config import Config
 import os.path
 import os
-
+from qcodes.dataset.sqlite_base import select_one_where
+                                   
 
 def make_title_from_id(run_id):
     '''Make a descriptive title from a run_id.'''
@@ -53,8 +53,6 @@ def safe_plot_by_id(run_id, axes=None):
 
 def refresh(mode, run_id, figure, axes, cbars):
     '''Call plot_by_id to plot the available data on axes.'''
-    if mode == 'freeze':
-        return
     for axis in axes:
         axis.clear()
     for cbar in cbars:
@@ -71,7 +69,8 @@ def prepare_figure(run_id):
     axes, _ = safe_plot_by_id(run_id)
     num_axes = len(axes)
     plt.close('all')
-    fig, axes = plt.subplots(num_axes, 1, sharex=True)
+    fig, axes = plt.subplots(num_axes, 1, sharex=True, squeeze=False)
+    axes = axes[:, 0]
     for axis in axes[:-1]:
         axis.get_xaxis().get_label().set_visible(False)
     axes, cbars = safe_plot_by_id(run_id, axes)
@@ -80,34 +79,40 @@ def prepare_figure(run_id):
     return fig, axes, cbars
     
 
-def make_filename(run_id):
-    extension = 'pdf'
-    db_path = Config()['core']['db_location']
-    db_folder = os.path.dirname(db_path)
-    plot_folder_name = 'plots'
-    plot_folder = os.path.join(db_folder, plot_folder_name)
-    os.makedirs(plot_folder, exist_ok=True)
-    filename = '{}.{}'.format(run_id, extension)
-    plot_path = os.path.join(plot_folder, filename)
-    return plot_path
+def make_filenames(run_id):
+    extensions = ['pdf', 'png']
+    for extension in extensions:
+        db_path = Config()['core']['db_location']
+        db_folder = os.path.dirname(db_path)
+        plot_folder_name = 'plots'
+        plot_folder = os.path.join(db_folder, plot_folder_name)
+        os.makedirs(plot_folder, exist_ok=True)
+        filename = '{}.{}'.format(run_id, extension)
+        plot_path = os.path.join(plot_folder, filename)
+        yield plot_path
     
 
 def is_completed(run_id):
-    '''Check if the run from run_id has already finished.
-    
-    TODO: this function should check for dataset.completed instead of a new
-    run, but dataset.completed is currently broken.'''
-    
-    return is_there_new_run(run_id)
+    '''Check if the run from run_id has already finished.'''
+    dataset = load_by_id(run_id)
+    comp_time = select_one_where(dataset.conn, "runs", "completed_timestamp",
+                                 "run_id", dataset.run_id)
+    return False if comp_time is None else True
 
 
-def save_figure(filename):
+def save_figure(filenames):
     '''Save the current figure at filename.'''
-    try:
-        plt.savefig(filename, bbox_inches='tight')
-        print('Saved plot at {}.'.format(filename))
-    except PermissionError:
-        print('File {} already exists, did not save plot.'.format(filename))
+    for filename in filenames:
+        try:
+            plt.savefig(filename, bbox_inches='tight')
+            print('Saved plot at {}.'.format(filename))
+        except PermissionError:
+            print('File {} already exists, did not save plot.'.format(filename))
+
+
+def init_function():
+    '''Does nothing, but prevents StopIteration exceptions.'''
+    pass
 
 
 def run_animation(run_id, interval=1., save=True):
@@ -115,12 +120,13 @@ def run_animation(run_id, interval=1., save=True):
     plt.ioff()
     plt.rcParams.update({'figure.max_open_warning': 0})
     print('Started plotting run_id {}.'.format(run_id))
-    fig, axes, cbars = prepare_figure(run_id)
+    try:
+        fig, axes, cbars = prepare_figure(run_id)
+    except:
+        print('run_id {} is not a valid plot.'.format(run_id))
+        return
     if save:
-        if type(save) is str:
-            filename = save
-        else:
-            filename = make_filename(run_id)
+        filenames = make_filenames(run_id)
     
     def get_frame():
         '''Keep iterating the animation as long as there isn't a new run.'''
@@ -129,36 +135,36 @@ def run_animation(run_id, interval=1., save=True):
             yield 'active'
         print('Stopped plotting run_id {}.'.format(run_id))
         if save:
-            save_figure(filename)
+            save_figure(filenames)
     
     anim = animation.FuncAnimation(fig, refresh, get_frame,
-                                   interval=interval * 1000,
-                                   repeat=False,
+                                   init_func=init_function,
+                                   interval=interval * 1000, repeat=False,
                                    fargs=(run_id, fig, axes, cbars))
     plt.show()
     print('Closed plot for run_id {}.'.format(run_id))
     
     
-def listen(interval=1., save=True, current=True):
+def listen(interval=1., save=True, first=True):
     '''Listen for a new run, then spawn an animation and a new listener.
     
     The current parameter is a workaround for dataset.completed not working.
-    If current == True, the last run_id will be plotted even if it was run
+    If first == True, the last run_id will be plotted even if it was run
     before the daemon started. It will be replaced with a check whether the
     last run_id is still running or not.'''
     
-    last_run_id = get_last_run_id()
     print('Listening for new run...')
-    while not is_there_new_run(last_run_id) and not current:
-        time.sleep(interval)
-    new_run_id = get_last_run_id()
-    p_animate = Process(target=run_animation, args=(new_run_id, interval,
-                                                    save))
+    run_id = get_last_run_id()
+    if not first or is_completed(run_id):
+        while not is_there_new_run(run_id):
+            time.sleep(interval)
+        run_id = get_last_run_id()
+    p_animate = Process(target=run_animation, args=(run_id, interval, save))
     p_listen = Process(target=listen, args=(interval, save, False))
     p_animate.start()   
     p_listen.start()
     p_animate.join()
-    p_listen.join()        
+    p_listen.join()  
 
 
 if __name__ == '__main__':

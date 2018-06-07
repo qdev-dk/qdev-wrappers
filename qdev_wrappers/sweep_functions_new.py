@@ -40,20 +40,14 @@ def do1d(param_set, start, stop, num_points, delay, *param_meas):
     progress_bar = progressbar.ProgressBar(max_value=num_points)
     points_taken = 0
     time.sleep(0.1)
+    
     with meas.run() as datasaver:
         run_id = datasaver.run_id
         last_time = time.time()
         for set_point in np.linspace(start, stop, num_points):
-            read_setpoint = False
-            try: # If param_set can be set, set it
-                param_set.set(set_point)
-            except: # Otherwise we're gonna read it out later
-                read_setpoint = True
-            time.sleep(delay)
+            param_set.set(set_point)
             for i, parameter in enumerate(param_meas):
                 output[i][1] = parameter.get()
-            if read_setpoint:
-                set_point = param_set.get()
             datasaver.add_result((param_set, set_point),
                                  *output)
             points_taken += 1
@@ -83,33 +77,16 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
     progress_bar = progressbar.ProgressBar(max_value=num_points1 * num_points2)
     points_taken = 0
     time.sleep(0.1)
+    
     with meas.run() as datasaver:
         run_id = datasaver.run_id
         last_time = time.time()
         for set_point1 in np.linspace(start1, stop1, num_points1):
-            read_setpoint1 = False
-            read_setpoint2 = False
-            try: # If param_set1 can be set, set it
-                param_set1.set(set_point1)
-            except: # Otherwise we're gonna read it out later
-                read_setpoint1 = True
-            try: # If param_set2 can be set, set it
-                param_set2.set(start2) # Set param_2 before the delay to allow things to settle
-            except: # Otherwise we're gonna read it out later
-                read_setpoint2 = True
-            time.sleep(delay1)
+            param_set1.set(set_point1)
             for set_point2 in np.linspace(start2, stop2, num_points2):
-                try: # If param_set2 can be set, set it
-                    param_set2.set(set_point2)
-                except: # Otherwise we're gonna read it out later
-                    read_setpoint2 = True
-                time.sleep(delay2)
+                param_set2.set(set_point2)
                 for i, parameter in enumerate(param_meas):
                     output[i][1] = parameter.get()
-                if read_setpoint1:
-                    set_point1 = param_set1.get()
-                if read_setpoint2:
-                    set_point2 = param_set2.get()
                 datasaver.add_result((param_set1, set_point1),
                                      (param_set2, set_point2),
                                      *output)
