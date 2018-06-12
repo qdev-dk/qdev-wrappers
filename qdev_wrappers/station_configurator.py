@@ -1,5 +1,6 @@
 from contextlib import suppress
 from typing import Optional
+from functools import partial
 import importlib
 import logging
 import yaml
@@ -43,6 +44,11 @@ class StationConfigurator:
         self.filename = filename
 
         self.load_file(self.filename)
+        for instrument_name in self._instrument_config.keys():
+            # TODO: check if name is valid (does not start with digit, contain
+            # dot, other signs etc.)
+            setattr(self, f'load_{instrument_name}',
+                    partial(self.load_instrument, identifier=instrument_name))
 
     def load_file(self, filename: Optional[str] = None):
         if filename is None:
