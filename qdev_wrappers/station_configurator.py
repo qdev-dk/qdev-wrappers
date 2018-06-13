@@ -47,8 +47,16 @@ class StationConfigurator:
         for instrument_name in self._instrument_config.keys():
             # TODO: check if name is valid (does not start with digit, contain
             # dot, other signs etc.)
-            setattr(self, f'load_{instrument_name}',
-                    partial(self.load_instrument, identifier=instrument_name))
+            method_name = f'load_{instrument_name}'
+            if method_name.isidentifier():
+                setattr(self, method_name,
+                        partial(self.load_instrument,
+                                identifier=instrument_name))
+            else:
+                log.warning(f'Invalid identifier: ' +
+                            f'for the instrument {instrument_name} no ' +
+                            f'lazy loading method {method_name} could be ' +
+                            'created in the StationConfigurator')
 
     def load_file(self, filename: Optional[str] = None):
         if filename is None:
