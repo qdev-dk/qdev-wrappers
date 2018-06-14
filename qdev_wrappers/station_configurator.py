@@ -1,5 +1,6 @@
 from contextlib import suppress
 from typing import Optional
+from functools import partial
 import importlib
 import logging
 import yaml
@@ -43,6 +44,19 @@ class StationConfigurator:
         self.filename = filename
 
         self.load_file(self.filename)
+        for instrument_name in self._instrument_config.keys():
+            # TODO: check if name is valid (does not start with digit, contain
+            # dot, other signs etc.)
+            method_name = f'load_{instrument_name}'
+            if method_name.isidentifier():
+                setattr(self, method_name,
+                        partial(self.load_instrument,
+                                identifier=instrument_name))
+            else:
+                log.warning(f'Invalid identifier: ' +
+                            f'for the instrument {instrument_name} no ' +
+                            f'lazy loading method {method_name} could be ' +
+                            'created in the StationConfigurator')
 
     def load_file(self, filename: Optional[str] = None):
         if filename is None:
