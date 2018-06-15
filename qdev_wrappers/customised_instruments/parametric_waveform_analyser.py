@@ -60,7 +60,6 @@ class DemodulationChannel(InstrumentChannel):
             self, "Channels", AlazarChannel,
             multichan_paramclass=AlazarMultiChannelParameter)
         self.add_submodule("alazar_channels", channels)
-        # TODO: add check that flags are satisfied here?
         if drive_frequency is not None:
             self.drive_frequency(drive_frequency)
 
@@ -128,7 +127,6 @@ class ParametricWaveformAnalyser(Instrument):
         self.station, self.sequencer, self.alazar = station, sequencer, alazar
         self.alazar_controller = ATSChannelController(
             'pwa_controller', alazar.name)
-        self._alazar_up_to_date = False
         self._base_demod_freq = None  # TODO: make this a parameter?
         self._carrier_freq = None  # TODO: make this a parameter?
         self.add_parameter(name='int_time',
@@ -145,13 +143,14 @@ class ParametricWaveformAnalyser(Instrument):
         demod_channels = ChannelList(self, "Channels", DemodulationChannel)
         self.add_submodule("demodulation_channels", channels)
         self.alazar_channels = self.alazar_controller.alazar_channels
-        # TODO: add check that flags are satisfied here?
 
     def _set_int_delay(self, int_delay):  # TODO: nicer way to do this?
-        self._alazar_up_to_date = False
+        for ch in self.alazar_channels:
+            ch._stale_setpoints = True
 
     def _set_int_time(self, int_delay):  # TODO: nicer way to do this?
-        self._alazar_up_to_date = False
+        for ch in self.alazar_channels:
+            ch._stale_setpoints = True
 
     def _set_seq_mode(self, mode):
         """
@@ -228,7 +227,6 @@ class ParametricWaveformAnalyser(Instrument):
             self.demodulation_channels.remove(ch)
         for ch in list(self.alazar_channels):
             self.alazar_channels.remove(ch)
-        self._alazar_up_to_date = False
         self.sequencer.sequence_up_to_date = False
 
     def add_alazar_channel(self, demod_ch_num, dtype, num_averages=1, averaging_settings=None):
@@ -299,7 +297,6 @@ class ParametricWaveformAnalyser(Instrument):
         for i in range(len(self.demodulation_channels)):
             self.add_alazar_channel(i, 'm')
             self.add_alazar_channel(i, 'p')
-        self._alazar_up_to_date = True
 
     def clear_alazar_channels(self):
         """
@@ -311,7 +308,6 @@ class ParametricWaveformAnalyser(Instrument):
             for demod_ch in list(self.demodulation_channels):
                 for alazar_ch in demod_ch.alazar_channels:
                     demod_ch.alazar_channels.remove(alazar_ch)
-        self._alazar_up_to_date = False
 
     def update_sequencer(self, builder=None, inner_setpoints=None,
                          outer_setpoints=None, default_builder_parms=None):
