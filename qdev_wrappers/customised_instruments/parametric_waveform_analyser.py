@@ -177,7 +177,7 @@ class ParametricWaveformAnalyser(Instrument):
             raise RuntimeError(
                 'seq modes on sequencer and alazar do not match')
 
-    def update_base_demod_frequency(self, f_demod):
+    def _update_base_demod_frequency(self, f_demod):
         """
         update the demodulation frequency locally and also runs update
         on the demodulation channels to propagate this to the demodulation
@@ -188,7 +188,7 @@ class ParametricWaveformAnalyser(Instrument):
         for demod_ch in self.demodulation_channels:
             demod_ch.update()
 
-    def update_carrier_frequency(self, carrier_freq, update_sidebands=True):
+    def _update_carrier_frequency(self, carrier_freq, update_sidebands=True):
         """
         update the carrier frequency locally and also runs update
         on the demodulation channels to propagate this to the demodulation
