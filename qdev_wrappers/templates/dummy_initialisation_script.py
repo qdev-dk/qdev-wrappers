@@ -1,3 +1,7 @@
+# import as a first module logging, and start logging
+from qdev_wrappers.logger import start_logging()
+start_logging()
+
 # import modules you might want to use
 import qcodes as qc
 import time
@@ -40,9 +44,6 @@ if __name__ == '__main__':
     dmm = DummyInstrument(name="dmm", gates=['voltage'])  # The DMM voltage reader
     dc = DummyChannelInstrument(name='dc')
 
-     the default dummy instrument returns always a constant value,
-     in the following line we make it random
-     just for the looks 💅
     import random
     dmm.voltage.get =  lambda: random.randint(0, 100)
 

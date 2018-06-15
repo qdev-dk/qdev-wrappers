@@ -29,6 +29,15 @@ __pycache__/
 # Temporary files
 *.md~
 *.py~
+.#
 tmp/
+.mypy_cache/
+.pytest_cache/
+
+# editors
+.vscode
 
 .idea
+
+# qcodes
+experiments.db
