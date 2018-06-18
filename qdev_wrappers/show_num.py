@@ -61,7 +61,7 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                 raise ValueError('qcodes.QtPlot does not support multigraph plotting. Set useQT=False to plot multiple datasets.')
             if dataname is not None:
                 if dataname not in [key for key in data.arrays.keys() if "_set" not in key]:
-                    raise RuntimeError('Dataname not in dataset. Input dataname was: {}'.format(dataname), \
+                    raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\''.format(dataname), \
                         'while dataname(s) in dataset are: \'{}\'.'.format('\', \''.join(data.arrays.keys())))
                 keys = [dataname]
             else:
