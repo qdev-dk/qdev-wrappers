@@ -86,8 +86,7 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                     arrays = getattr(data, key)
                     if transpose and len(arrays.set_arrays)==2:
                         if useQT:
-                            print('Transpose only works for qc.MatPlot.')
-                            break
+                            raise AttributeError('Transpose only works for qc.MatPlot.')
                         arrays.ndarray = arrays.ndarray.T
                         set0_temp = arrays.set_arrays[0]
                         set1_temp = arrays.set_arrays[1]
