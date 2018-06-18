@@ -74,7 +74,6 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
         plots = []
         num = ''
         l = len(unique_keys)
-
         for j, key in enumerate(unique_keys):
             array_list = []
             xlims = [[],[]]
@@ -87,6 +86,8 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                     if transpose and len(arrays.set_arrays)==2:
                         if useQT:
                             raise AttributeError('Transpose only works for qc.MatPlot.')
+                        if dataname is None and l != 1:
+                            raise ValueError('Dataname has to be provided to plot data transposed for dataset with more than 1 measurement.')
                         arrays.ndarray = arrays.ndarray.T
                         set0_temp = arrays.set_arrays[0]
                         set1_temp = arrays.set_arrays[1]
