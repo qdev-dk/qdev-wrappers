@@ -15,7 +15,7 @@ def check_experiment_is_initialized():
 
 
 def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng=True,
-            fig_size=[6,4],clim=None,dataname=None,xlim=None,ylim=None,**kwargs):
+            fig_size=[6,4],clim=None,dataname=None,xlim=None,ylim=None,transpose=False,**kwargs):
     """
     Show and return plot and data.
     Args:
@@ -30,6 +30,7 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
         clim [cmin,cmax]: Set min and max of colorbar to cmin and cmax respectrively
         xlim [xmin,xmax]: Set limits on x axis
         ylim [ymin,ymax]: set limits on y axis
+        transpose (boolean): Transpose data to be plotted (only works for 2D scans and qc.MatPlot)
         **kwargs: Are passed to plot function
 
     Returns:
@@ -83,12 +84,22 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
             for data, keys in zip(data_list,keys_list):
                 if key in keys:
                     arrays = getattr(data, key)
+                    if transpose and len(arrays.set_arrays)==2:
+                        if useQT:
+                            print('Transpose only works for qc.MatPlot.')
+                            break
+                        arrays.ndarray = arrays.ndarray.T
+                        set0_temp = arrays.set_arrays[0]
+                        set1_temp = arrays.set_arrays[1]
+                        set0_temp.ndarray = set0_temp.ndarray.T
+                        set1_temp.ndarray = set1_temp.ndarray.T
+                        arrays.set_arrays = (set1_temp,set0_temp,)
                     if avg_sub == 'row':
-                        for i in range(np.shape(arrays)[0]):
-                            arrays[i,:] -= np.nanmean(arrays[i,:])
+                        for i in range(np.shape(arrays.ndarray)[0]):
+                            arrays.ndarray[i,:] -= np.nanmean(arrays.ndarray[i,:])
                     if avg_sub == 'col':
-                        for i in range(np.shape(arrays)[1]):
-                            arrays[:,i] -= np.nanmean(arrays[:,i])
+                        for i in range(np.shape(arrays.ndarray)[1]):
+                            arrays.ndarray[:,i] -= np.nanmean(arrays.ndarray[:,i])
                     array_list.append(arrays)
 
                     # Find axis limits for dataset
