@@ -62,7 +62,7 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
             if dataname is not None:
                 if dataname not in [key for key in data.arrays.keys() if "_set" not in key]:
                     raise RuntimeError('Dataname not in dataset. Input dataname was: {}'.format(dataname), \
-                        'while dataname(s) in dataset are: {}.'.format(', '.join(data.arrays.keys())))
+                        'while dataname(s) in dataset are: \'{}\'.'.format('\', \''.join(data.arrays.keys())))
                 keys = [dataname]
             else:
                 keys = [key for key in data.arrays.keys() if "_set" not in key]
@@ -87,7 +87,8 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                         if useQT:
                             raise AttributeError('Transpose only works for qc.MatPlot.')
                         if dataname is None and l != 1:
-                            raise ValueError('Dataname has to be provided to plot data transposed for dataset with more than 1 measurement.')
+                            raise ValueError('Dataname has to be provided to plot data transposed for dataset with more '
+                                    'than 1 measurement. Datanames in dataset are: \'{}\'.'.format('\', \''.join(unique_keys)))
                         arrays.ndarray = arrays.ndarray.T
                         set0_temp = arrays.set_arrays[0]
                         set1_temp = arrays.set_arrays[1]
