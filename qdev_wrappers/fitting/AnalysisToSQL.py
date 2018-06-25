@@ -47,6 +47,9 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
     
     est = []    #estimated/predicted value for the measured data given the fitted parameters
     est_name = '{}_estimate'.format(yname)
+    est_label = data[yname]['label']
+    est_unit = data[yname]['unit']
+
     
     p_values = []
     
@@ -54,12 +57,15 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
         zname = fit['inferred_from']['zdata']
         zdata = data[zname]['data'] 
         est_name = '{}_estimate'.format(zname)
-        
+        est_label = data[zname]['label']
+        est_unit = data[zname]['unit']
     
     #make array of estimated values based on parameters and model used
     if dim == 1:
-    
-        params = list(fitclass.p_labels) 
+
+        param_units = [fit['parameters'][param]['unit'] for param in list(fitclass.p_labels)]
+
+        params = list(fitclass.p_labels)
         for index, parameter in enumerate(params):
             if parameter not in fit['parameters']:
                 raise KeyError('The list of parameters for the fitclass {} contains a parameter, {}, which is not present in the fit dictionary.'.format(fitclass.name, parameter))
@@ -69,15 +75,19 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
             y = fitclass.fun(datapoint, *params)
             est.append(y)
             p_values.append(params)
+
             
     if dim == 2:
+
+        setpoints = [key for key in fit.keys()]
+        param_units = [fit[setpoints[0]]['parameters'][param]['unit'] for param in list(fitclass.p_labels)]
         
         for xpoint, ypoint in zip(xdata, ydata):
         
-            if xpoint in fit.keys():
+            if xpoint in setpoints:
                 setpoint = xpoint
                 datapoint = ypoint
-            elif ypoint in fit.keys():
+            elif ypoint in setpoints:
                 setpoint = ypoint
                 datapoint = xpoint
         
@@ -114,11 +124,59 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
 
 
 
+    data_id = data['data_id']
+    exp_id = data['exp_id']
+    analysis_id = 1
+    predicts = est_name.strip("estimate").strip("_")
+    estimator = "{}, {}".format(fit['estimator']['method'], fit['estimator']['type'])
+    analysis = fit['estimator']['function']
+    parameters = fitclass.p_labels
+    param_labels = fitclass.p_names
+
+
     conn = sqlite3.connect('analysis.db')  # should this go in a separate analysis database, or just go in experiments.db?
     cur = conn.cursor()
 
+    #Alternative: have a separate function that sets up the general analysis database with tables, so that this doesn't have to be here
+    if not is_table('analyses', cur):
+        cur.execute('''CREATE TABLE analyses 
+                        (run_id INTEGER, exp_id INTEGER, analysis_id INTEGER, result_table_name TEXT, 
+                        predicts TEXT, estimator TEXT, function TEXT)''')
+    if not is_table('overview', cur):
+        cur.execute('''CREATE TABLE overview 
+                        (id INTEGER, analysis_id INTEGER, 
+                        parameter TEXT, label TEXT, unit TEXT, inferred_from TEXT)''')
+
+
     table = make_table(tablename, cur)
- 
+
+
+    sql_analyses = 'INSERT INTO analyses VALUES (?,?,?,?,?,?,?)'
+
+    max_id = cur.execute('SELECT MAX(analysis_id) FROM analyses').fetchone()[0]
+    if max_id != None:
+        analysis_id += max_id
+
+    cur.execute(sql_analyses, (data_id, exp_id, analysis_id, table, predicts, estimator, analysis))
+
+
+    sql_overview = 'INSERT INTO overview VALUES (?,?,?,?,?,?)'
+
+    result_id = 1
+    max_id = cur.execute('SELECT MAX(id) FROM overview').fetchone()[0]
+    if max_id != None:
+        result_id += max_id
+
+    overview_rows = []
+    for parameter, label, unit in zip(parameters, param_labels, param_units):
+        row = (result_id, analysis_id, parameter, label, unit, "inferred_from")
+        overview_rows.append(row)
+        result_id += 1
+    overview_rows.append((result_id, analysis_id, est_name, est_label, est_unit, "inferred_from"))
+
+    cur.executemany(sql_overview, (overview_rows))
+
+
     for column in table_columns:
         cur.execute('ALTER TABLE {} ADD {}'.format(table, column))
     
@@ -126,6 +184,7 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
     placeholder = ('?,'*num_cols).strip(',')
 
     cur.executemany('INSERT INTO {} VALUES ({})'.format(table, placeholder), table_rows)
+
 
     conn.commit()
     conn.close()

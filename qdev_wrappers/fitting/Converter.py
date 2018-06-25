@@ -23,10 +23,12 @@ class DataConverter():
         
         data = self.find_data(id, samplefolder) 
         data_dict = self.make_data_dictionary(data)
-        
+
+        exp_id = self.find_experiment(id)
         dependencies = self.find_dependencies(id, data)  #SQL needs only id number to find dependencies, Legacy needs only data
         all_variables = self.find_variables(data)
-        
+
+        data_dict['exp_id'] = exp_id
         data_dict['data_id'] = id
         data_dict['dependencies'] = dependencies
         data_dict['variables'] = all_variables
@@ -82,6 +84,16 @@ class SQL_Converter(DataConverter):
                     all_variables.append(variable['name'])
                     
         return all_variables
+
+    def find_experiment(self, id):
+
+        conn = connect('experiments.db')  # the name of the file to access can't be set manually right now
+        cur = conn.cursor()
+
+        execute = cur.execute('SELECT exp_id FROM runs WHERE run_id is {}'.format(id))
+        exp_id = execute.fetchone()[0]
+
+        return exp_id
 
     
     def make_data_dictionary(self, data):
@@ -141,6 +153,11 @@ class Legacy_Converter(DataConverter):
         
         all_variables = [variable for variable in data.arrays.keys()]
         return all_variables
+
+    def find_experiment(self, id):
+
+        exp_id = id
+        return exp_id
     
     
     def resize_data(self, data1, data2):
