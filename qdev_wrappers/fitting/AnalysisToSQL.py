@@ -27,6 +27,8 @@ def make_table(tablename, cursor):
     else:
         cursor.execute('CREATE TABLE {} (id INTEGER)'.format(name))
 
+    return name
+
 
 def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were able to get the fitclass from the fit information 
 
@@ -117,15 +119,15 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
     conn = sqlite3.connect('analysis.db')  # should this go in a separate analysis database, or just go in experiments.db?
     cur = conn.cursor()
 
-    make_table(tablename, cur)
+    table = make_table(tablename, cur)
  
     for column in table_columns:
-        cur.execute('ALTER TABLE {} ADD {}'.format(tablename, column))
+        cur.execute('ALTER TABLE {} ADD {}'.format(table, column))
     
     num_cols = len(table_rows[0])
     placeholder = ('?,'*num_cols).strip(',')
 
-    cur.executemany('INSERT INTO {} VALUES ({})'.format(tablename, placeholder), table_rows)
+    cur.executemany('INSERT INTO {} VALUES ({})'.format(table, placeholder), table_rows)
 
     conn.commit()
     conn.close()
