@@ -4,10 +4,10 @@ import sqlite3
 from qdev_wrappers.fitting.Fitclasses import T1, T2
 
 
-def is_table(tablename):  # Checks if table already exists. Assumes database connection and cursor already established
+def is_table(tablename, cursor):  # Checks if table already exists. Assumes database connection and cursor already established
 
     table_count = "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name='{}'".format(tablename)
-    execute = cur.execute(table_count)
+    execute = cursor.execute(table_count)
     count = execute.fetchone()[0]
 
     if count == 0:
@@ -17,15 +17,15 @@ def is_table(tablename):  # Checks if table already exists. Assumes database con
         return True
 
 
-def make_table(tablename):
+def make_table(tablename, cursor):
     name = tablename
     n = 0
 
-    while is_table(name):
+    while is_table(name, cursor):
         n += 1
         name = "{}_{}".format(tablename, n)
     else:
-        cur.execute('CREATE TABLE {} (id INTEGER)'.format(name))
+        cursor.execute('CREATE TABLE {} (id INTEGER)'.format(name))
 
 
 def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were able to get the fitclass from the fit information 
@@ -117,7 +117,7 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
     conn = sqlite3.connect('analysis.db')  # should this go in a separate analysis database, or just go in experiments.db?
     cur = conn.cursor()
 
-    make_table(tablename)
+    make_table(tablename, cur)
  
     for column in table_columns:
         cur.execute('ALTER TABLE {} ADD {}'.format(tablename, column))
