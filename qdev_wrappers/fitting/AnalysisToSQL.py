@@ -4,6 +4,29 @@ import sqlite3
 from qdev_wrappers.fitting.Fitclasses import T1, T2
 
 
+def is_table(tablename):  # Checks if table already exists. Assumes database connection and cursor already established
+
+    table_count = "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name='{}'".format(tablename)
+    execute = cur.execute(table_count)
+    count = execute.fetchone()[0]
+
+    if count == 0:
+        return False
+
+    if count == 1:
+        return True
+
+
+def make_table(tablename):
+    name = tablename
+    n = 0
+
+    while is_table(name):
+        n += 1
+        name = "{}_{}".format(tablename, n)
+    else:
+        cur.execute('CREATE TABLE {} (id INTEGER)'.format(name))
+
 
 def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were able to get the fitclass from the fit information 
 
@@ -65,15 +88,10 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
             z = fitclass.fun(datapoint, *params)
             est.append(z)
             p_values.append(params)
-        
-        
-     
-    
-    
-    tablename = 'data_{}_{}'.format(data['data_id'], fitclass.name) 
-        #this is not a good plan for naming the table!
-        #It doesn't allow to save multiple fit analyses for the same data set
-        #TODO: figure out how to generate a unique table name each time in a way that makes sense
+
+
+
+    tablename = 'data_{}_{}'.format(data['data_id'], fitclass.name)
     
     if dim == 1:
         table_columns = [xname, yname, est_name]
@@ -93,14 +111,13 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
             id_nr = est.index(estimate) + 1
             row = (id_nr, xpoint, ypoint, zpoint, estimate, *parameters)                           
             table_rows.append(row)
-    
-    
-    
-    
-    conn = sqlite3.connect('analysis.db') #should this go in a separate analysis database, or just go in experiments.db?
+
+
+
+    conn = sqlite3.connect('analysis.db')  # should this go in a separate analysis database, or just go in experiments.db?
     cur = conn.cursor()
-    
-    cur.execute('CREATE TABLE {} (id INTEGER)'.format(tablename))
+
+    make_table(tablename)
  
     for column in table_columns:
         cur.execute('ALTER TABLE {} ADD {}'.format(tablename, column))
