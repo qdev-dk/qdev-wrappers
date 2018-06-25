@@ -129,3 +129,5 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
 
     conn.commit()
     conn.close()
+
+    print("Table {} created in analysis.db".format(table))
