@@ -95,23 +95,21 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
 
     tablename = 'data_{}_{}'.format(data['data_id'], fitclass.name)
     
-    if dim == 1:
-        table_columns = [xname, yname, est_name]
-    elif dim == 2:
-        table_columns = [xname, yname, zname, est_name]
+
+    table_columns = [est_name]
     for parameter in fitclass.p_labels:
         table_columns.append(parameter)
        
     table_rows = []
     if dim == 1:
-        for xpoint, ypoint, estimate in zip(xdata, ydata, est):
+        for estimate in est:
             id_nr = est.index(estimate) + 1
-            row = (id_nr, xpoint, ypoint, estimate, *params)
+            row = (id_nr, estimate, *params)
             table_rows.append(row)
     elif dim == 2:
-        for xpoint, ypoint, zpoint, estimate, parameters in zip(xdata, ydata, zdata, est, p_values):    
+        for estimate, parameters in zip(est, p_values):
             id_nr = est.index(estimate) + 1
-            row = (id_nr, xpoint, ypoint, zpoint, estimate, *parameters)                           
+            row = (id_nr, estimate, *parameters)
             table_rows.append(row)
 
 
