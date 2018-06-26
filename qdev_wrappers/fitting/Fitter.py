@@ -29,8 +29,8 @@ class Fitter():
     def fit(self, data, fitclass, x=None, y=None, z=None, default_dependencies=False, dataname = None, cut='horizontal', p0=None,**kwargs):
         
         if type(fitclass) == type:  
-            #Maybe I'm just an idiot, and this isn't necessary for the world-at-large, but 
-            #I spent about 45 minutes trying to figure out what I broke before I realized 
+            #Maybe I'm just an idiot, and this isn't necessary for the world-at-large, but
+            #I spent about 45 minutes trying to figure out what I broke before I realized
             #that I just forgot the parentheses after the fitclass. So this is here for now.
             raise RuntimeError('It looks like there is something wrong with your fitclass(). Possibly you forgot the parentheses?')
         
@@ -38,6 +38,11 @@ class Fitter():
             raise RuntimeError('Please either specify data for x, y (and optionally z) or set default_dependencies = True')
             
         if default_dependencies == True:
+            cut = 'vertical'
+            '''so far in the examples, the new data sets switch out the x and y axes, 
+            but I don't know if this is an artifact of the conversion function for old to new datasets,
+            or if its how the new datasets are going to be. So this may be the incorrect default.'''
+            #TODO: Ask someone about this!!!
             dep_var = [key for key in data['dependencies'].keys()]
             indep_vars = [value for value in data['dependencies'].values()]
         
