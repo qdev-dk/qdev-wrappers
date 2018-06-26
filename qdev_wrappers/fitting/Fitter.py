@@ -26,7 +26,7 @@ class Fitter():
             return "Could not find guess parameters for fit."
         
 
-    def fit(self, data, fitclass, x=None, y=None, z=None, default_dependencies=False, dataname = None, cut='vertical', p0=None,**kwargs):
+    def fit(self, data, fitclass, x=None, y=None, z=None, default_dependencies=False, dataname = None, cut='horizontal', p0=None,**kwargs):
         
         if type(fitclass) == type:  
             #Maybe I'm just an idiot, and this isn't necessary for the world-at-large, but 
@@ -86,6 +86,8 @@ class Fitter():
                 dimensions = 2
 
         # find parameter units
+        if dimensions == 1:
+            cut = 'horizontal'  #Must be horizontal for 1D plots for units to work. Now you can't mess it up.
         unit_template = fitclass.p_units
         param_units = []
         x = x_dict['unit']
