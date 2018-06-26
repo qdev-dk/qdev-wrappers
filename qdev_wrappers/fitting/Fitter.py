@@ -95,13 +95,22 @@ class Fitter():
 
         for item in unit_template:
             template = list(item)
-            for i in range(len(template)):
-                if template[i] == 'x':
-                    template[i] = x
-                if template[i] == 'y':
-                    template[i] = y
-                if template[i] == 'z':
-                    template[i] = z
+            if cut == 'horizontal':
+                for i in range(len(template)):
+                    if template[i] == 'x':
+                        template[i] = x
+                    if template[i] == 'y':
+                        template[i] = y
+                    if template[i] == 'z':
+                        template[i] = z
+            elif cut == 'vertical':
+                for i in range(len(template)):
+                    if template[i] == 'x':
+                        template[i] = y
+                    if template[i] == 'y':
+                        template[i] = x
+                    if template[i] == 'z':
+                        template[i] = z
             unit = "".join(template)
             param_units.append(unit)
     
