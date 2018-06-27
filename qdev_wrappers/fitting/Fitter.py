@@ -1,5 +1,6 @@
 import qcodes as qc
 import numpy as np
+import dill
 
 from qdev_wrappers.fitting.Converter import SQL_Converter, Legacy_Converter
 from qdev_wrappers.fitting.Fitclasses import T1, T2
@@ -127,28 +128,23 @@ class Fitter():
             xdata = x_dict['data']     
             ydata = y_dict['data'] 
             
-            fit1d = {}
-            fit1d['parameters'] = {}
+            fit = {}
+            fit['parameters'] = {}
                                                        
             popt, pcov = self.do_1d(xdata, ydata, fitclass, p0,**kwargs)
                 
             for parameter in fitclass.p_labels:   #parameters currently missing units, use fitclass.p_units
-                fit1d['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
-                fit1d['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
-                fit1d['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
-            
-            fit1d['estimator'] = {'method': 'Least squared fit',
-                                  'type': fitclass.name, 
-                                  'function': 'save all text from fitter function and class function here?',
-                                  'more?' : 'perhaps'} 
+                fit['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
+                fit['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
+                fit['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
+
    
-            fit1d['inferred_from'] = {'xdata': x_dict['name'], 
+            fit['inferred_from'] = {'xdata': x_dict['name'],
                                             'ydata': y_dict['name'], 
                                             'dataset': data['run_id'],
                                             'dependencies': data['dependencies']} #missing sample name
                     
-            
-            return fit1d
+
         
         
         #Do fit for 2D data   
@@ -158,7 +154,7 @@ class Fitter():
             ydata = y_dict['data'] 
             zdata = z_dict['data'] 
             
-            fits2d = {}
+            fit = {}
             
             if cut == 'horizontal':
                 setarray = ydata
@@ -197,35 +193,35 @@ class Fitter():
                 
                 popt, pcov = self.do_1d(xdata_1d, ydata_1d, fitclass, p0,**kwargs)
                 
-                fits2d[set_value] = {}
-                fits2d[set_value]['parameters'] = {}
+                fit[set_value] = {}
+                fit[set_value]['parameters'] = {}
                 
                 for parameter in fitclass.p_labels:            #parameters currently missing units, use fitclass.p_units
-                    fits2d[set_value]['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
-                    fits2d[set_value]['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
-                    fits2d[set_value]['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
-            
+                    fit[set_value]['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
+                    fit[set_value]['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
+                    fit[set_value]['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
 
-            fits2d['estimator'] = {'method': 'Least squared fit',
-                                  'type': fitclass.name, 
-                                  'function': 'save all text from fitter function and class function here?',
-                                  'more?' : 'perhaps'}
-            
-            
+
             #does this needs to be moved so that it specifies which cut the individual sets of parameters are inferred from? 
-            fits2d['inferred_from'] = {'xdata': x_dict['name'],  
+            fit['inferred_from'] = {'xdata': x_dict['name'],
                                             'ydata': y_dict['name'], 
                                             'zdata': z_dict['name'],
                                             'dataset': data['run_id'],
                                             'dependencies': data['dependencies']} #missing sample name
 
             if cut == 'horizontal':
-                fits2d['inferred_from']['setpoints'] = 'ydata'
+                fit['inferred_from']['setpoints'] = 'ydata'
 
             if cut == 'vertical':
-                fits2d['inferred_from']['setpoints'] = 'xdata'
+                fit['inferred_from']['setpoints'] = 'xdata'
 
 
-            return fits2d            
+        dill_obj = dill.dumps(fitclass)
+        fit['estimator'] = {'method': 'Least squared fit',
+                            'type': fitclass.name,
+                            'function': 'save all text from fitter function and class function here?',
+                            'dill': dill_obj}
+
+        return fit
         
 
