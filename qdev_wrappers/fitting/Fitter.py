@@ -179,7 +179,7 @@ def do_fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**k
     dill_obj = dill.dumps(fitclass)
     fit['estimator'] = {'method': 'Least squared fit',
                         'type': fitclass.name,
-                        'function': 'save all text from fitter function and class function here?',
+                        'function used': str(fitclass.fun_np),
                         'dill': dill_obj}
 
     return fit
