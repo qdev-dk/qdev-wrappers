@@ -44,7 +44,7 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 # download git
 Write-Host 'download latest version of git'
 $html = Invoke-WebRequest -Uri $git_url
-$e = ($html.ParsedHtml.getElementsByTagName(‘a’) | Where{ $_.innerText -eq ‘64-bit Git for Windows Setup’ } )
+$e = ($html.ParsedHtml.getElementsByTagName('a') | Where{ $_.innerText -eq '64-bit Git for Windows Setup' } )
 $git_setup_url = $e.attributes.getNamedItem('href').nodeValue()
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Invoke-WebRequest -Uri $git_setup_url -OutFile $git_exe
