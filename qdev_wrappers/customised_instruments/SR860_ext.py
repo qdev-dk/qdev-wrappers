@@ -48,5 +48,5 @@ Example yaml file:
         address: 'your address'
         parameters:
             amplitude: {scale: 100000, monitor: True}
-            iv_gain: {initial_value: -0.000000001}
+            iv_gain: {initial_value: -100000000}
 """
