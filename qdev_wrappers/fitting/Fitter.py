@@ -9,7 +9,7 @@ from scipy.optimize import curve_fit
 
         
 
-def fit(data, fitclass, x=None, y=None, z=None, default_dependencies=False, dataname = None, cut='horizontal', p0=None,**kwargs):
+def fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**kwargs):
 
     def do_1d(xdata, ydata, fitclass, p0, **kwargs):
 
@@ -22,7 +22,8 @@ def fit(data, fitclass, x=None, y=None, z=None, default_dependencies=False, data
             return popt, pcov
         else:
             return "Could not find guess parameters for fit."
-        
+
+
     if type(fitclass) == type:
         #Maybe I'm just an idiot, and this isn't necessary for the world-at-large, but
         #I spent about 45 minutes trying to figure out what I broke before I realized
@@ -31,63 +32,23 @@ def fit(data, fitclass, x=None, y=None, z=None, default_dependencies=False, data
         
     if (x==None or y==None) and default_dependencies==False:
         raise RuntimeError('Please either specify data for x, y (and optionally z) or set default_dependencies = True')
-            
-    if default_dependencies == True:
-        cut = 'vertical'
-        '''so far in the examples, the new data sets switch out the x and y axes, 
-        but I don't know if this is an artifact of the conversion function for old to new datasets,
-        or if its how the new datasets are going to be. So this may be the incorrect default.'''
-        #TODO: Ask someone about this!!!
-        dep_var = [key for key in data['dependencies'].keys()]
-        indep_vars = [value for value in data['dependencies'].values()]
 
-        if dataname==None:
-            if len(dep_var) != 1:
-                raise RuntimeError('Dataset has more than one dataname. Choose dataname to be fitted from: {}.'.format(', '.join(dep_var)))
+    for dataname in [x, y, z]:
+        if (dataname not in data['variables']) and (dataname is not None):
+            raise RuntimeError('The specified variable "{}" is not found in the variables for this data dictionary. Variables are {}'.format(dataname, data['variables']))
 
-            indep_vars = indep_vars[0]
+    # specify x, y and z
+    x_dict = data[x]
+    y_dict = data[y]
+    dimensions = 1
 
-        else:
-            if dataname not in dep_var:
-                raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\' while dataname(s) in dataset are: {}.'.format(dataname,', '.join(dep_var)))
-
-            indep_vars = indep_vars[dep_var.index(dataname)]
-            dep_var = [dataname]
-
-            if len(indep_vars) > 2:
-                print('independent variables: {}'.format(indep_vars))
-                raise RuntimeError('That dataset seems to contain {} independent variables, which is {} too many.'.format(len(indep_vars), len(indep_vars)-2))
-
-
-        if len(indep_vars) == 1:
-            dimensions = 1
-            x_dict = data[indep_vars[0]]
-            y_dict = data[dep_var[0]]
-
-        if len(indep_vars) == 2:
-            dimensions = 2
-            x_dict = data[indep_vars[0]]
-            y_dict = data[indep_vars[1]]
-            z_dict = data[dep_var[0]]
-            
-            
-    elif default_dependencies == False:
-
-        for dataname in [x, y, z]:
-            if (dataname not in data['variables']) and (dataname is not None):
-                raise RuntimeError('The specified variable "{}" is not found in the variables for this data dictionary. Variables are {}'.format(dataname, data['variables']))
-
-        x_dict = data[x]
-        y_dict = data[y]
-        dimensions = 1
-
-        if z != None:
-            z_dict = data[z]
-            dimensions = 2
+    if z != None:
+        z_dict = data[z]
+        dimensions = 2
 
     # find parameter units
     if dimensions == 1:
-        cut = 'horizontal'  #Must be horizontal for 1D plots for units to work. Now you can't mess it up.
+        cut = 'horizontal'  # Must be horizontal for 1D plots for units to work. Now you can't mess it up.
     unit_template = fitclass.p_units
     param_units = []
     x = x_dict['unit']
