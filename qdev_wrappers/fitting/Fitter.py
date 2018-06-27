@@ -9,7 +9,7 @@ from scipy.optimize import curve_fit
 
         
 
-def fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**kwargs):
+def do_fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**kwargs):
 
     def do_1d(xdata, ydata, fitclass, p0, **kwargs):
 
