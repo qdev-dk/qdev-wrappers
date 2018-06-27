@@ -1,8 +1,8 @@
 from qcodes.instrument_drivers.stanford_research.SR86x import SR86x
 
 class SR86x_ext(SR86x):
-    def __init__(self, name: str, address: str, **kwargs: str) ->None:
-        super().__init__(name, address, **kwargs)
+    def __init__(self, name, address, max_frequency, reset=False, **kwargs) ->None:
+        super().__init__(name, address, max_frequency, reset, **kwargs):
 
        	self.add_parameter(name='iv_gain',
                            label='I/V Gain',
