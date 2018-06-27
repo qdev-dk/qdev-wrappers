@@ -11,15 +11,14 @@ from scipy.optimize import curve_fit
 
 def do_fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**kwargs):
 
-    def do_1d(xdata, ydata, fitclass, p0, **kwargs):
+    def find_start_parameters(fitclass, p0, xdata, ydata):
 
         if (p0 == None and hasattr(fitclass, 'guess')):
             p0 = getattr(fitclass, 'guess')(xdata, ydata)
-            popt, pcov = curve_fit(fitclass.fun, xdata, ydata, p0=p0, **kwargs)
-            return popt, pcov
+            return p0
         elif p0 != None:
-            popt, pcov = curve_fit(fitclass.fun, xdata, ydata, p0=p0, **kwargs)
-            return popt, pcov
+            p0 = p0
+            return p0
         else:
             return "Could not find guess parameters for fit."
 
@@ -85,13 +84,16 @@ def do_fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**k
 
         fit = {}
         fit['parameters'] = {}
+        fit['start_params'] = {}
 
-        popt, pcov = do_1d(xdata, ydata, fitclass, p0,**kwargs)
+        guess = find_start_parameters(fitclass, p0, xdata, ydata)
+        popt, pcov = curve_fit(fitclass.fun, xdata, ydata, p0=guess, **kwargs)
 
-        for parameter in fitclass.p_labels:   #parameters currently missing units, use fitclass.p_units
+        for parameter in fitclass.p_labels:
             fit['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
             fit['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
             fit['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
+            fit['start_params'][parameter] = guess[fitclass.p_labels.index(parameter)]
 
 
         fit['inferred_from'] = {'xdata': x_dict['name'],
@@ -146,15 +148,18 @@ def do_fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**k
 
         for set_value, xdata_1d, ydata_1d in zip(setpoints, xdata, ydata):
 
-            popt, pcov = do_1d(xdata_1d, ydata_1d, fitclass, p0,**kwargs)
+            guess = find_start_parameters(fitclass, p0, xdata_1d, ydata_1d)
+            popt, pcov = curve_fit(fitclass.fun, xdata_1d, ydata_1d, p0=guess, **kwargs)
 
             fit[set_value] = {}
             fit[set_value]['parameters'] = {}
+            fit[set_value]['start_params'] = {}
 
             for parameter in fitclass.p_labels:            #parameters currently missing units, use fitclass.p_units
                 fit[set_value]['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
                 fit[set_value]['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
                 fit[set_value]['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
+                fit[set_value]['start_params'][parameter] = guess[fitclass.p_labels.index(parameter)]
 
 
         #does this needs to be moved so that it specifies which cut the individual sets of parameters are inferred from?
