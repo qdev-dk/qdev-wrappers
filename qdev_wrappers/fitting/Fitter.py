@@ -144,7 +144,7 @@ class Fitter():
    
             fit1d['inferred_from'] = {'xdata': x_dict['name'], 
                                             'ydata': y_dict['name'], 
-                                            'dataset': data['data_id'],
+                                            'dataset': data['run_id'],
                                             'dependencies': data['dependencies']} #missing sample name
                     
             
@@ -216,7 +216,7 @@ class Fitter():
             fits2d['inferred_from'] = {'xdata': x_dict['name'],  
                                             'ydata': y_dict['name'], 
                                             'zdata': z_dict['name'],
-                                            'dataset': data['data_id'],
+                                            'dataset': data['run_id'],
                                             'dependencies': data['dependencies']} #missing sample name
 
             if cut == 'horizontal':

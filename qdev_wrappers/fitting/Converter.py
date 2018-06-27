@@ -29,7 +29,7 @@ class DataConverter():
         all_variables = self.find_variables(data)
 
         data_dict['exp_id'] = exp_id
-        data_dict['data_id'] = id
+        data_dict['run_id'] = id
         data_dict['dependencies'] = dependencies
         data_dict['variables'] = all_variables
         

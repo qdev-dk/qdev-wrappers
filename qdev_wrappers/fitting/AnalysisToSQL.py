@@ -103,7 +103,7 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
 
 
 
-    tablename = 'data_{}_{}'.format(data['data_id'], fitclass.name)
+    tablename = 'data_{}_{}'.format(data['run_id'], fitclass.name)
     
 
     table_columns = [est_name]
@@ -124,7 +124,7 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
 
 
 
-    data_id = data['data_id']
+    run_id = data['run_id']
     exp_id = data['exp_id']
     analysis_id = 1
     predicts = est_name.strip("estimate").strip("_")
@@ -157,7 +157,7 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
     if max_id != None:
         analysis_id += max_id
 
-    cur.execute(sql_analyses, (data_id, exp_id, analysis_id, table, predicts, estimator, analysis))
+    cur.execute(sql_analyses, (run_id, exp_id, analysis_id, table, predicts, estimator, analysis))
 
 
     sql_overview = 'INSERT INTO overview VALUES (?,?,?,?,?,?)'
