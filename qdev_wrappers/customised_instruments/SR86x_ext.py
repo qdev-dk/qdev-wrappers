@@ -51,7 +51,7 @@ Use negative I/V gain to account for sign change on voltage input on Basel curre
 
 Example yaml file:
     lockin:
-        driver: qdev_wrappers.customised_instruments.SR860_ext
+        driver: qdev_wrappers.customised_instruments.SR86x_ext
         type: SR860_ext
         address: 'your address'
         parameters:
