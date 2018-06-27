@@ -21,14 +21,37 @@ class SR86x_ext(SR86x):
                            unit='Ω',
                            get_cmd=self._get_resistance,
                            get_parser=float)
+        
+        self.add_parameter(name='g_X',
+                           label='Conductance',
+                           unit='2e^2/h',
+                           get_cmd=self._get_conductance_X,
+                           get_parser=float)
+
+       	self.add_parameter(name='resistance_X',
+                           label='Resistance',
+                           unit='Ω',
+                           get_cmd=self._get_resistance_X,
+                           get_parser=float)
 
     def _get_conductance(self):
+        V = self.amplitude.get_latest()
+        I = self.R()/self.iv_gain.get_latest()
+        conductance_quantum = 7.7480917310e-5
+        return (I/V)/conductance_quantum
+
+    def _get_resistance(self):
+        V = self.amplitude.get_latest()
+        I = self.R()/self.iv_gain.get_latest()
+        return (V/I)
+
+    def _get_conductance_X(self):
         V = self.amplitude.get_latest()
         I = self.X()/self.iv_gain.get_latest()
         conductance_quantum = 7.7480917310e-5
         return (I/V)/conductance_quantum
 
-    def _get_resistance(self):
+    def _get_resistance_X(self):
         V = self.amplitude.get_latest()
         I = self.X()/self.iv_gain.get_latest()
         return (V/I)
