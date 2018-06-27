@@ -13,7 +13,7 @@ class SR860_ext(SR860):
                            set_cmd=lambda x: x,
                            get_parser=float)
 
-       	self.add_parameter(name='conductance',
+       	self.add_parameter(name='g',
                            label='Conductance',
                            unit='2e^2/h',
                            get_cmd=self._get_conductance,
