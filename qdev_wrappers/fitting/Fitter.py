@@ -30,7 +30,7 @@ def do_fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**k
         raise RuntimeError('It looks like there is something wrong with your fitclass(). Possibly you forgot the parentheses?')
         
     if (x==None or y==None):
-        raise RuntimeError('Please either specify data for x, y (and optionally z)')
+        raise RuntimeError('Please specify data for x, y (and optionally z)')
 
     for dataname in [x, y, z]:
         if (dataname not in data['variables']) and (dataname is not None):

@@ -103,7 +103,7 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
 
 
 
-    tablename = 'data_{}_{}'.format(data['run_id'], fitclass.name)
+    tablename = 'analysis_{}_{}'.format(data['run_id'], fitclass.name)
     
 
     table_columns = [est_name]
@@ -124,69 +124,80 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
 
 
 
-    run_id = data['run_id']
+    data_run_id = data['run_id']
     exp_id = data['exp_id']
-    analysis_id = 1
     predicts = est_name.strip("estimate").strip("_")
     estimator = "{}, {}".format(fit['estimator']['method'], fit['estimator']['type'])
-    analysis = fit['estimator']['function']
+    analysis = fit['estimator']['function used']
+    dill_obj = fit['estimator']['dill']
     parameters = fitclass.p_labels
     param_labels = fitclass.p_names
 
 
-    conn = sqlite3.connect('analysis.db')  # should this go in a separate analysis database, or just go in experiments.db?
+    conn = sqlite3.connect('experiments.db')  # should this go in a separate analysis database, or just go in experiments.db?
     cur = conn.cursor()
 
     #Alternative: have a separate function that sets up the general analysis database with tables, so that this doesn't have to be here
     if not is_table('analyses', cur):
         cur.execute('''CREATE TABLE analyses 
-                        (run_id INTEGER, exp_id INTEGER, analysis_id INTEGER, result_table_name TEXT, 
-                        predicts TEXT, estimator TEXT, function TEXT)''')
-    if not is_table('overview', cur):
-        cur.execute('''CREATE TABLE overview 
-                        (id INTEGER, analysis_id INTEGER, 
-                        parameter TEXT, label TEXT, unit TEXT, inferred_from TEXT)''')
+                        (data_run_id INTEGER, exp_id INTEGER, run_id INTEGER, analysis_table_name TEXT, 
+                        predicts TEXT, estimator TEXT, function TEXT, dill TEXT)''')
+
+
 
 
     table = make_table(tablename, cur)
 
-
-    sql_analyses = 'INSERT INTO analyses VALUES (?,?,?,?,?,?,?)'
-
-    max_id = cur.execute('SELECT MAX(analysis_id) FROM analyses').fetchone()[0]
-    if max_id != None:
-        analysis_id += max_id
-
-    cur.execute(sql_analyses, (run_id, exp_id, analysis_id, table, predicts, estimator, analysis))
-
-
-    sql_overview = 'INSERT INTO overview VALUES (?,?,?,?,?,?)'
-
-    result_id = 1
-    max_id = cur.execute('SELECT MAX(id) FROM overview').fetchone()[0]
-    if max_id != None:
-        result_id += max_id
-
-    overview_rows = []
-    for parameter, label, unit in zip(parameters, param_labels, param_units):
-        row = (result_id, analysis_id, parameter, label, unit, "inferred_from")
-        overview_rows.append(row)
-        result_id += 1
-    overview_rows.append((result_id, analysis_id, est_name, est_label, est_unit, "inferred_from"))
-
-    cur.executemany(sql_overview, (overview_rows))
-
-
     for column in table_columns:
         cur.execute('ALTER TABLE {} ADD {}'.format(table, column))
-    
+
     num_cols = len(table_rows[0])
-    placeholder = ('?,'*num_cols).strip(',')
+    placeholder = ('?,' * num_cols).strip(',')
 
     cur.executemany('INSERT INTO {} VALUES ({})'.format(table, placeholder), table_rows)
+
+
+
+
+
+    sql_analyses = 'INSERT INTO analyses VALUES (?,?,?,?,?,?,?,?)'
+
+    run_id = 1
+    max_id = cur.execute('SELECT MAX(run_id) FROM layouts').fetchone()[0]
+    if max_id != None:
+        run_id += max_id
+
+    cur.execute(sql_analyses, (data_run_id, exp_id, run_id, table, predicts, estimator, analysis, dill_obj))
+
+
+
+
+    sql_layout = 'INSERT INTO layouts VALUES (?,?,?,?,?,?)'
+
+    layout_id = 1
+    max_id = cur.execute('SELECT MAX(layout_id) FROM layouts').fetchone()[0]
+    if max_id != None:
+        layout_id += max_id
+
+    layout_rows = []
+    for parameter, label, unit in zip(parameters, param_labels, param_units):
+        row = (layout_id, run_id, parameter, label, unit, "inferred_from")
+        layout_rows.append(row)
+        layout_id += 1
+    layout_rows.append((layout_id, run_id, est_name, est_label, est_unit, "inferred_from"))
+
+    cur.executemany(sql_layout, (layout_rows))
+
+
+
+
+    sql_runs = 'INSERT INTO runs VALUES (?,?,?,?,?,?,?,?,?,?)'
+    cur.execute(sql_runs, (run_id, exp_id, 'analysis', table, "", "", "", 1, "", ""))
+
+
 
 
     conn.commit()
     conn.close()
 
-    print("Table {} created in analysis.db".format(table))
+    print("Table {} created".format(table))
