@@ -3,7 +3,7 @@ from typing import Optional
 from functools import partial
 import importlib
 import logging
-import yaml
+from ruamel.yaml import YAML
 import os
 from copy import deepcopy
 import qcodes
@@ -59,6 +59,7 @@ class StationConfigurator:
                             'created in the StationConfigurator')
 
     def load_file(self, filename: Optional[str] = None):
+        yaml=YAML()
         if filename is None:
             filename = default_file
         try:
