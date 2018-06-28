@@ -19,7 +19,7 @@ class ConductanceBuffer(ChannelBuffer):
         # If X is not being measured, complain
         if self._instrument.ch1_display() != 'X':
             raise ValueError('Can not return conductance since X is not '
-                             'being measured on channel 1.')
+                                'being measured on channel 1.')
 
         resistance_quantum = 25.818e3  # (Ohm)
         xarray = super().get()
@@ -38,34 +38,34 @@ class SR830_ext(SR830):
         super().__init__(name, address, **kwargs)
 
         self.add_parameter(name='iv_gain',
-                           label='I/V Gain',
-                           unit='',
-                           set_cmd=lambda x: x,
-                           get_parser=float)
+                            label='I/V Gain',
+                            unit='',
+                            set_cmd=lambda x: x,
+                            get_parser=float)
 
-       	self.add_parameter(name='g',
-                           label='Conductance',
-                           unit='e$^2$/h',
-                           get_cmd=self._get_conductance,
-                           get_parser=float)
+        self.add_parameter(name='g',
+                            label='Conductance',
+                            unit='e$^2$/h',
+                            get_cmd=self._get_conductance,
+                            get_parser=float)
 
-       	self.add_parameter(name='resistance',
-                           label='Resistance',
-                           unit='Ohm',
-                           get_cmd=self._get_resistance,
-                           get_parser=float)
+        self.add_parameter(name='resistance',
+                            label='Resistance',
+                            unit='Ohm',
+                            get_cmd=self._get_resistance,
+                            get_parser=float)
         
         self.add_parameter(name='g_X',
-                           label='Conductance X',
-                           unit='e$^2$/h',
-                           get_cmd=self._get_conductance_X,
-                           get_parser=float)
+                            label='Conductance X',
+                            unit='e$^2$/h',
+                            get_cmd=self._get_conductance_X,
+                            get_parser=float)
 
-       	self.add_parameter(name='resistance_X',
-                           label='Resistance X',
-                           unit='Ohm',
-                           get_cmd=self._get_resistance_X,
-                           get_parser=float)
+        self.add_parameter(name='resistance_X',
+                            label='Resistance X',
+                            unit='Ohm',
+                            get_cmd=self._get_resistance_X,
+                            get_parser=float)
 
     def _get_conductance(self):
         V = self.amplitude.get_latest()
