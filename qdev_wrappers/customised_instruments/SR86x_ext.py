@@ -12,25 +12,25 @@ class SR86x_ext(SR86x):
 
        	self.add_parameter(name='g',
                            label='Conductance',
-                           unit='2e^2/h',
+                           unit='e$^2$/h',
                            get_cmd=self._get_conductance,
                            get_parser=float)
 
        	self.add_parameter(name='resistance',
                            label='Resistance',
-                           unit='Ω',
+                           unit='Ohm',
                            get_cmd=self._get_resistance,
                            get_parser=float)
         
         self.add_parameter(name='g_X',
                            label='Conductance',
-                           unit='2e^2/h',
+                           unit='e$^2$/h',
                            get_cmd=self._get_conductance_X,
                            get_parser=float)
 
        	self.add_parameter(name='resistance_X',
                            label='Resistance',
-                           unit='Ω',
+                           unit='Ohm',
                            get_cmd=self._get_resistance_X,
                            get_parser=float)
 
@@ -38,7 +38,7 @@ class SR86x_ext(SR86x):
         V = self.amplitude.get_latest()
         I = abs(self.R()/self.iv_gain.get_latest())
         conductance_quantum = 7.7480917310e-5
-        return (I/V)/conductance_quantum
+        return (I/V)/(conductance_quantum/2)
 
     def _get_resistance(self):
         V = self.amplitude.get_latest()
@@ -49,7 +49,7 @@ class SR86x_ext(SR86x):
         V = self.amplitude.get_latest()
         I = self.X()/self.iv_gain.get_latest()
         conductance_quantum = 7.7480917310e-5
-        return (I/V)/conductance_quantum
+        return (I/V)/(conductance_quantum/2)
 
     def _get_resistance_X(self):
         V = self.amplitude.get_latest()
@@ -68,6 +68,7 @@ class SR860_ext(SR86x_ext):
 """
 Voltage division on input to fridge is added as scale factor to self.amplitude.
 Use negative I/V gain to account for sign change on voltage input on Basel current amplifier.
+To take the new scale into account we also need to change the limits on the amplitude.
 
 Example yaml file:
     lockin:
@@ -75,6 +76,6 @@ Example yaml file:
         type: SR860_ext
         address: 'your address'
         parameters:
-            amplitude: {scale: 100000, monitor: true}
+            amplitude: {scale: 100000, limits: '0,2e-5',monitor: true}
             iv_gain: {initial_value: -100000000}
 """
