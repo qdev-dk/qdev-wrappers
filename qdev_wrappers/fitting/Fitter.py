@@ -98,8 +98,10 @@ def do_fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**k
 
         fit['inferred_from'] = {'xdata': x_dict['name'],
                                         'ydata': y_dict['name'],
-                                        'dataset': data['run_id'],
-                                        'dependencies': data['dependencies']} #missing sample name
+                                        'run_id': data['run_id'],
+                                        'exp_id': data['exp_id'],
+                                        'dependencies': data['dependencies'],
+                                        'dimensions': 1} #missing sample name
 
 
 
@@ -166,8 +168,10 @@ def do_fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**k
         fit['inferred_from'] = {'xdata': x_dict['name'],
                                         'ydata': y_dict['name'],
                                         'zdata': z_dict['name'],
-                                        'dataset': data['run_id'],
-                                        'dependencies': data['dependencies']} #missing sample name
+                                        'run_id': data['run_id'],
+                                        'exp_id': data['exp_id'],
+                                        'dependencies': data['dependencies'],
+                                        'dimensions' : 2} #missing sample name
 
         if cut == 'horizontal':
             fit['inferred_from']['setpoints'] = 'ydata'
@@ -181,6 +185,71 @@ def do_fit(data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**k
                         'type': fitclass.name,
                         'function used': str(fitclass.fun_np),
                         'dill': dill_obj}
+
+    # Find estimated values for the function output based on fitted parameters
+
+    fit['estimate'] = {}
+
+    xdata = x_dict['data']
+    output = y_dict
+
+    if dimensions == 2:
+        ydata = y_dict['data']
+        output = z_dict
+
+    est_values = []  # estimated/predicted value for the measured data given the fitted parameters
+    est_name = '{}_estimate'.format(output['name'])
+    est_label = output['label']
+    est_unit = output['unit']
+
+    p_values = []
+
+    # make array of estimated values based on parameters and model used
+    if dimensions == 1:
+
+        params = list(fitclass.p_labels)
+        for index, parameter in enumerate(params):
+            if parameter not in fit['parameters']:
+                raise KeyError(
+                    'The list of parameters for the fitclass {} contains a parameter, {}, which is not present in the fit dictionary.'.format(
+                        fitclass.name, parameter))
+            params[index] = fit['parameters'][parameter]['value']
+
+        for datapoint in xdata:
+            y = fitclass.fun(datapoint, *params)
+            est_values.append(y)
+            p_values.append(params)
+
+    if dimensions == 2:
+
+        for xpoint, ypoint in zip(xdata, ydata):
+
+            if xpoint in setpoints:
+                setpoint = xpoint
+                datapoint = ypoint
+            elif ypoint in setpoints:
+                setpoint = ypoint
+                datapoint = xpoint
+
+            params = list(fitclass.p_labels)
+            for index, parameter in enumerate(params):
+                if parameter not in fit[setpoint]['parameters']:
+                    raise KeyError(
+                        'The list of parameters for the fitclass {} contains a parameter, {}, which is not present in the fit dictionary.'.format(
+                            fitclass.name, parameter))
+                params[index] = fit[setpoint]['parameters'][parameter]['value']
+
+            z = fitclass.fun(datapoint, *params)
+            est_values.append(z)
+            p_values.append(params)
+
+
+    fit['estimate']['name'] = est_name
+    fit['estimate']['label'] = est_label
+    fit['estimate']['unit'] = est_unit
+    fit['estimate']['data'] = est_values
+    fit['estimate']['parameters'] = p_values
+
 
     return fit
         

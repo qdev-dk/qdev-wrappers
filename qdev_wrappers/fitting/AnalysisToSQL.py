@@ -1,6 +1,7 @@
 
 
 import sqlite3
+import dill
 from qdev_wrappers.fitting.Fitclasses import T1, T2
 
 
@@ -30,102 +31,49 @@ def make_table(tablename, cursor):
     return name
 
 
-def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were able to get the fitclass from the fit information 
+def fit_to_SQL(fit):    #it would be an improvement if it were able to get the fitclass from the fit information
 
-    if fit['estimator']['type'] != fitclass.name:       #maybe this should be more general in this function, like 'analysis_class? - so it makes sense e.g. in the case of Baysian inference
-        raise RuntimeError('The data given was analyzed using {}. This does not seem to match {} specified in this function'.format(fit['estimator']['type'], fitclass.name))
-    
-    dim = 1
-    if 'zdata' in fit['inferred_from'].keys():
-        dim = 2
-    
-    xname = fit['inferred_from']['xdata']
-    xdata = data[xname]['data']
-    
-    yname = fit['inferred_from']['ydata']
-    ydata = data[yname]['data']
-    
-    est = []    #estimated/predicted value for the measured data given the fitted parameters
-    est_name = '{}_estimate'.format(yname)
-    est_label = data[yname]['label']
-    est_unit = data[yname]['unit']
+    fitclass_pckl = fit['estimator']['dill']
+    fitclass = dill.loads(fitclass_pckl)
 
-    
-    p_values = []
-    
-    if dim == 2:
-        zname = fit['inferred_from']['zdata']
-        zdata = data[zname]['data'] 
-        est_name = '{}_estimate'.format(zname)
-        est_label = data[zname]['label']
-        est_unit = data[zname]['unit']
-    
-    #make array of estimated values based on parameters and model used
+    est_values = fit['estimate']['data']
+    est_name = '{}_estimate'.format(fit['estimate']['name'])
+    est_label = fit['estimate']['label']
+    est_unit = fit['estimate']['unit']
+    param_values = fit['estimate']['parameters']
+
+    dim = fit['inferred_from']['dimensions']
+
     if dim == 1:
-
         param_units = [fit['parameters'][param]['unit'] for param in list(fitclass.p_labels)]
-
-        params = list(fitclass.p_labels)
-        for index, parameter in enumerate(params):
-            if parameter not in fit['parameters']:
-                raise KeyError('The list of parameters for the fitclass {} contains a parameter, {}, which is not present in the fit dictionary.'.format(fitclass.name, parameter))
-            params[index] = fit['parameters'][parameter]['value']  
-    
-        for datapoint in xdata:
-            y = fitclass.fun(datapoint, *params)
-            est.append(y)
-            p_values.append(params)
-
-            
-    if dim == 2:
-
+    elif dim == 2:
         setpoints = [key for key in fit.keys()]
         param_units = [fit[setpoints[0]]['parameters'][param]['unit'] for param in list(fitclass.p_labels)]
-        
-        for xpoint, ypoint in zip(xdata, ydata):
-        
-            if xpoint in setpoints:
-                setpoint = xpoint
-                datapoint = ypoint
-            elif ypoint in setpoints:
-                setpoint = ypoint
-                datapoint = xpoint
-        
-            params = list(fitclass.p_labels)
-            for index, parameter in enumerate(params):
-                if parameter not in fit[setpoint]['parameters']:
-                    raise KeyError('The list of parameters for the fitclass {} contains a parameter, {}, which is not present in the fit dictionary.'.format(fitclass.name, parameter))
-                params[index] = fit[setpoint]['parameters'][parameter]['value']
-        
-            z = fitclass.fun(datapoint, *params)
-            est.append(z)
-            p_values.append(params)
 
 
-
-    tablename = 'analysis_{}_{}'.format(data['run_id'], fitclass.name)
+    tablename = 'analysis_{}_{}'.format(fit['inferred_from']['run_id'], fitclass.name)
     
 
     table_columns = [est_name]
     for parameter in fitclass.p_labels:
         table_columns.append(parameter)
-       
+
     table_rows = []
     if dim == 1:
-        for estimate in est:
-            id_nr = est.index(estimate) + 1
+        for estimate, params in zip(est_values, param_values):
+            id_nr = est_values.index(estimate) + 1
             row = (id_nr, estimate, *params)
             table_rows.append(row)
     elif dim == 2:
-        for estimate, parameters in zip(est, p_values):
-            id_nr = est.index(estimate) + 1
+        for estimate, parameters in zip(est_values, param_values):
+            id_nr = est_values.index(estimate) + 1
             row = (id_nr, estimate, *parameters)
             table_rows.append(row)
 
 
 
-    data_run_id = data['run_id']
-    exp_id = data['exp_id']
+    data_run_id = fit['inferred_from']['run_id']
+    exp_id = fit['inferred_from']['exp_id']
     predicts = est_name.strip("estimate").strip("_")
     estimator = "{}, {}".format(fit['estimator']['method'], fit['estimator']['type'])
     analysis = fit['estimator']['function used']
@@ -139,8 +87,8 @@ def fit_to_SQL(data, fitclass, fit):    #it would be an improvement if it were a
 
     #Alternative: have a separate function that sets up the general analysis database with tables, so that this doesn't have to be here
     if not is_table('analyses', cur):
-        cur.execute('''CREATE TABLE analyses 
-                        (data_run_id INTEGER, exp_id INTEGER, run_id INTEGER, analysis_table_name TEXT, 
+        cur.execute('''CREATE TABLE analyses
+                        (data_run_id INTEGER, exp_id INTEGER, run_id INTEGER, analysis_table_name TEXT,
                         predicts TEXT, estimator TEXT, function TEXT, dill TEXT)''')
 
 
