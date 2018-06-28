@@ -23,13 +23,13 @@ class SR86x_ext(SR86x):
                            get_parser=float)
         
         self.add_parameter(name='g_X',
-                           label='Conductance',
+                           label='Conductance X',
                            unit='e$^2$/h',
                            get_cmd=self._get_conductance_X,
                            get_parser=float)
 
        	self.add_parameter(name='resistance_X',
-                           label='Resistance',
+                           label='Resistance X',
                            unit='Ohm',
                            get_cmd=self._get_resistance_X,
                            get_parser=float)
