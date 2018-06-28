@@ -76,6 +76,6 @@ Example yaml file:
         type: SR860_ext
         address: 'your address'
         parameters:
-            amplitude: {scale: 100000, limits: '0,2e-5',monitor: true}
-            iv_gain: {initial_value: -100000000}
+            amplitude: {scale: 1e5, limits: '0,2e-5',monitor: true}
+            iv_gain: {initial_value: -1e7}
 """
