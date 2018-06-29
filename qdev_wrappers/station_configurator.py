@@ -3,6 +3,7 @@ from typing import Optional
 from functools import partial
 import importlib
 import logging
+import warnings
 import os
 from copy import deepcopy
 import qcodes
@@ -16,7 +17,6 @@ use_pyyaml = False
 try:
     from ruamel.yaml import YAML
 except ImportError:
-    import yaml
     use_pyyaml = True
     warnings.warn("ruamel yaml not found station configurator is falling back to pyyaml. "
                            "It's highly recommended to install ruamel.yaml. This fixes issues with "
@@ -67,8 +67,10 @@ class StationConfigurator:
                             'created in the StationConfigurator')
 
     def load_file(self, filename: Optional[str] = None):
-        if use_pyyaml = False:
-                yaml=YAML()
+        if use_pyyaml:
+            import yaml
+        else:
+            yaml=YAML()
         if filename is None:
             filename = default_file
         try:
