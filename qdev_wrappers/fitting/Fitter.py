@@ -7,12 +7,141 @@ from qdev_wrappers.fitting.Fitclasses import T1, T2
 from scipy.optimize import curve_fit
 
 
-class Fitter():
+def fit_data(data, fitclass, fun_inputs, fun_output, setpoint_params=None, p0=None, **kwargs):
 
-    def find_start_parameters(self, fitclass, p0, xdata, ydata):
+    fun_dim = len(fitclass.fun_vars)
+    num_inputs = len(fun_inputs)
+    if setpoint_params is not None:
+        num_setpoints = len(setpoint_params)
+    else: num_setpoints = 0
+
+
+    if fun_dim == 1 and num_inputs == 1 and num_setpoints == 0:
+        fitter = Fitter_1D(data, fitclass, fun_output)
+    elif fun_dim == 1 and num_inputs == 1 and num_setpoints == 1:
+        fitter.Fitter_2Ddata_1Dfunction(data, fitclass, fun_output)    #what does the fitter actually need??
+    else:
+        print('The specified function has ')
+
+    fitter.find_fit(data, fitclass, fun_inputs, fun_output, setpoint_params, p0, **kwargs)
+
+class Fitter1D:
+
+    def __init__(self, data, fitclass, output):
+
+        self.fitclass = fitclass    #'UNNECESSARY??'
+        self.fun_dim = len(fitclass.fun_vars)
+        self.data_dim = 'undefined'
+        self.input_vars = []
+        self.output_var = []
+        self.all_datanames = []
+        self.full_parameter_dict = 'undefined'
+        self.output_dataname = []
+
+        self.input_dataname = []
+        self.setpoint_params = []
+
+        self.input_data = []
+        self.output_data = []
+
+    def find_fit(self, data, fitclass, fun_inputs, fun_output, setpoint_params=None, p0=None, **kwargs):
+
+        self.check_input_matches_fitclass(fitclass, fun_inputs, fun_output, setpoint_params, p0)
+        data_dict, label_dict, name_dict, unit_dict = self.organize_data(data, fun_inputs, fun_output, setpoint_params)
+        param_units = self.find_parameter_units(fitclass, unit_dict)
+
+        fit = self.perform_fit(data_dict, data, fitclass, setpoint_params, p0, param_units, **kwargs)
+
+        fit['estimate'] = self.estimate_function_values(fitclass, data, data_dict)
+
+        dill_obj = dill.dumps(fitclass)
+        fit['inferred_from'] = {'inputs': fun_inputs,
+                                'output': fun_output,
+                                'setpoints': setpoint_params,
+                                'run_id': data['run_id'],
+                                'exp_id': data['exp_id'],
+                                'dependencies': data['dependencies'],
+                                'data_dimensions': self.data_dim,
+                                'estimator' : {'method': 'Least squared fit',
+                                                'type': fitclass.name,
+                                                'function used': str(fitclass.fun_np),
+                                                'dill': dill_obj}
+                                }
+
+        return fit
+
+    def check_input_matches_fitclass(self, fitclass, inputs, output, setpoints, p0):
+
+        # check input and output are given, and that input, output and setpoints are in correct format
+        if (type(inputs) != dict or type(output) != dict):
+            raise RuntimeError('''Please specify both input and output variables for the function you wish to fit in
+        #                    the format fun_inputs = {'x':'name', 'y':'other_name'}, fun_output = {z: 'another_name'} ''')
+        if (setpoints is not None) and (type(setpoints) != list):
+            raise RuntimeError('''Please specify setpoints as a list ['setpoint_name', ...], even if there is only one.''')
+
+        # check inputs specified match inputs function takes
+        if len(inputs) != len(fitclass.fun_vars):
+            raise RuntimeError('''The function you are fitting to takes {} variables, 
+                            and you have specified {}'''.format(len(fitclass.fun_vars), len(inputs)))
+        for variable in inputs.keys():
+            if variable not in fitclass.fun_vars:
+                raise RuntimeError('''You have specified a variable {}. 
+                                    The fit function takes variables {}'''.format(variable, fitclass.fun_vars))
+        for variable in output.keys():
+            if variable not in fitclass.fun_output:
+                raise RuntimeError('''You have specified a variable {}. 
+                                    The fit function returns variables {}'''.format(variable, fitclass.fun_output))
+
+        # check that if a guess p0 is specified, the number of parameters is correct for the fit function
+        if (p0 is not None) and (len(p0) != len(fitclass.p_labels)):
+            raise RuntimeError('''You have specified {} start parameters for the fit function: {}. The function takes 
+                            {} start parameters: {}'''.format(len(p0), p0, len(fitclass.p_labels), fitclass.p_labels))
+
+
+    def organize_data(self, data, inputs, output, setpoints):
+
+        all_vars = [dataname for dataname in inputs.values()]
+        for dataname in output.values():
+            all_vars.append(dataname)
+        if setpoints is not None:
+            for dataname in setpoints:
+                all_vars.append(dataname)
+        # confirm all variables involved are in the dataset
+        for dataname in all_vars:
+            if dataname not in data.keys():
+                raise RuntimeError('''Variable {} not found in data dictionary. Data dictionary contains 
+                                                        variables: {}'''.format(dataname, data['variables']))
+        self.all_datanames = all_vars
+        self.data_dim = len(self.all_datanames) - 1
+
+        data_dict = {}
+        label_dict = {}
+        name_dict = {}
+        unit_dict = {}
+
+        for variable, name in inputs.items():
+            data_dict[variable] = data[name]['data']
+            label_dict[variable] = data[name]['label']
+            name_dict[variable]  = data[name]['name']
+            unit_dict[variable]  = data[name]['unit']
+
+        for variable, name in output.items():
+            data_dict[variable] = data[name]['data']
+            label_dict[variable] = data[name]['label']
+            name_dict[variable] = data[name]['name']
+            unit_dict[variable] = data[name]['unit']
+
+        self.input_vars = [variable for variable in inputs.keys()]
+        self.output_var = [variable for variable in output.keys()]
+        self.input_dataname = [dataname for dataname in inputs.values()]
+        self.output_dataname = [dataname for dataname in output.values()]
+
+        return data_dict, label_dict, name_dict, unit_dict
+
+    def find_start_parameters(self, fitclass, p0, data_dict):
 
         if (p0 == None and hasattr(fitclass, 'guess')):
-            p0 = getattr(fitclass, 'guess')(xdata, ydata)
+            p0 = getattr(fitclass, 'guess')(**data_dict)
             return p0
         elif p0 != None:
             p0 = p0
@@ -20,238 +149,141 @@ class Fitter():
         else:
             return "Could not find guess parameters for fit."
 
+    def find_parameter_units(self, fitclass, unit_dict):
 
-    def do_fit(self, data, fitclass, x=None, y=None, z=None, cut='horizontal', p0=None,**kwargs):
-
-        if type(fitclass) == type:
-            #Maybe I'm just an idiot, and this isn't necessary for the world-at-large, but
-            #I spent about 45 minutes trying to figure out what I broke before I realized
-            #that I just forgot the parentheses after the fitclass. So this is here for now.
-            raise RuntimeError('It looks like there is something wrong with your fitclass(). Possibly you forgot the parentheses?')
-
-        if (x==None or y==None):
-            raise RuntimeError('Please specify data for x, y (and optionally z)')
-
-        for dataname in [x, y, z]:
-            if (dataname not in data['variables']) and (dataname is not None):
-                raise RuntimeError('The specified variable "{}" is not found in the variables for this data dictionary. Variables are {}'.format(dataname, data['variables']))
-
-        # specify x, y and z
-        x_dict = data[x]
-        y_dict = data[y]
-        dimensions = 1
-
-        if z != None:
-            z_dict = data[z]
-            dimensions = 2
-
-        # find parameter units
-        if dimensions == 1:
-            cut = 'horizontal'  # Must be horizontal for 1D plots for units to work. Now you can't mess it up.
-        unit_template = fitclass.p_units
+        unit_templates = fitclass.p_units
         param_units = []
-        x = x_dict['unit']
-        y = y_dict['unit']
-        if dimensions == 2:
-            z = z_dict['unit']
 
-        for item in unit_template:
-            template = list(item)
-            if cut == 'horizontal':
-                for i in range(len(template)):
-                    if template[i] == 'x':
-                        template[i] = x
-                    if template[i] == 'y':
-                        template[i] = y
-                    if template[i] == 'z':
-                        template[i] = z
-            elif cut == 'vertical':
-                for i in range(len(template)):
-                    if template[i] == 'x':
-                        template[i] = y
-                    if template[i] == 'y':
-                        template[i] = x
-                    if template[i] == 'z':
-                        template[i] = z
+        for template in unit_templates:
+            template = list(template)
+            for i in range(len(template)):
+                for variable in unit_dict.keys():
+                    if template[i] == variable:
+                        template[i] = unit_dict[variable]
             unit = "".join(template)
             param_units.append(unit)
 
+        return param_units
 
-        #Do fit for 1D data
-        if dimensions == 1:
+    def perform_fit(self, data_dict, data, fitclass, setpoints, p0, param_units, **kwargs):
 
-            xdata = x_dict['data']
-            ydata = y_dict['data']
+        fit = {}
+        fit['parameters'] = {}
+        fit['start_params'] = {}
 
-            fit = {}
-            fit['parameters'] = {}
-            fit['start_params'] = {}
+        xdata = data_dict[self.input_vars[0]]
+        ydata = data_dict[self.output_var[0]]
 
-            guess = self.find_start_parameters(fitclass, p0, xdata, ydata)
-            popt, pcov = curve_fit(fitclass.fun, xdata, ydata, p0=guess, **kwargs)
+        p_guess = self.find_start_parameters(fitclass, p0, data_dict)
+        popt, pcov = curve_fit(fitclass.fun, xdata, ydata, p0=p_guess, **kwargs)
 
-            for parameter in fitclass.p_labels:
-                fit['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
-                fit['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
-                fit['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
-                fit['start_params'][parameter] = guess[fitclass.p_labels.index(parameter)]
+        for parameter in fitclass.p_labels:
+            fit['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
+            fit['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
+            fit['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
+            fit['start_params'][parameter] = p_guess[fitclass.p_labels.index(parameter)]
 
-
-            fit['inferred_from'] = {'xdata': x_dict['name'],
-                                            'ydata': y_dict['name'],
-                                            'run_id': data['run_id'],
-                                            'exp_id': data['exp_id'],
-                                            'dependencies': data['dependencies'],
-                                            'dimensions': 1} #missing sample name
-
-
-
-
-        #Do fit for 2D data
-        if dimensions == 2:
-
-            xdata = x_dict['data']
-            ydata = y_dict['data']
-            zdata = z_dict['data']
-
-            fit = {}
-
-            if cut == 'horizontal':
-                setarray = ydata
-                xarray = xdata
-
-            if cut == 'vertical':
-                setarray = xdata
-                xarray = ydata
-
-            setpoints = np.unique(setarray)
-            yarray = zdata
-
-            #reformats as array of set points, with a y-array and z-array corresponding to each set point
-
-            xdata_lst = []
-            ydata_lst = []
-
-            for set_point in setpoints:
-                x_dat = []
-                y_dat = []
-                for setpoint, x, y in zip(setarray, xarray, yarray):
-                    if setpoint == set_point:
-                        x_dat.append(x)
-                        y_dat.append(y)
-                xdata_lst.append(np.array(x_dat))
-                ydata_lst.append(np.array(y_dat))
-
-
-            xdata = np.array(xdata_lst)
-            ydata = np.array(ydata_lst)
-
-
-            #fitting as a sequence of 1D plots for different set_values
-
-            for set_value, xdata_1d, ydata_1d in zip(setpoints, xdata, ydata):
-
-                guess = self.find_start_parameters(fitclass, p0, xdata_1d, ydata_1d)
-                popt, pcov = curve_fit(fitclass.fun, xdata_1d, ydata_1d, p0=guess, **kwargs)
-
-                fit[set_value] = {}
-                fit[set_value]['parameters'] = {}
-                fit[set_value]['start_params'] = {}
-
-                for parameter in fitclass.p_labels:            #parameters currently missing units, use fitclass.p_units
-                    fit[set_value]['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
-                    fit[set_value]['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
-                    fit[set_value]['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
-                    fit[set_value]['start_params'][parameter] = guess[fitclass.p_labels.index(parameter)]
-
-
-            #does this needs to be moved so that it specifies which cut the individual sets of parameters are inferred from?
-            fit['inferred_from'] = {'xdata': x_dict['name'],
-                                            'ydata': y_dict['name'],
-                                            'zdata': z_dict['name'],
-                                            'run_id': data['run_id'],
-                                            'exp_id': data['exp_id'],
-                                            'dependencies': data['dependencies'],
-                                            'dimensions' : 2} #missing sample name
-
-            if cut == 'horizontal':
-                fit['inferred_from']['setpoints'] = 'ydata'
-
-            if cut == 'vertical':
-                fit['inferred_from']['setpoints'] = 'xdata'
-
-
-        dill_obj = dill.dumps(fitclass)
-        fit['estimator'] = {'method': 'Least squared fit',
-                            'type': fitclass.name,
-                            'function used': str(fitclass.fun_np),
-                            'dill': dill_obj}
-
-        # Find estimated values for the function output based on fitted parameters
-
-        fit['estimate'] = {}
-
-        xdata = x_dict['data']
-        output = y_dict
-
-        if dimensions == 2:
-            ydata = y_dict['data']
-            output = z_dict
-
-        est_values = []  # estimated/predicted value for the measured data given the fitted parameters
-        est_name = '{}_estimate'.format(output['name'])
-        est_label = output['label']
-        est_unit = output['unit']
-
-        p_values = []
-
-        # make array of estimated values based on parameters and model used
-        if dimensions == 1:
-
-            params = list(fitclass.p_labels)
-            for index, parameter in enumerate(params):
-                if parameter not in fit['parameters']:
-                    raise KeyError(
-                        'The list of parameters for the fitclass {} contains a parameter, {}, which is not present in the fit dictionary.'.format(
-                            fitclass.name, parameter))
-                params[index] = fit['parameters'][parameter]['value']
-
+        # make an dictionary containing arrays of each parameter value with same dimension as data (for estimate)
+        all_params = {}
+        for parameter in fitclass.p_labels:
+            all_params[parameter] = []
             for datapoint in xdata:
-                y = fitclass.fun(datapoint, *params)
-                est_values.append(y)
-                p_values.append(params)
-
-        if dimensions == 2:
-
-            for xpoint, ypoint in zip(xdata, ydata):
-
-                if xpoint in setpoints:
-                    setpoint = xpoint
-                    datapoint = ypoint
-                elif ypoint in setpoints:
-                    setpoint = ypoint
-                    datapoint = xpoint
-
-                params = list(fitclass.p_labels)
-                for index, parameter in enumerate(params):
-                    if parameter not in fit[setpoint]['parameters']:
-                        raise KeyError(
-                            'The list of parameters for the fitclass {} contains a parameter, {}, which is not present in the fit dictionary.'.format(
-                                fitclass.name, parameter))
-                    params[index] = fit[setpoint]['parameters'][parameter]['value']
-
-                z = fitclass.fun(datapoint, *params)
-                est_values.append(z)
-                p_values.append(params)
-
-
-        fit['estimate']['name'] = est_name
-        fit['estimate']['label'] = est_label
-        fit['estimate']['unit'] = est_unit
-        fit['estimate']['data'] = est_values
-        fit['estimate']['parameters'] = p_values
-
+                all_params[parameter].append(fit['parameters'][parameter]['value'])
+            all_params[parameter] = np.array(all_params[parameter])
+        self.full_parameter_dict = all_params
 
         return fit
-        
 
+    def estimate_function_values(self, fitclass, data, data_dict):
+
+        estimate = {}
+
+        input_data = data_dict
+        for variable in self.output_var:
+                del input_data[variable]
+
+        input_parameters = self.full_parameter_dict
+
+        # Calculate estimated values for output based on function and store in estimate['values']
+        estimate['values'] = fitclass.fun(**input_data, **input_parameters)
+
+        # Save estimate
+        estimate['name'] = '{}_estimate'.format(self.output_dataname[0])
+        estimate['label'] = '{} estimate'.format(data[self.output_dataname[0]]['label'])
+        estimate['unit'] = data[self.output_dataname[0]]['unit']
+        estimate['parameters'] = self.full_parameter_dict   #not sure this is used for anything
+
+        return estimate
+
+
+class Fitter_2Ddata_1Dfunction(Fitter1D):
+
+    def perform_fit(self, data_dict, data, fitclass, setpoints, p0, param_units, **kwargs):
+
+        #Retrieve data
+        xarray = data_dict[self.input_vars[0]]
+        yarray = data_dict[self.output_var[0]]
+        setpoint_array = data[setpoints[0]]['data']
+
+        # Reorganize data by setpoint
+        unique_setpoints = np.unique(setpoint_array)
+
+        xdata_lst = []
+        ydata_lst = []
+
+        for set_point in unique_setpoints:
+            x_dat = []
+            y_dat = []
+            for setpoint, x, y in zip(setpoint_array, xarray, yarray):
+                if setpoint == set_point:
+                    x_dat.append(x)
+                    y_dat.append(y)
+            xdata_lst.append(np.array(x_dat))
+            ydata_lst.append(np.array(y_dat))
+
+        xdata = np.array(xdata_lst)
+        ydata = np.array(ydata_lst)
+
+        #perform 1D fit for cross section at each setpoint and save to fit dictionary
+        fit = {}
+
+        for set_value, xdata_1d, ydata_1d in zip(unique_setpoints, xdata, ydata):
+
+            data_dict_1d = {self.input_vars[0]:xdata_1d, self.output_var[0]:ydata_1d}
+
+            p_guess = self.find_start_parameters(fitclass, p0, data_dict_1d)
+            popt, pcov = curve_fit(fitclass.fun, xdata_1d, ydata_1d, p0=p_guess, **kwargs)
+
+            fit[set_value] = {}
+            fit[set_value]['parameters'] = {}
+            fit[set_value]['start_params'] = {}
+
+            for parameter in fitclass.p_labels:  # parameters currently missing units, use fitclass.p_units
+                fit[set_value]['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
+                fit[set_value]['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
+                fit[set_value]['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
+                fit[set_value]['start_params'][parameter] = p_guess[fitclass.p_labels.index(parameter)]
+
+
+
+        # Make an array of parameters, specified in the same order as the original setpoint array, before data
+        # was rearranged to do the fit. This is for running through the estimation function later.
+        all_params = {}
+        for parameter in fitclass.p_labels:
+            all_params[parameter] = []
+            for setpoint in setpoint_array:
+                all_params[parameter].append(fit[setpoint]['parameters'][parameter]['value'])
+            all_params[parameter] = np.array(all_params[parameter])
+        self.full_parameter_dict = all_params
+
+        return fit
+
+
+
+
+    #def fit_2d_function_to_2d_data(self):
+     #   print('This does not work yet.')
+
+
+    #is data_dict helpful? What are all theses things I've defined now, and how many of them are just reworks
+    #the same stuff?

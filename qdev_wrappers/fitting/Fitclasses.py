@@ -20,6 +20,7 @@ class T1(Fitclass):
         self.fun_str = r'$f(x) = a \exp(-x/T) + c$'
         self.fun_np = 'a*np.exp(-x/T)+c'
         self.fun_vars = ['x']
+        self.fun_output = ['y']
         self.p_names = ['$a$', '$T$', '$c$']
         self.p_labels= ['a', 'T', 'c']
         self.p_units = ['y', 'x', 'y']                                        
@@ -48,6 +49,7 @@ class T2(Fitclass):
         self.fun_str = r'$f(x) = a \sin(\omega x +\phi)\exp(-x/T) + c$'
         self.fun_np = 'a*np.exp(-x/T)*np.sin(w*x+p)+c'
         self.fun_vars = ['x']
+        self.fun_output = ['y']
         self.p_names = ['$a$', '$T$', '$\omega$', '$\phi$', '$c$']
         self.p_labels = ['a', 'T', 'w', 'p', 'c']
         self.p_units = ['y', 'x', '1/x', '', 'y']                 

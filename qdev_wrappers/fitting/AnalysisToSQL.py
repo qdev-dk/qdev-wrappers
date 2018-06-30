@@ -36,7 +36,7 @@ def fit_to_SQL(fit):    #it would be an improvement if it were able to get the f
     fitclass_pckl = fit['estimator']['dill']
     fitclass = dill.loads(fitclass_pckl)
 
-    est_values = fit['estimate']['data']
+    est_values = fit['estimate']['values']
     est_name = '{}_estimate'.format(fit['estimate']['name'])
     est_label = fit['estimate']['label']
     est_unit = fit['estimate']['unit']
