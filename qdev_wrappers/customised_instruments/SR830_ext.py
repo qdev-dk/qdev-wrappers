@@ -1,10 +1,7 @@
-from qcodes.instrument_drivers.stanford_research.SR830 import SR830
-from qcodes.instrument_drivers.devices import VoltageDivider
-from qcodes.instrument_drivers.stanford_research.SR830 import ChannelBuffer
+from qcodes.instrument_drivers.stanford_research.SR830 import SR830, ChannelBuffer
 
 # A conductance buffer, needed for the faster 2D conductance measurements
 # (Dave Wecker style)
-
 
 class ConductanceBuffer(ChannelBuffer):
     """
@@ -14,7 +11,7 @@ class ConductanceBuffer(ChannelBuffer):
     We basically just slightly tweak the get method
     """
 
-    def __init__(self, name: str, instrument: 'SR830_T10', **kwargs):
+    def __init__(self, name: str, instrument: 'SR830', **kwargs):
         super().__init__(name, instrument, channel=1)
         self.unit = ('e^2/h')
 
@@ -22,12 +19,12 @@ class ConductanceBuffer(ChannelBuffer):
         # If X is not being measured, complain
         if self._instrument.ch1_display() != 'X':
             raise ValueError('Can not return conductance since X is not '
-                             'being measured on channel 1.')
+                                'being measured on channel 1.')
 
         resistance_quantum = 25.818e3  # (Ohm)
         xarray = super().get()
-        iv_conv = self._instrument.ivgain
-        ac_excitation = self._instrument.amplitude_true()
+        iv_conv = self._instrument.iv_gain
+        ac_excitation = self._instrument.amplitude.get_latest()
 
         gs = xarray / iv_conv / ac_excitation * resistance_quantum
 
@@ -37,81 +34,73 @@ class ConductanceBuffer(ChannelBuffer):
 # Subclass the SR830
 
 class SR830_ext(SR830):
-    """
-    An SR830 with the following super powers:
-        - a Voltage divider
-        - An I/V converter
-        - A conductance buffer
-    """
-
-    def __init__(self, name, address, config, **kwargs):
+    def __init__(self, name, address, **kwargs):
         super().__init__(name, address, **kwargs)
 
-        # using the vocabulary of the config file
-        self.ivgain = float(config.get('Gain Settings',
-                                       'iv gain'))
-        self.__acf = float(config.get('Gain Settings',
-                                      'ac factor'))
+        self.add_parameter(name='iv_gain',
+                            label='I/V Gain',
+                            unit='',
+                            set_cmd=lambda x: x,
+                            get_parser=float)
 
-        self.add_parameter('amplitude_true',
-                           label='ac bias',
-                           parameter_class=VoltageDivider,
-                           v1=self.amplitude,
-                           division_value=self.acfactor)
+        self.add_parameter(name='g',
+                            label='Conductance',
+                            unit='e$^2$/h',
+                            get_cmd=self._get_conductance,
+                            get_parser=float)
 
-        self.acbias = self.amplitude_true
+        self.add_parameter(name='resistance',
+                            label='Resistance',
+                            unit='Ohm',
+                            get_cmd=self._get_resistance,
+                            get_parser=float)
+        
+        self.add_parameter(name='g_X',
+                            label='Conductance X',
+                            unit='e$^2$/h',
+                            get_cmd=self._get_conductance_X,
+                            get_parser=float)
 
-        self.add_parameter('g',
-                           label='{} conductance'.format(self.name),
-                           # use lambda for late binding
-                           get_cmd=self._get_conductance,
-                           unit='e^2/h',
-                           get_parser=float)
-
-        self.add_parameter('conductance',
-                           label='{} conductance'.format(self.name),
-                           parameter_class=ConductanceBuffer)
-
-        self.add_parameter('resistance',
-                           label='{} Resistance'.format(self.name),
-                           get_cmd=self._get_resistance,
-                           unit='Ohm',
-                           get_parser=float)
+        self.add_parameter(name='resistance_X',
+                            label='Resistance X',
+                            unit='Ohm',
+                            get_cmd=self._get_resistance_X,
+                            get_parser=float)
 
     def _get_conductance(self):
-        """
-        get_cmd for conductance parameter
-        """
-        resistance_quantum = 25.8125e3  # (Ohm)
-        i = self.R() / self.ivgain
-        # ac excitation voltage at the sample
-        v_sample = self.amplitude_true()
-
-        return (i / v_sample) * resistance_quantum
+        V = self.amplitude.get_latest()
+        I = abs(self.R()/self.iv_gain.get_latest())
+        conductance_quantum = 7.7480917310e-5
+        return (I/V)/(conductance_quantum/2)
 
     def _get_resistance(self):
-        """
-        get_cmd for resistance parameter
-        """
-        i = self.R() / self.ivgain
-        # ac excitation voltage at the sample
-        v_sample = self.amplitude_true()
+        V = self.amplitude.get_latest()
+        I = abs(self.R()/self.iv_gain.get_latest())
+        return (V/I)
 
-        return (v_sample / i)
+    def _get_conductance_X(self):
+        V = self.amplitude.get_latest()
+        I = self.X()/self.iv_gain.get_latest()
+        conductance_quantum = 7.7480917310e-5
+        return (I/V)/(conductance_quantum/2)
 
-    @property
-    def acfactor(self):
-        return self.__acf
+    def _get_resistance_X(self):
+        V = self.amplitude.get_latest()
+        I = self.X()/self.iv_gain.get_latest()
+        return (V/I)
 
-    @acfactor.setter
-    def acfactor(self, acfactor):
-        self.__acf = acfactor
-        self.amplitude_true.division_value = acfactor
 
-    def snapshot_base(self, update=False, params_to_skip_update=None):
-        if params_to_skip_update is None:
-            params_to_skip_update = (
-                'conductance', 'ch1_databuffer', 'ch2_databuffer')
-        snap = super().snapshot_base(
-            update=update, params_to_skip_update=params_to_skip_update)
-        return snap
+"""
+Voltage division on input to fridge is added as scale factor to self.amplitude.
+Use negative I/V gain to account for sign change on voltage input on Basel current amplifier.
+To take the new scale into account we also need to change the limits on the amplitude.
+
+Example yaml file:
+    lockin:
+        driver: qdev_wrappers.customised_instruments.SR830_ext
+        type: SR830_ext
+        address: 'your address'
+        parameters:
+            amplitude: {scale: 100000, limits: '4e-8,5e-5', monitor: true}
+            iv_gain: {initial_value: -10000000}
+"""
