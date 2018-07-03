@@ -45,7 +45,6 @@ class StationConfigurator:
     def __init__(self, filename: Optional[str] = None,
                  station: Optional[Station] = None) -> None:
         self.monitor_parameters = {}
-        self.monitor = Monitor()
 
         if station is None:
             station = Station.default or Station()
@@ -218,6 +217,6 @@ class StationConfigurator:
         self.station.add_component(instr)
 
         # restart Monitor
-        self.monitor = Monitor(*self.monitor_parameters.values())
+        Monitor(*self.monitor_parameters.values())
 
         return instr
