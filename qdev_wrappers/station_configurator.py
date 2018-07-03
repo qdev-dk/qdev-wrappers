@@ -40,7 +40,7 @@ class StationConfigurator:
     """
 
     PARAMETER_ATTRIBUTES = ['label', 'unit', 'scale', 'inter_delay', 'delay',
-                            'step']
+                            'step', 'offset']
 
     def __init__(self, filename: Optional[str] = None,
                  station: Optional[Station] = None) -> None:
