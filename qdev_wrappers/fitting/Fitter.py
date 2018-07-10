@@ -17,13 +17,13 @@ def fit_data(data, fitclass, fun_inputs, fun_output, setpoint_params=None, p0=No
 
 
     if fun_dim == 1 and num_inputs == 1 and num_setpoints == 0:
-        fitter = Fitter_1D(data, fitclass, fun_output)
+        fitter = Fitter1D(data, fitclass, fun_output)
     elif fun_dim == 1 and num_inputs == 1 and num_setpoints == 1:
-        fitter.Fitter_2Ddata_1Dfunction(data, fitclass, fun_output)    #what does the fitter actually need??
-    else:
-        print('The specified function has ')
+        fitter =Fitter_2Ddata_1Dfunction(data, fitclass, fun_output)    #what does the fitter actually need??
 
-    fitter.find_fit(data, fitclass, fun_inputs, fun_output, setpoint_params, p0, **kwargs)
+    fit = fitter.find_fit(data, fitclass, fun_inputs, fun_output, setpoint_params, p0, **kwargs)
+
+    return fit
 
 class Fitter1D:
 
@@ -48,9 +48,10 @@ class Fitter1D:
 
         self.check_input_matches_fitclass(fitclass, fun_inputs, fun_output, setpoint_params, p0)
         data_dict, label_dict, name_dict, unit_dict = self.organize_data(data, fun_inputs, fun_output, setpoint_params)
-        param_units = self.find_parameter_units(fitclass, unit_dict)
 
-        fit = self.perform_fit(data_dict, data, fitclass, setpoint_params, p0, param_units, **kwargs)
+        fit = self.perform_fit(data_dict, data, fitclass, setpoint_params, p0, **kwargs)
+
+        fit['parameter units']= self.find_parameter_units(fitclass, unit_dict)
 
         fit['estimate'] = self.estimate_function_values(fitclass, data, data_dict)
 
@@ -152,20 +153,21 @@ class Fitter1D:
     def find_parameter_units(self, fitclass, unit_dict):
 
         unit_templates = fitclass.p_units
-        param_units = []
+        unit_labels = fitclass.p_labels
+        param_units = {}
 
-        for template in unit_templates:
+        for template, label in zip(unit_templates, unit_labels):
             template = list(template)
             for i in range(len(template)):
                 for variable in unit_dict.keys():
                     if template[i] == variable:
                         template[i] = unit_dict[variable]
             unit = "".join(template)
-            param_units.append(unit)
+            param_units[label] = unit
 
         return param_units
 
-    def perform_fit(self, data_dict, data, fitclass, setpoints, p0, param_units, **kwargs):
+    def perform_fit(self, data_dict, data, fitclass, setpoints, p0, **kwargs):
 
         fit = {}
         fit['parameters'] = {}
@@ -180,7 +182,6 @@ class Fitter1D:
         for parameter in fitclass.p_labels:
             fit['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
             fit['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
-            fit['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
             fit['start_params'][parameter] = p_guess[fitclass.p_labels.index(parameter)]
 
         # make an dictionary containing arrays of each parameter value with same dimension as data (for estimate)
@@ -218,7 +219,7 @@ class Fitter1D:
 
 class Fitter_2Ddata_1Dfunction(Fitter1D):
 
-    def perform_fit(self, data_dict, data, fitclass, setpoints, p0, param_units, **kwargs):
+    def perform_fit(self, data_dict, data, fitclass, setpoints, p0, **kwargs):
 
         #Retrieve data
         xarray = data_dict[self.input_vars[0]]
@@ -246,6 +247,7 @@ class Fitter_2Ddata_1Dfunction(Fitter1D):
 
         #perform 1D fit for cross section at each setpoint and save to fit dictionary
         fit = {}
+        fit['start_params'] = {}
 
         for set_value, xdata_1d, ydata_1d in zip(unique_setpoints, xdata, ydata):
 
@@ -256,13 +258,12 @@ class Fitter_2Ddata_1Dfunction(Fitter1D):
 
             fit[set_value] = {}
             fit[set_value]['parameters'] = {}
-            fit[set_value]['start_params'] = {}
+            fit['start_params'][set_value] = {}
 
             for parameter in fitclass.p_labels:  # parameters currently missing units, use fitclass.p_units
                 fit[set_value]['parameters'][parameter] = {'value': popt[fitclass.p_labels.index(parameter)]}
                 fit[set_value]['parameters'][parameter]['cov'] = pcov[fitclass.p_labels.index(parameter)]
-                fit[set_value]['parameters'][parameter]['unit'] = param_units[fitclass.p_labels.index(parameter)]
-                fit[set_value]['start_params'][parameter] = p_guess[fitclass.p_labels.index(parameter)]
+                fit['start_params'][set_value][parameter] = p_guess[fitclass.p_labels.index(parameter)]
 
 
 

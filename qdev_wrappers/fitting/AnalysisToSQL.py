@@ -33,7 +33,7 @@ def make_table(tablename, cursor):
 
 def fit_to_SQL(fit):    #it would be an improvement if it were able to get the fitclass from the fit information
 
-    fitclass_pckl = fit['estimator']['dill']
+    fitclass_pckl = fit['inferred_from']['estimator']['dill']
     fitclass = dill.loads(fitclass_pckl)
 
     est_values = fit['estimate']['values']
@@ -41,44 +41,41 @@ def fit_to_SQL(fit):    #it would be an improvement if it were able to get the f
     est_label = fit['estimate']['label']
     est_unit = fit['estimate']['unit']
     param_values = fit['estimate']['parameters']
-
-    dim = fit['inferred_from']['dimensions']
-
-    if dim == 1:
-        param_units = [fit['parameters'][param]['unit'] for param in list(fitclass.p_labels)]
-    elif dim == 2:
-        setpoints = [key for key in fit.keys()]
-        param_units = [fit[setpoints[0]]['parameters'][param]['unit'] for param in list(fitclass.p_labels)]
-
+    param_units = fit['parameter units']
+    data_length = len(est_values)
 
     tablename = 'analysis_{}_{}'.format(fit['inferred_from']['run_id'], fitclass.name)
     
-
+    # make SQL table columns list
     table_columns = [est_name]
     for parameter in fitclass.p_labels:
         table_columns.append(parameter)
 
+    # reformat parameters as a list of table rows
+    param_list = []
+    for i in range(data_length):
+        params = []
+        for parameter in fitclass.p_labels:
+            params.append(param_values[parameter][i])
+        param_list.append(params)
+
+    # make list of table row contents
     table_rows = []
-    if dim == 1:
-        for estimate, params in zip(est_values, param_values):
-            id_nr = est_values.index(estimate) + 1
-            row = (id_nr, estimate, *params)
-            table_rows.append(row)
-    elif dim == 2:
-        for estimate, parameters in zip(est_values, param_values):
-            id_nr = est_values.index(estimate) + 1
-            row = (id_nr, estimate, *parameters)
-            table_rows.append(row)
+    for estimate, parameters, index in zip(est_values, param_list, range(data_length)):
+        id_nr = index + 1
+        row = (id_nr, estimate, *parameters)
+        table_rows.append(row)
 
 
 
     data_run_id = fit['inferred_from']['run_id']
     exp_id = fit['inferred_from']['exp_id']
     predicts = est_name.strip("estimate").strip("_")
-    estimator = "{}, {}".format(fit['estimator']['method'], fit['estimator']['type'])
-    analysis = fit['estimator']['function used']
-    dill_obj = fit['estimator']['dill']
+    estimator = "{}, {}".format(fit['inferred_from']['estimator']['method'], fit['inferred_from']['estimator']['type'])
+    analysis = str(fit['inferred_from']['estimator']['function used'])
+    dill_obj = fit['inferred_from']['estimator']['dill']
     parameters = fitclass.p_labels
+    start_params = str(fit['start_params'])
     param_labels = fitclass.p_names
 
 
@@ -89,7 +86,7 @@ def fit_to_SQL(fit):    #it would be an improvement if it were able to get the f
     if not is_table('analyses', cur):
         cur.execute('''CREATE TABLE analyses
                         (data_run_id INTEGER, exp_id INTEGER, run_id INTEGER, analysis_table_name TEXT,
-                        predicts TEXT, estimator TEXT, function TEXT, dill TEXT)''')
+                        predicts TEXT, estimator TEXT, function TEXT, start_parameters TEXT, dill TEXT)''')
 
 
 
@@ -108,14 +105,14 @@ def fit_to_SQL(fit):    #it would be an improvement if it were able to get the f
 
 
 
-    sql_analyses = 'INSERT INTO analyses VALUES (?,?,?,?,?,?,?,?)'
+    sql_analyses = 'INSERT INTO analyses VALUES (?,?,?,?,?,?,?,?,?)'
 
     run_id = 1
     max_id = cur.execute('SELECT MAX(run_id) FROM layouts').fetchone()[0]
     if max_id != None:
         run_id += max_id
 
-    cur.execute(sql_analyses, (data_run_id, exp_id, run_id, table, predicts, estimator, analysis, dill_obj))
+    cur.execute(sql_analyses, (data_run_id, exp_id, run_id, table, predicts, estimator, analysis, start_params, dill_obj))
 
 
 
