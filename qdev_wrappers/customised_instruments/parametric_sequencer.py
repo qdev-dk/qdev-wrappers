@@ -150,7 +150,8 @@ class ParametricSequencer(Instruement):
         if awg_val != self.default_builder_parms()['seq_mode']:
             raise RuntimeError('seq mode of awg does not match '
                                'paremeters of current sequence')
-        else return awg_val
+        else:
+            return awg_val
 
     def _create_sequence(self):  # -> bb.Sequence:
         """
