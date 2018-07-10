@@ -6,13 +6,16 @@ from itertools import compress
 from functools import partial
 from os.path import sep
 import numpy as np
-from qcodes import Station, Instrument
-from qdev_wrappers.alazar_controllers.ATSChannelController import ATSChannelController
-from qdev_wrappers.alazar_controllers.acquisition_parameters import NonSettableDerivedParameter
+from qcodes import Station, Instrument, ChannelList
+from qcodes.instrument.channel import InstrumentChannel
+from qdev_wrappers.parameters import DelegateParameter
+from qdev_wrappers.alazar_controllers.ATSChannelController import (
+    ATSChannelController, AlazarMultiChannelParameter)
+from qdev_wrappers.alazar_controllers.acquisition_parmeters import NonSettableDerivedParameter
 from qdev_wrappers.alazar_controllers.alazar_channel import AlazarChannel
 from qdev_wrappers.transmon.file_helpers import get_subfolder_location
-from qcodes.instrument.channel import InstrumentChannel
-from qcodes import Parameter
+DFSDF
+
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +63,7 @@ class DemodulationChannel(InstrumentChannel):
         alazar_channels = ChannelList(
             self, "Channels", AlazarChannel,
             multichan_paramclass=AlazarMultiChannelParameter)
-        self.add_submodule("alazar_channels", channels)
+        self.add_submodule("alazar_channels", alazar_channels)
         if drive_frequency is not None:
             self.drive_frequency(drive_frequency)
 
@@ -142,7 +145,7 @@ class ParametricWaveformAnalyser(Instrument):
                            set_cmd=self._set_seq_mode,
                            get_cmd=self._get_seq_mode)
         demod_channels = ChannelList(self, "Channels", DemodulationChannel)
-        self.add_submodule("demodulation_channels", channels)
+        self.add_submodule("demodulation_channels", demod_channels)
         self.alazar_channels = self.alazar_controller.alazar_channels
 
     def _set_int_delay(self, int_delay):  # TODO: nicer way to do this?
@@ -169,7 +172,7 @@ class ParametricWaveformAnalyser(Instrument):
                 self.add_alazar_channel(i, 'm', [True, True, True])
                 self.add_alazar_channel(i, 'm', [True, True, True])
 
-    def _get_seq_mode():
+    def _get_seq_mode(self):
         if self.alazar.seq_mode() and self.sequencer.seq_mode():
             return True
         elif not self.alazar.seq_mode() and not self.sequencer.seq_mode():
@@ -220,7 +223,7 @@ class ParametricWaveformAnalyser(Instrument):
         self.add_alazar_channel(demod_ch_num, 'm')
         self.add_alazar_channel(demod_ch_num, 'p')
 
-    def clear_demodulation_channels():
+    def clear_demodulation_channels(self):
         """
         clears all demodulation_channels and the alazar_channels
         """
@@ -230,7 +233,8 @@ class ParametricWaveformAnalyser(Instrument):
             self.alazar_channels.remove(ch)
         self.sequencer.sequence_up_to_date = False
 
-    def add_alazar_channel(self, demod_ch_num, dtype, num_averages=1, averaging_settings=None):
+    def add_alazar_channel(self, demod_ch_num, dtype, num_averages=1,
+                           averaging_settings=None):
         """
         adds an alazar channel with the demodulation frequency matching the
         demod_ch with demod_ch_num, dtype is 'm' or 'p' for magnitude or phase
@@ -267,7 +271,7 @@ class ParametricWaveformAnalyser(Instrument):
         if not average_buffers:
             chan.buffers_per_acquisition(
                 len(self.sequencer.outer_setpoints()['setpoints']))
-        chan.num_averages(num_averages) # TODO!!
+        chan.num_averages(num_averages)  # TODO!!
         chan.prepare_channel(
             record_setpoints=self.sequencer.inner_setpoints()['setpoints'],
             buffer_setpoints=self.sequencer.outer_setpoints()['setpoints'],

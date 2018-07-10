@@ -1,5 +1,6 @@
 from typing import Callable, Dict, List
-from copy import deepcopy
+import logging
+from copy import deepcopy, copy
 import re
 from itertools import compress
 from functools import partial
@@ -59,7 +60,7 @@ class DictWithDefaultParameter(Parameter):
         self._save_val(new_dict)
 
 
-class ParametricSequencer(Instruement):
+class ParametricSequencer(Instrument):
     """
     Take a step back to make it more general, and keep the
     ParametricWaveforms in the background
@@ -73,13 +74,13 @@ class ParametricSequencer(Instruement):
     default_inner_setpoints = {'name': 'records',
                                'label': 'Records',
                                'unit': '',
-                               setpoints: None}
+                               'setpoints': None}
     default_outer_setpoints = {'name': 'buffers',
                                'label': 'Buffers',
                                'unit': '',
-                               setpoints: None}
+                               'setpoints': None}
 
-    def __init__(self, awg, default_builder_parms: Dict=None):
+    def __init__(self, awg, default_builder_parms: Dict=None) -> None:
         self.awg = awg
         self.builder = None
         self.save_sequence_on_upload = True
@@ -91,10 +92,10 @@ class ParametricSequencer(Instruement):
                            set_cmd=self._set_sequence_builder,
                            parameter_class=BuilderParameter)
         self.add_parameter(name='inner_setpoints',
-                           initial_val=default_inner_setpoints,
+                           initial_val=self.default_inner_setpoints,
                            parameter_class=DictWithDefaultParameter)
         self.add_parameter(name='outer_setpoints',
-                           initial_val=default_outer_setpoints,
+                           initial_val=self.default_outer_setpoints,
                            parameter_class=DictWithDefaultParameter)
         self.add_parameter(name='default_builder_parms',
                            initial_val=default_builder_parms,
@@ -122,6 +123,7 @@ class ParametricSequencer(Instruement):
             raise RuntimeError('must turn off sequence mode to'
                                ' set output of one element on loop')
         array = np.asarray(self.inner_setpoints()['setpoints'])
+        idx = (np.abs(array - value)).argmin()
         return array[self.awg.sequence_pos(idx)]
 
     def _set_seq_mode(self, status):
@@ -173,14 +175,14 @@ class ParametricSequencer(Instruement):
         upload it to the awg
         """
         seq = self._create_sequence()
-        if save_sequence_on_upload:
-            unwrapped_seq = sequence.unwrap()[0]
+        if self.save_sequence_on_upload:
+            unwrapped_seq = seq.unwrap()[0]
             awg_file = self.awg.make_awg_file(*unwrapped_seq)
-            filename = sequence.name + '.awg'
+            filename = seq.name + '.awg'
             self.awg.send_and_load_awg_file(awg_file, filename)
             self.awg.all_channels_on()
             self.awg.run()
-            if save_sequence:
+            if self.save_sequence:
                 # TODO: remove dependence on file_helpers
                 local_filename = sep.join(
                     [get_subfolder_location('waveforms'), filename])
