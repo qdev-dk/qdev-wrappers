@@ -23,6 +23,11 @@ def fit_data(data, fitclass, fun_inputs, fun_output, setpoint_params=None, p0=No
 
     fit = fitter.find_fit(data, fitclass, fun_inputs, fun_output, setpoint_params, p0, **kwargs)
 
+    dill_fitclass = dill.dumps(fitclass)
+    dill_fitter = dill.dumps(fitter)
+
+    fit['inferred_from']['estimator']['dill'] = {'fitclass' : dill_fitclass, 'fitter' : dill_fitter}
+
     return fit
 
 class Fitter1D:
@@ -55,7 +60,6 @@ class Fitter1D:
 
         fit['estimate'] = self.estimate_function_values(fitclass, data, data_dict)
 
-        dill_obj = dill.dumps(fitclass)
         fit['inferred_from'] = {'inputs': fun_inputs,
                                 'output': fun_output,
                                 'setpoints': setpoint_params,
@@ -66,7 +70,7 @@ class Fitter1D:
                                 'estimator' : {'method': 'Least squared fit',
                                                 'type': fitclass.name,
                                                 'function used': str(fitclass.fun_np),
-                                                'dill': dill_obj}
+                                                }
                                 }
 
         return fit

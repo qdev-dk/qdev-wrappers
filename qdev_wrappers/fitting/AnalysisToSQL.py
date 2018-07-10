@@ -33,7 +33,7 @@ def make_table(tablename, cursor):
 
 def fit_to_SQL(fit):    #it would be an improvement if it were able to get the fitclass from the fit information
 
-    fitclass_pckl = fit['inferred_from']['estimator']['dill']
+    fitclass_pckl = fit['inferred_from']['estimator']['dill']['fitclass']
     fitclass = dill.loads(fitclass_pckl)
 
     est_values = fit['estimate']['values']
@@ -73,7 +73,7 @@ def fit_to_SQL(fit):    #it would be an improvement if it were able to get the f
     predicts = est_name.strip("estimate").strip("_")
     estimator = "{}, {}".format(fit['inferred_from']['estimator']['method'], fit['inferred_from']['estimator']['type'])
     analysis = str(fit['inferred_from']['estimator']['function used'])
-    dill_obj = fit['inferred_from']['estimator']['dill']
+    dill_obj = str(fit['inferred_from']['estimator']['dill'])
     parameters = fitclass.p_labels
     start_params = str(fit['start_params'])
     param_labels = fitclass.p_names
