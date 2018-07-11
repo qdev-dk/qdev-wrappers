@@ -1,9 +1,11 @@
 from contextlib import suppress
 from typing import Optional
+from functools import partial
 import importlib
 import logging
 import yaml
-
+import os
+from copy import deepcopy
 import qcodes
 from qcodes.instrument.base import Instrument
 from qcodes.station import Station
@@ -15,7 +17,9 @@ from .parameters import DelegateParameter
 log = logging.getLogger(__name__)
 
 # config from the qcodesrc.json file (working directory, home or qcodes dir)
-enable_forced_reconnect = qcodes.config["user"]["enable_forced_reconnect"]
+enable_forced_reconnect = qcodes.config["station_configurator"]["enable_forced_reconnect"]
+default_folder = qcodes.config["station_configurator"]["default_folder"]
+default_file = qcodes.config["station_configurator"]["default_file"]
 
 
 class StationConfigurator:
@@ -30,17 +34,48 @@ class StationConfigurator:
     PARAMETER_ATTRIBUTES = ['label', 'unit', 'scale', 'inter_delay', 'delay',
                             'step']
 
-    def __init__(self, filename: str,
+    def __init__(self, filename: Optional[str] = None,
                  station: Optional[Station] = None) -> None:
         self.monitor_parameters = {}
 
         if station is None:
             station = Station.default or Station()
         self.station = station
+        self.filename = filename
 
-        with open(filename, 'r') as f:
-            self.config = yaml.load(f)
-            self._instrument_config = self.config['instruments']
+        self.load_file(self.filename)
+        for instrument_name in self._instrument_config.keys():
+            # TODO: check if name is valid (does not start with digit, contain
+            # dot, other signs etc.)
+            method_name = f'load_{instrument_name}'
+            if method_name.isidentifier():
+                setattr(self, method_name,
+                        partial(self.load_instrument,
+                                identifier=instrument_name))
+            else:
+                log.warning(f'Invalid identifier: ' +
+                            f'for the instrument {instrument_name} no ' +
+                            f'lazy loading method {method_name} could be ' +
+                            'created in the StationConfigurator')
+
+    def load_file(self, filename: Optional[str] = None):
+        if filename is None:
+            filename = default_file
+        try:
+            with open(filename, 'r') as f:
+                self.config = yaml.load(f)
+        except FileNotFoundError as e:
+            if not os.path.isabs(filename) and default_folder is not None:
+                try:
+                    with open(os.path.join(default_folder, filename),
+                              'r') as f:
+                        self.config = yaml.load(f)
+                except FileNotFoundError:
+                    raise e
+            else:
+                raise e
+
+        self._instrument_config = self.config['instruments']
 
         class ConfigComponent:
             def __init__(self, data):
@@ -54,7 +89,7 @@ class StationConfigurator:
         self.station.components['StationConfigurator'] = ConfigComponent(self.config)
 
     def load_instrument(self, identifier: str,
-                          **kwargs) -> Instrument:
+                        **kwargs) -> Instrument:
         """
         Creates an instrument driver as described by the loaded config file.
 
@@ -65,7 +100,10 @@ class StationConfigurator:
                 __init__-method of the instrument to be added.
         """
 
-        # load config
+        # load file
+        self.load_file(self.filename)
+
+        # load from config
         if identifier not in self._instrument_config.keys():
             raise RuntimeError('Instrument {} not found in config.'
                                .format(identifier))
@@ -95,9 +133,21 @@ class StationConfigurator:
         init_kwargs = {} if init_kwargs is None else init_kwargs
         if 'address' in instr_cfg:
             init_kwargs['address'] = instr_cfg['address']
+        if 'port' in instr_cfg:
+            init_kwargs['port'] = instr_cfg['port']
         # make explicitly passed arguments overide the ones from the config file
-        init_kwargs = {**init_kwargs, **kwargs}
-        instr = instr_class(identifier, **init_kwargs)
+
+        # the intuitive line:
+
+        # We are mutating the dict below
+        # so make a copy to ensure that any changes
+        # does not leek into the station config object
+        # specifically we may be passing non pickleable
+        # instrument instances via kwargs
+        instr_kwargs = deepcopy(init_kwargs)
+        instr_kwargs.update(kwargs)
+
+        instr = instr_class(name=identifier, **instr_kwargs)
         # setup
 
         # local function to refactor common code from defining new parameter

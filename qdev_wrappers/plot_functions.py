@@ -8,7 +8,7 @@ from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
 from qcodes.instrument.channel import MultiChannelInstrumentParameter
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
-
+from qcodes.instrument.channel import MultiChannelInstrumentParameter
 
 def _plot_setup(data, inst_meas, useQT=True, startranges=None):
     title = "{} #{:03d}".format(CURRENT_EXPERIMENT["sample_name"],

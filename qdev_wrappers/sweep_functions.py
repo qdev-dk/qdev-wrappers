@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from os.path import sep
 from typing import Optional, Tuple, Sequence
 from collections import Iterable
+from contextlib import suppress
 from pyqtgraph.multiprocess.remoteproxy import ClosedError
 
 import qcodes as qc
@@ -17,7 +18,6 @@ from qdev_wrappers.plot_functions import _plot_setup, \
     _save_individual_plots
 from qdev_wrappers.device_annotator.device_image import save_device_image
 
-
 import logging
 log = logging.getLogger(__name__)
 
@@ -30,23 +30,15 @@ def _flush_buffers(*params):
     Supposed to be called inside doNd like so:
     _flush_buffers(inst_set, *inst_meas)
     """
-
-    for param in params:
-        if hasattr(param, '_instrument'):
-            inst = param._instrument
-            if hasattr(inst, 'visa_handle'):
-                status_code = inst.visa_handle.clear()
-                if status_code is not None:
-                    log.warning("Cleared visa buffer on "
-                                "{} with status code {}".format(inst.name,
-                                                                status_code))
-        elif isinstance(param, VisaInstrument):
-            inst = param
-            status_code = inst.visa_handle.clear()
-            if status_code is not None:
-                log.warning("Cleared visa buffer on "
-                            "{} with status code {}".format(inst.name,
-                                                            status_code))
+    instr_names = set(p.root_instrument.name
+                      for p in params
+                      if p.root_instrument is not None)
+    for name in instr_names:
+        instr = qc.Instrument.find_instrument(name)
+        # suppress for non visa instruments, that do not implement this
+        # method
+        with suppress(AttributeError):
+            instr.device_clear()
 
 
 def _select_plottables(tasks):
@@ -63,7 +55,6 @@ def _select_plottables(tasks):
     plottables = [task for task in tasks if hasattr(task, '_instrument')]
 
     return tuple(plottables)
-
 
 def _do_measurement_single(measurement: Measure, meas_params: tuple,
                            do_plots: Optional[bool]=True,
@@ -145,6 +136,8 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
                 plot, _ = _plot_setup(data, meas_params, startranges=startranges)
             except (ClosedError, ConnectionError):
                 log.warning('Remote process crashed png will not be saved')
+                # if remote process crashed continue without plots
+                do_plots = False
         else:
             plot = None
         try:
@@ -162,6 +155,8 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
                 plot.save()
             except (ClosedError, ConnectionError):
                 log.warning('Remote process crashed png will not be saved')
+                # if remote process crashed continue without plots
+                do_plots = False
 
             if 'pdf_subfolder' in CURRENT_EXPERIMENT or 'png_subfolder' in CURRENT_EXPERIMENT:
                 _do_MatPlot(data,meas_params)

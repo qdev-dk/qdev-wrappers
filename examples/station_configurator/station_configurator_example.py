@@ -21,9 +21,12 @@ is closed. So there will appear multiple copies of them.
 from qdev_wrappers.station_configurator import StationConfigurator
 
 
-scfg = StationConfigurator('exampleConfig.yaml')
-dmm1 = scfg.load_instrument('dmm1')
-mock_dac = scfg.load_instrument('mock_dac')
+# scfg = StationConfigurator('exampleConfig.yaml')
+scfg = StationConfigurator()
+# dmm1 = scfg.load_instrument('dmm1')
+# mock_dac = scfg.load_instrument('mock_dac')
+mock_dac = scfg.load_instrument('qdac')
+
 # this works only with the lakeshore PR and when you change the directory in
 # yaml file to point to the sim file
 # ls = scfg.load_instrument('lakeshore')
