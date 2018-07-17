@@ -14,8 +14,12 @@ def is_table(tablename, cursor):  # Checks if table already exists. Assumes data
     if count == 0:
         return False
 
-    if count == 1:
+    elif count == 1:
         return True
+
+    else:
+        raise RuntimeError('''Attempt to check existing table names failed. Count of tables with 
+                            name {} returned {} instead of 1 or 0.'''.format(tablename, count))
 
 
 def make_table(tablename, cursor):
