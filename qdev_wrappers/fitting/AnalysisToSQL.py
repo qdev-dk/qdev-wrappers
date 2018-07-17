@@ -2,6 +2,8 @@
 
 import sqlite3
 import dill
+import qcodes as qc
+from os.path import expanduser
 from qdev_wrappers.fitting.Fitclasses import T1, T2
 
 
@@ -110,8 +112,7 @@ def fit_to_sql(fit, database=None):
     if database is not None:
         file = database
     else:
-        raise NotImplementedError('Retrieving database from qc.config not implemented')
-        #TODO: make it get database from the config.
+        file = expanduser(qc.config['core']['db_location'])
     conn = sqlite3.connect(file)
     cur = conn.cursor()
 
