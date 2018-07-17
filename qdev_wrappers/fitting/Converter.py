@@ -38,13 +38,13 @@ class DataConverter():
 
         raise NotImplementedError('make_data_dictionary not implemented in the base class.')
 
-    def find_experiment(self, run_id):
+    def find_experiment(self, run_id, samplefolder):
 
         """ Takes run_id, and returns corresponding experiment id """
 
         raise NotImplementedError('find_experiment not implemented in the base class.')
 
-    def find_dependencies(self, run_id, data):
+    def find_dependencies(self, run_id, data, samplefolder):
 
         """ Takes run_id and data dict. Finds dependencies of the variables, and returns them as a
         dependencies dict. E.g. if A and B were measured, and they both depend on C and D:
@@ -68,8 +68,8 @@ class DataConverter():
         data = self.find_data(id, samplefolder) 
         data_dict = self.make_data_dictionary(data)
 
-        exp_id = self.find_experiment(id)
-        dependencies = self.find_dependencies(id, data)  # SQL needs only id, Legacy needs only data
+        exp_id = self.find_experiment(id, samplefolder)
+        dependencies = self.find_dependencies(id, data, samplefolder)  # SQL needs only id, Legacy needs only data
         all_variables = self.find_variables(data)
 
         data_dict['exp_id'] = exp_id
@@ -84,22 +84,28 @@ class SQL_Converter(DataConverter):
     
     def find_data(self, id, samplefolder):
         
-            """This isn't actually set up to use the samplefolder if one is given - it can only use
-            the qc.config via the get_data_by_id function. """
-          
-            data = get_data_by_id(id)
+            """ This isn't actually set up to use the samplefolder if one is given - it can only use
+            the qc.config via the get_data_by_id function. If this were set up to retrieve the data as
+            get_data_by_id does, but with get_DB_location() returning expanduser(sampefolder) instead
+            of expanduser(qcodes.config["core"]["db_location"]), then I think everything would work
+            for manual specification of database location """
+
+            if samplefolder is None:
+                data = get_data_by_id(id)
+            else:
+                raise NotImplementedError('Manual specification of database location not implemented for SQL')
 
             if len(data) == 0:
                 raise RuntimeError('No data found for run id {}'.format(id))
             
             return data  
 
-    def find_dependencies(self, id, data):  # SQL converter only needs id, not data
+    def find_dependencies(self, id, data, samplefolder):  # SQL converter only needs id, not data
 
-        """Again, this only works if the database is the one indicated by qc.config. It is not
-         possible to set another database manually at the moment."""
-
-        file = expanduser(qc.config['core']['db_location'])
+        if samplefolder is None:
+            file = expanduser(qc.config['core']['db_location'])
+        else:
+            file = expanduser(samplefolder)
         conn = connect(file)
         cur = conn.cursor()
         
@@ -132,12 +138,12 @@ class SQL_Converter(DataConverter):
                     
         return all_variables
 
-    def find_experiment(self, id):
+    def find_experiment(self, id, samplefolder):
 
-        """Again, this only works if the database is the one indicated by qc.config. It is not
-        possible to set another database manually at the moment."""
-
-        file = expanduser(qc.config['core']['db_location'])
+        if samplefolder is None:
+            file = expanduser(qc.config['core']['db_location'])
+        else:
+            file = expanduser(samplefolder)
         conn = connect(file)
         cur = conn.cursor()
 
@@ -186,7 +192,7 @@ class Legacy_Converter(DataConverter):
         return data
     
     
-    def find_dependencies(self, id, data):    #legacy only needs data, not id
+    def find_dependencies(self, id, data, samplefolder):    # legacy only needs data, not id or sample folder
         
         dep_vars   = [key for key in data.arrays.keys() if "_set" not in key[-4:]]
         indep_vars = [key for key in data.arrays.keys() if "_set" in key[-4:]]
@@ -204,7 +210,7 @@ class Legacy_Converter(DataConverter):
         all_variables = [variable for variable in data.arrays.keys()]
         return all_variables
 
-    def find_experiment(self, id):
+    def find_experiment(self, id, samplefolder):  # samplefolder only needed in sql converter
 
         exp_id = id
         return exp_id
