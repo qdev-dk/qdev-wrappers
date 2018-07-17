@@ -84,10 +84,8 @@ class SQL_Converter(DataConverter):
     
     def find_data(self, id, samplefolder):
         
-            """sample folder does nothing except act as placeholder.
-            This function currently proceeds under the assumption that the experiment is set up, and doesn't
-            check anything to confirm that. Also, I think this doesn't return any error if it can't find 
-            the dataset with that id number."""
+            """This isn't actually set up to use the samplefolder if one is given - it can only use
+            the qc.config via the get_data_by_id function"""
           
             data = get_data_by_id(id)
 
