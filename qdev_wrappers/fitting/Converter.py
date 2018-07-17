@@ -1,6 +1,6 @@
 import qcodes as qc
 import numpy as np
-from os.path import sep
+from os.path import sep, expanduser
 from qcodes.dataset.data_export import get_data_by_id
 from qcodes.dataset.sqlite_base import connect
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
@@ -85,7 +85,7 @@ class SQL_Converter(DataConverter):
     def find_data(self, id, samplefolder):
         
             """This isn't actually set up to use the samplefolder if one is given - it can only use
-            the qc.config via the get_data_by_id function"""
+            the qc.config via the get_data_by_id function. """
           
             data = get_data_by_id(id)
 
@@ -95,7 +95,12 @@ class SQL_Converter(DataConverter):
             return data  
 
     def find_dependencies(self, id, data):  # SQL converter only needs id, not data
-        conn = connect('experiments.db')    # the name of the file to access can't be set manually right now
+
+        """Again, this only works if the database is the one indicated by qc.config. It is not
+         possible to set another database manually at the moment."""
+
+        file = expanduser(qc.config['core']['db_location'])
+        conn = connect(file)
         cur = conn.cursor()
         
         names = {}
@@ -129,7 +134,11 @@ class SQL_Converter(DataConverter):
 
     def find_experiment(self, id):
 
-        conn = connect('experiments.db')  # the name of the file to access can't be set manually right now
+        """Again, this only works if the database is the one indicated by qc.config. It is not
+        possible to set another database manually at the moment."""
+
+        file = expanduser(qc.config['core']['db_location'])
+        conn = connect(file)
         cur = conn.cursor()
 
         execute = cur.execute('SELECT exp_id FROM runs WHERE run_id is {}'.format(id))
