@@ -45,10 +45,19 @@ def make_table(tablename, cursor):
 
 def fit_to_sql(fit, database=None):
 
-    """Takes the fit (dictionary output by Fitter) and stores the information to an SQL database.
-    In the first part of this function, the data from the fit dictionary is retrieved and organized
+    """Takes the fit (dictionary output by Fitter) and an optional database. If no database name/location
+    is given, it gets the database from qc.config. Stores the information from the fit dictionary in the SQL
+    database. In the first part of this function, the data from the fit dictionary is retrieved and organized
     for storage in the SQL file. In the second part, a connection to the SQL database is established a
-    series of SQL commands are executed to store the data."""
+    series of SQL commands are executed to store the data.
+
+    Note: It does not accept file locations of the format './file.db'. It seems you either need to specify
+    the full location of the file (e.g. /Users/Username/Desktop/file.db), or have the file in the same folder
+    you are running from and just specify the file name. """
+
+    # Note: the function uses SQL commands to establish the connection. It does not understand './file.db' as a
+    # location. If the database in question is in the same folder that you are running from, it just takes the
+    # file name, 'file.db'. Otherwise it seems to want a full"""
 
     # Part1 : Information from the fit dictionary is retrieved and organized
 
@@ -102,7 +111,7 @@ def fit_to_sql(fit, database=None):
         file = database
     else:
         raise NotImplementedError('Retrieving database from qc.config not implemented')
-        #TODO: make it get database from the config
+        #TODO: make it get database from the config.
     conn = sqlite3.connect(file)
     cur = conn.cursor()
 
