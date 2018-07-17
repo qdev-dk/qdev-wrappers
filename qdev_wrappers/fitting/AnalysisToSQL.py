@@ -29,8 +29,8 @@ def make_table(tablename, cursor):
     while is_table(name, cursor):
         n += 1
         name = "{}_{}".format(tablename, n)
-    else:
-        cursor.execute('CREATE TABLE {} (id INTEGER)'.format(name))
+
+    cursor.execute('CREATE TABLE {} (id INTEGER)'.format(name))
 
     return name
 
