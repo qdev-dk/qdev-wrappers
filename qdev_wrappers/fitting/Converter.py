@@ -18,14 +18,58 @@ def data_to_dict(id, samplefolder=None, datatype='SQL'):
 
 
 class DataConverter():
+
+    """This is the base class for converters that convert data stored in files into a python dictionary."""
+
+    def find_data(self, id, samplefolder):
+
+        """ Takes data run id as argument, as well as a samplefolder, which can be set
+        to None if the run is part of the current configuration. Retrieves the data from the file
+        it is stored in, based on either the sample folder or qc.config. Returns data. """
+
+        raise NotImplementedError('find_data not implemented in the base class.')
+
+    def make_data_dictionary(self, data):
+
+        """ Takes data (as returned by find_data). Organizes data into as a dictionary. Each key
+        is one of the variables from the data, and its corresponding value is a dictionary in
+        the format {'name': str, 'label': str, 'unit': str, 'data': np.array }. Returns data dict
+        containing name, label, unit and data array for each variable in the dataset. """
+
+        raise NotImplementedError('make_data_dictionary not implemented in the base class.')
+
+    def find_experiment(self, run_id):
+
+        """ Takes run_id, and returns corresponding experiment id """
+
+        raise NotImplementedError('find_experiment not implemented in the base class.')
+
+    def find_dependencies(self, run_id, data):
+
+        """ Takes run_id and data dict. Finds dependencies of the variables, and returns them as a
+        dependencies dict. E.g. if A and B were measured, and they both depend on C and D:
+        dependencies = {A: [C, D], B: [C, D]} """
+
+        raise NotImplementedError('find_dependencies not implemented in the base class.')
+
+    def find_variables(self, data):
+
+        """ Takes data dict. Returns list of all variables contained in the data dict."""
+
+        raise NotImplementedError('find_variables not implemented in the base class.')
     
-    def convert(self, id, samplefolder = None):
+    def convert(self, id, samplefolder=None):
+
+        """ Takes run_id and optionally a samplefolder name. Sample folder name should only be
+        necessary if the run in question isn't part of the current experimental configuration.
+        Returns a dictionary containing all the data from the specified run as numpy arrays,
+        plus relevant metadata (experiment id, run id, dependencies, names, labels, and units). """
         
         data = self.find_data(id, samplefolder) 
         data_dict = self.make_data_dictionary(data)
 
         exp_id = self.find_experiment(id)
-        dependencies = self.find_dependencies(id, data)  #SQL needs only id number to find dependencies, Legacy needs only data
+        dependencies = self.find_dependencies(id, data)  # SQL needs only id, Legacy needs only data
         all_variables = self.find_variables(data)
 
         data_dict['exp_id'] = exp_id
@@ -34,25 +78,26 @@ class DataConverter():
         data_dict['variables'] = all_variables
         
         return data_dict
-    
 
 
 class SQL_Converter(DataConverter):
     
-    def find_data(self, id, samplefolder):  
+    def find_data(self, id, samplefolder):
         
-            '''sample folder does nothing except act as placeholder.                    
+            """sample folder does nothing except act as placeholder.
             This function currently proceeds under the assumption that the experiment is set up, and doesn't
             check anything to confirm that. Also, I think this doesn't return any error if it can't find 
-            the dataset with that id number.'''
+            the dataset with that id number."""
           
-            data = get_data_by_id(id)                   
+            data = get_data_by_id(id)
+
+            if len(data) == 0:
+                raise RuntimeError('No data found for run id {}'.format(id))
             
             return data  
 
-        
-    def find_dependencies(self, id, data):      #SQL converter only needs id, not data
-        conn = connect('experiments.db')    #the name of the file to access can't be set manually right now 
+    def find_dependencies(self, id, data):  # SQL converter only needs id, not data
+        conn = connect('experiments.db')    # the name of the file to access can't be set manually right now
         cur = conn.cursor()
         
         names = {}
@@ -73,7 +118,6 @@ class SQL_Converter(DataConverter):
 
         return dependencies
 
-    
     def find_variables(self, data):
         
         all_variables = []
@@ -95,7 +139,6 @@ class SQL_Converter(DataConverter):
 
         return exp_id
 
-    
     def make_data_dictionary(self, data):
         
         data_dict = {}
@@ -106,8 +149,8 @@ class SQL_Converter(DataConverter):
                 name = variable['name']
         
                 if name in data_dict.keys():
-                    print(name)
                     if not np.array_equal(variable['data'], data_dict[name]['data']):
+                        print(name)
                         raise RuntimeError('Variables with identical names contain non-identical data arrays!')
         
                 data_dict[name] = variable
