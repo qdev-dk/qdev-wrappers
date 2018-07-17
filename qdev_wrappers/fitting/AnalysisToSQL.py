@@ -43,7 +43,7 @@ def make_table(tablename, cursor):
     return name
 
 
-def fit_to_sql(fit):
+def fit_to_sql(fit, database=None):
 
     """Takes the fit (dictionary output by Fitter) and stores the information to an SQL database.
     In the first part of this function, the data from the fit dictionary is retrieved and organized
@@ -98,8 +98,11 @@ def fit_to_sql(fit):
     # Part2 : A connection to the SQL database is created and the fit data is saved to the database
 
     #create a connection to the SQL database
-    file = 'experiments.db'
-    #TODO: instead of being named explicitly, this should come from the config
+    if database is not None:
+        file = database
+    else:
+        raise NotImplementedError('Retrieving database from qc.config not implemented')
+        #TODO: make it get database from the config
     conn = sqlite3.connect(file)
     cur = conn.cursor()
 
