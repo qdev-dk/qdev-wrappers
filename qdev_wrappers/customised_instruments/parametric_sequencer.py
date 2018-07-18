@@ -119,7 +119,7 @@ class AWG5014Interface(AWGInterface):
         self.awg.sequence_pos(1)
 
     def get_SR(self):
-        return 1e6
+        return self.awg.clock_freq()
 
     def _restore_sequence_state(self):
         if self.last_repeated_element is not None:
