@@ -387,8 +387,8 @@ class ParametricSequencer(Instrument):
 
     @staticmethod
     def _value_to_index(value, setpoints):
-        index = (np.abs(setpoints.values -
-                        value)).argmin()
+        values = np.asarray(setpoints.values)
+        index = (np.abs(values - value)).argmin()
         return index
 
     # Private methods
