@@ -104,7 +104,8 @@ class AWG5014Interface(AWGInterface):
         print(f'stop repeating {self.last_repeated_element} start {index}')
         self.awg.set_sqel_loopcnt_to_inf(index, state=1)
         self.awg.sequence_pos(index)
-        if self.last_repeated_element is not None:
+        if (self.last_repeated_element is not None and
+            self.last_repeated_element_series != index):
             self.awg.set_sqel_loopcnt_to_inf(self.last_repeated_element,
                                              state=0)
         self.last_repeated_element = index
