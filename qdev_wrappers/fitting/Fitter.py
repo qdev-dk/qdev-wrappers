@@ -32,10 +32,19 @@ def fit_data(data, fitclass, fun_inputs, fun_output, setpoint_params=None, p0=No
 
 class Fitter:
 
+    """ The fitter has a method, 'find_fit', which takes the fitclass, data, function inputs, function outputs,
+     setpoints when relevant, and optionally, guess parameters, and returns a fit dictionary. It does this by
+     using all the other methods in the Fitter to fit a particular function (as defined in a LeastSquaresFit
+     class) to the specified data.
+
+     Much of the fitting is generic and does not depend on the number of inputs, outputs or setpoints in the
+     specified LeastSquaresFit class; however, depending on the dimensionality of the function to be fitted
+     and the measured data, the function 'perform_fit' varies """
+
     def __init__(self, data, fitclass, output):
 
         self.fitclass = fitclass    #'UNNECESSARY??'
-        self.fun_dim = len(fitclass.fun_vars)
+        self.fun_dim = len(fitclass.fun_vars) #'UNNECESSARY??'
         self.data_dim = 'undefined'
         self.input_vars = []
         self.output_var = []
