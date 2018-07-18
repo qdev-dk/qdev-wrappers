@@ -181,6 +181,7 @@ class ParametricSequencer(Instrument):
                  context: ContextDict={},
                  units: Dict[Symbol, str]={},
                  labels: Dict[Symbol, str]={},
+                 first_sequence_element: Element=None,
                  initial_element: Element=None) -> None:
         super().__init__(name)
         self.awg = awg
@@ -204,23 +205,26 @@ class ParametricSequencer(Instrument):
 
         # populate the sequence channel with the provided symbols
         self.set_template(template_element=template_element,
-                           inner_setpoints=inner_setpoints,
-                           outer_setpoints=outer_setpoints,
-                           context=context,
-                           units=units,
-                           labels=labels,
-                           initial_element=initial_element)
+                          inner_setpoints=inner_setpoints,
+                          outer_setpoints=outer_setpoints,
+                          context=context,
+                          units=units,
+                          labels=labels,
+                          initial_element=initial_element,
+                          first_sequence_element=first_sequence_element)
 
 
     def set_template(self,
-                      template_element: Element,
-                      inner_setpoints: Tuple[Symbol, Sequence],
-                      outer_setpoints: Tuple[Symbol, Sequence]=None,
-                      context: ContextDict={},
-                      units: Dict[Symbol, str]={},
-                      labels: Dict[Symbol, str]={},
-                      initial_element: Element=None) -> None:
+                     template_element: Element,
+                     inner_setpoints: Tuple[Symbol, Sequence],
+                     outer_setpoints: Tuple[Symbol, Sequence]=None,
+                     context: ContextDict={},
+                     units: Dict[Symbol, str]={},
+                     labels: Dict[Symbol, str]={},
+                     first_sequence_element: Element=None,
+                     initial_element: Element=None) -> None:
         self.template_element = template_element
+        self.first_sequence_element = first_sequence_element
         self.initial_element = initial_element
         self._context = context
         self._units = units
@@ -408,17 +412,27 @@ class ParametricSequencer(Instrument):
         elements = []
         # this duplication of code could be done nicer, with some more time...
         if self._outer_setpoints:
-            for outer_value in self._outer_setpoints.values:
+            for i, outer_value in enumerate(self._outer_setpoints.values):
                 kwarg = {self._outer_setpoints.symbol: outer_value}
-                for inner_value in self._inner_setpoints.values:
+                for j, inner_value in enumerate(self._inner_setpoints.values):
+                    if (self.first_sequence_element is not None and
+                        j == 0 and i == 0):
+                        template = self.first_sequence_element
+                    else:
+                        template = self.template_element
                     kwarg[self._inner_setpoints.symbol] = inner_value
-                    new_element = in_context(self.template_element, **kwarg)
+                    new_element = in_context(template, **kwarg)
                     elements.append(new_element)
         else:
             kwarg = {}
-            for inner_value in self._inner_setpoints.values:
+            for j, inner_value in enumerate(self._inner_setpoints.values):
+                if (self.first_sequence_element is not None and
+                    j == 0):
+                    template = self.first_sequence_element
+                else:
+                    template = self.template_element
                 kwarg[self._inner_setpoints.symbol] = inner_value
-                new_element = in_context(self.template_element, **kwarg)
+                new_element = in_context(template, **kwarg)
                 elements.append(new_element)
 
         # make sequence repeat indefinitely
