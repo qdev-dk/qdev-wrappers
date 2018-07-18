@@ -5,6 +5,16 @@ import scipy.fftpack as fftpack
 
 
 class LeastSquaresFit:
+
+    """ This is the base class for the other classes in this file. Each class specifies
+    a particular mathematical function and information that can be used to perform a
+    Least Squares Fit to the data.
+
+    Each class holds the mathematical function itself ('fun'), a function for determining
+    an initial guess for the fit parameters ('guess'), and a list of attributes that set
+    the function inputs and outputs, the fit parameter labels and names, and the relationship
+    between the units on the input and output variables and the units on the parameters. """
+
     def __init__(self):
         self.name = 'NoName'
         self.fun_str = 'None'
