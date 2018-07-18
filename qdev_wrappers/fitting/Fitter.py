@@ -30,7 +30,7 @@ def fit_data(data, fitclass, fun_inputs, fun_output, setpoint_params=None, p0=No
 
     return fit
 
-class Fitter1D:
+class Fitter:
 
     def __init__(self, data, fitclass, output):
 
@@ -173,6 +173,34 @@ class Fitter1D:
 
     def perform_fit(self, data_dict, data, fitclass, setpoints, p0, **kwargs):
 
+        raise NotImplementedError("A generic fitter function for the Fitter base class has yet to be implemented.")
+
+    def estimate_function_values(self, fitclass, data, data_dict):
+
+        estimate = {}
+
+        input_data = data_dict
+        for variable in self.output_var:
+                del input_data[variable]
+
+        input_parameters = self.full_parameter_dict
+
+        # Calculate estimated values for output based on function and store in estimate['values']
+        estimate['values'] = fitclass.fun(**input_data, **input_parameters)
+
+        # Save estimate
+        estimate['name'] = '{}_estimate'.format(self.output_dataname[0])
+        estimate['label'] = '{} estimate'.format(data[self.output_dataname[0]]['label'])
+        estimate['unit'] = data[self.output_dataname[0]]['unit']
+        estimate['parameters'] = self.full_parameter_dict   #not sure this is used for anything
+
+        return estimate
+
+
+class Fitter1D(Fitter):
+
+    def perform_fit(self, data_dict, data, fitclass, setpoints, p0, **kwargs):
+
         fit = {}
         fit['parameters'] = {}
         fit['start_params'] = {}
@@ -199,29 +227,8 @@ class Fitter1D:
 
         return fit
 
-    def estimate_function_values(self, fitclass, data, data_dict):
 
-        estimate = {}
-
-        input_data = data_dict
-        for variable in self.output_var:
-                del input_data[variable]
-
-        input_parameters = self.full_parameter_dict
-
-        # Calculate estimated values for output based on function and store in estimate['values']
-        estimate['values'] = fitclass.fun(**input_data, **input_parameters)
-
-        # Save estimate
-        estimate['name'] = '{}_estimate'.format(self.output_dataname[0])
-        estimate['label'] = '{} estimate'.format(data[self.output_dataname[0]]['label'])
-        estimate['unit'] = data[self.output_dataname[0]]['unit']
-        estimate['parameters'] = self.full_parameter_dict   #not sure this is used for anything
-
-        return estimate
-
-
-class Fitter_2Ddata_1Dfunction(Fitter1D):
+class Fitter_2Ddata_1Dfunction(Fitter):
 
     def perform_fit(self, data_dict, data, fitclass, setpoints, p0, **kwargs):
 
