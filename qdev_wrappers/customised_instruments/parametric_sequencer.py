@@ -68,6 +68,8 @@ class SimulatedAWGInterface(AWGInterface):
 
     def set_repeated_element(self, index):
         print(f'setting repeated element to {index}')
+        # AWG is not zero indexed but one, convert to zero index
+        index -= 1
         if self.forged_sequence is None:
             print(f'but there was not sequence uploaded')
             return
@@ -76,6 +78,9 @@ class SimulatedAWGInterface(AWGInterface):
     def set_repeated_element_series(self, start_index, stop_index):
         print(f'setting repeated element series from {start_index} to '
               f'{stop_index}')
+        # AWG is not zero indexed but one, convert to zero index
+        start_index -= start_index
+        stop_index -= stop_index
         if self.forged_sequence is None:
             print(f'but there was not sequence uploaded')
             return
