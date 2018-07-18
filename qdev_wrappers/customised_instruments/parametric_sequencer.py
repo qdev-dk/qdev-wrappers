@@ -197,8 +197,7 @@ class ParametricSequencer(Instrument):
                            context=context,
                            units=units,
                            labels=labels,
-                           initial_element=initial_element,
-                           upload=True)
+                           initial_element=initial_element)
 
     def set_template(self,
                       template_element: Element,
@@ -207,8 +206,7 @@ class ParametricSequencer(Instrument):
                       context: ContextDict={},
                       units: Dict[Symbol, str]={},
                       labels: Dict[Symbol, str]={},
-                      initial_element: Element=None,
-                      upload=False) -> None:
+                      initial_element: Element=None) -> None:
         self.template_element = template_element
         self.initial_element = initial_element
         self._context = context
@@ -238,15 +236,13 @@ class ParametricSequencer(Instrument):
 
         if inner_setpoints is not None or outer_setpoints is not None:
             self.set_setpoints(inner=inner_setpoints,
-                               outer=outer_setpoints,
-                               upload=upload)
-        elif upload:
+                               outer=outer_setpoints)
+        elif self._do_upload:
             self._upload_sequence()
 
     def set_setpoints(self,
                       inner: Union[Tuple[Symbol, Sequence], None],
-                      outer: Union[Tuple[Symbol, Sequence], None]=None,
-                      upload=True):
+                      outer: Union[Tuple[Symbol, Sequence], None]=None):
         inner = make_setpoints_tuple(inner)
         outer = make_setpoints_tuple(outer)
         self._sequence_up_to_date = False
@@ -281,21 +277,21 @@ class ParametricSequencer(Instrument):
         self.metadata['inner_setpoints'] = inner
         self.metadata['outer_setpoints'] = outer
 
-        if upload:
+        if self._do_upload:
             self._upload_sequence()
 
     # context managers
     @contextmanager
     def no_upload(self):
-        self._do_upload_on_set_sequence_parameter = False
+        self._do_upload = False
         yield
-        self._do_upload_on_set_sequence_parameter = True
+        self._do_upload = True
 
     @contextmanager
     def single_upload(self):
-        self._do_upload_on_set_sequence_parameter = False
+        self._do_upload = False
         yield
-        self._do_upload_on_set_sequence_parameter = True
+        self._do_upload = True
         self._upload_sequence()
 
     # Parameter getters and setters
@@ -310,7 +306,7 @@ class ParametricSequencer(Instrument):
     def _set_context_parameter(self, parameter, val):
         self._context[parameter] = val
         self._sequence_up_to_date = False
-        if self._do_upload_on_set_sequence_parameter:
+        if self._do_upload:
             self._upload_sequence()
 
     def _set_repeated_element(self, value, set_inner):
