@@ -4,16 +4,21 @@ import numpy as np
 import scipy.fftpack as fftpack
 
 
-class Fitclass:
+class LeastSquaresFit:
     def __init__(self):
         self.name = 'NoName'
         self.fun_str = 'None'
         self.p_names = ['none']
         self.p_units = ['none']
 
+    def fun(self, x, a, T, c):
+        raise NotImplementedError('This is not implemented in the base class.')
+
+    def guess(self, x, y):
+        raise NotImplementedError('This is not implemented in the base class.')
 
 
-class T1(Fitclass):
+class T1(LeastSquaresFit):
     
     def __init__(self):
         self.name = 'T1fit'
@@ -41,8 +46,7 @@ class T1(Fitclass):
         return [a, T, c]
 
 
-
-class T2(Fitclass):
+class T2(LeastSquaresFit):
     
     def __init__(self):
         self.name = 'T2fit'
