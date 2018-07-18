@@ -191,8 +191,7 @@ class Legacy_Converter(DataConverter):
             
         return data
     
-    
-    def find_dependencies(self, id, data, samplefolder):    # legacy only needs data, not id or sample folder
+    def find_dependencies(self, id, data, samplefolder=None):  # legacy only needs data, not id or sample folder
         
         dep_vars   = [key for key in data.arrays.keys() if "_set" not in key[-4:]]
         indep_vars = [key for key in data.arrays.keys() if "_set" in key[-4:]]
@@ -210,7 +209,7 @@ class Legacy_Converter(DataConverter):
         all_variables = [variable for variable in data.arrays.keys()]
         return all_variables
 
-    def find_experiment(self, id, samplefolder):  # samplefolder only needed in sql converter
+    def find_experiment(self, id, samplefolder=None):  # samplefolder only needed in sql converter
 
         exp_id = id
         return exp_id
@@ -228,7 +227,6 @@ class Legacy_Converter(DataConverter):
         
         return np.array(new_data2)
 
-    
     def make_data_dictionary(self, data):
         
         data_dict = {}
