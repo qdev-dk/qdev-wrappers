@@ -300,6 +300,8 @@ class ParametricSequencer(Instrument):
 
     # Parameter getters and setters
     def _set_repeat_mode(self, mode):
+        # this is necessary so that the call for _sync_repetion_state gets the right value
+        self.repeat_mode._save_val(mode)
         if mode == 'sequence':
             self.awg.repeat_full_sequence()
         elif mode == 'element':
