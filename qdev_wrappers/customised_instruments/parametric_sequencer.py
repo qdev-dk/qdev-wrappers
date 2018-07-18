@@ -300,7 +300,10 @@ class ParametricSequencer(Instrument):
 
     # Parameter getters and setters
     def _set_repeat_mode(self, mode):
-        pass
+        if mode == 'sequence':
+            self.awg.repeat_full_sequence()
+        elif mode == 'element':
+            self._sync_repetion_state()
 
     def _set_context_parameter(self, parameter, val):
         self._context[parameter] = val
