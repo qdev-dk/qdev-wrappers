@@ -280,6 +280,12 @@ class ParametricSequencer(Instrument):
         if self._do_upload:
             self._upload_sequence()
 
+    def get_inner_setpoints(self):
+        return self._inner_setpoints
+
+    def get_outer_setpoints(self):
+        return self._outer_setpoints
+
     # context managers
     @contextmanager
     def no_upload(self):
