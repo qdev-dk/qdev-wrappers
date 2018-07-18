@@ -48,7 +48,10 @@ class ATSChannelController(AcquisitionController):
         super().__init__(name, alazar_name, **kwargs)
         self.filter_settings = {'filter': self.filter_dict[filter],
                                 'numtaps': numtaps}
-        self.number_of_channels = 2
+        if self._get_alazar().channel_selection() in ['A']:
+            self.number_of_channels = 1
+        else:
+            self.number_of_channels = 2
 
         channels = ChannelList(self, "Channels", AlazarChannel,
                                multichan_paramclass=AlazarMultiChannelParameter)
@@ -287,7 +290,8 @@ class ATSChannelController(AcquisitionController):
                                            samples_per_record,
                                            self.number_of_channels)
         channelAData = reshaped_buf[..., 0]
-        channelBData = reshaped_buf[..., 1]
+        if self.number_of_channels == 2:
+            channelBData = reshaped_buf[..., 1]
 
         def handle_alazar_channel(channelData,
                                   channel_number: int,
