@@ -329,7 +329,10 @@ class ParametricSequencer(Instrument):
             # raise RuntimeWarning('Cannot set repeated element when repeat '
             #                      'mode is "sequence"')
         if self.repeat_mode() == 'element':
-            index = (self._outer_index*len(self._outer_setpoints.values) +
+            if self._outer_index is None:
+                index = self._inner_index
+            else:
+                index = (self._outer_index*len(self._outer_setpoints.values) +
                     self._inner_index)
             index += 1
             if self.initial_element is not None:
