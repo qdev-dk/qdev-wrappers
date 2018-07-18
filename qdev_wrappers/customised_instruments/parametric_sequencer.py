@@ -22,6 +22,9 @@ from broadbean.plotting import plotter
 
 log = logging.getLogger(__name__)
 
+
+# namedtuple for the setpoints of a sequence. Symbol refers to a broadbean
+# symbol and values is a
 Setpoints = NamedTuple('Setpoints', (('symbol', Symbol), ('values', Sequence)))
 
 
@@ -97,6 +100,10 @@ class AWG5014Interface(AWGInterface):
     def upload(self, forged_sequence: ForgedSequenceType):
         self.awg.make_send_and_load_awg_file_from_forged_sequence(forged_sequence)
         self.forged_sequence = forged_sequence
+        # uploading a sequence results in reverting the information on the
+        # elements
+        self.last_repeated_element = None
+        self.last_repeated_element_series = (None, None)
         self.awg.all_channels_on()
         self.awg.run()
 
@@ -178,10 +185,9 @@ class ParametricSequencer(Instrument):
         super().__init__(name)
         self.awg = awg
 
-        self.add_parameter('repeat_mode',
-                           vals=validators.Enum('element', 'inner', 'sequence'),
-                           initial_value='sequence',
-                           set_cmd=self._set_repeat_mode)
+        # inital values of states
+        self._do_upload = True
+        self._do_sync_repetion_state = True
 
         # all symbols are mapped to parameters that live on the SequenceChannel
         # and RepeatChannel respectively
@@ -189,6 +195,12 @@ class ParametricSequencer(Instrument):
         self.add_submodule('sequence', sequence_channel)
         repeat_channel = SequenceChannel(self, 'repeat_parameters')
         self.add_submodule('repeat', repeat_channel)
+
+        # this parameter has to be added at the end because setting it
+        # to its initial value is only is defined when a sequence is uploaded
+        self.add_parameter('repeat_mode',
+                           vals=validators.Enum('element', 'inner', 'sequence'),
+                           set_cmd=self._set_repeat_mode)
 
         # populate the sequence channel with the provided symbols
         self.set_template(template_element=template_element,
@@ -198,6 +210,7 @@ class ParametricSequencer(Instrument):
                            units=units,
                            labels=labels,
                            initial_element=initial_element)
+
 
     def set_template(self,
                       template_element: Element,
@@ -214,11 +227,17 @@ class ParametricSequencer(Instrument):
         self._labels = labels
 
         self._sequence_up_to_date = False
-        self._sync_repetion_state_element = True
+
+        # add metadata, that gets added to the snapshot automatically
+        # add it before the upload so that if there is a crash, the
+        # state that is causing the crash is captured in the metadata
+        # TODO: add serialization of the elements
+        self.metadata['template_element'] = template_element
+        self.metadata['initial_element'] = initial_element
 
         # add sequence symbols as qcodes parameters
         self.sequence.parameters = {}
-        with self.no_upload():
+        with self.single_upload():
             for name, value in self._context.items():
                 self.sequence.add_parameter(name=name,
                                             unit=self._units.get(name, ''),
@@ -229,16 +248,10 @@ class ParametricSequencer(Instrument):
                                                 name),
                                             initial_value=value)
 
-        # add metadata, that gets added to the snapshot automatically
-        # TODO: add serialization of the elements
-        self.metadata['template_element'] = template_element
-        self.metadata['initial_element'] = initial_element
 
-        if inner_setpoints is not None or outer_setpoints is not None:
-            self.set_setpoints(inner=inner_setpoints,
-                               outer=outer_setpoints)
-        elif self._do_upload:
-            self._upload_sequence()
+            if inner_setpoints is not None or outer_setpoints is not None:
+                self.set_setpoints(inner=inner_setpoints,
+                                   outer=outer_setpoints)
 
     def set_setpoints(self,
                       inner: Union[Tuple[Symbol, Sequence], None],
@@ -247,6 +260,10 @@ class ParametricSequencer(Instrument):
         outer = make_setpoints_tuple(outer)
         self._sequence_up_to_date = False
 
+        # add metadata, that gets added to the snapshot automatically
+        self.metadata['inner_setpoints'] = inner
+        self.metadata['outer_setpoints'] = outer
+
         self.last_inner_index = 0
         self.last_outer_index = 0
         self._inner_index = 0
@@ -254,6 +271,11 @@ class ParametricSequencer(Instrument):
 
         self._inner_setpoints = inner
         self._outer_setpoints = outer
+
+        # setting this state to False is needed to avoid syncing when the
+        # initial value of the parameters is set. 
+        self._do_sync_repetion_state = False
+
         self.repeat.parameters = {}
         for setpoints in (inner, outer):
             if setpoints is None:
@@ -265,6 +287,7 @@ class ParametricSequencer(Instrument):
                                           self._set_repeated_element,
                                           set_inner=setpoints == inner),
                                       initial_value=setpoints.values[0])
+        self._do_sync_repetion_state = True
         # define shortcuts (with long names, I know)
         self._inner_setpoint_parameter = None
         self._outer_setpoint_parameter = None
@@ -273,9 +296,6 @@ class ParametricSequencer(Instrument):
         if outer:
             self._outer_setpoint_parameter = self.repeat.parameters[outer.symbol]
 
-        # add metadata, that gets added to the snapshot automatically
-        self.metadata['inner_setpoints'] = inner
-        self.metadata['outer_setpoints'] = outer
 
         if self._do_upload:
             self._upload_sequence()
@@ -289,25 +309,25 @@ class ParametricSequencer(Instrument):
     # context managers
     @contextmanager
     def no_upload(self):
+        # we have to save the oringinal stat in order to allow nesting of
+        # this context
+        original_state = self._do_upload
         self._do_upload = False
         yield
-        self._do_upload = True
+        self._do_upload = original_state
 
     @contextmanager
     def single_upload(self):
-        self._do_upload = False
-        yield
-        self._do_upload = True
-        self._upload_sequence()
+        with self.no_upload():
+            yield
+        # wrapping single upload somewhere in a no_upload context should not
+        # result in an upload. Therefore add check of flag
+        if self._do_upload:
+            self._upload_sequence()
 
     # Parameter getters and setters
     def _set_repeat_mode(self, mode):
-        # this is necessary so that the call for _sync_repetion_state gets the right value
-        self.repeat_mode._save_val(mode)
-        if mode == 'sequence':
-            self.awg.repeat_full_sequence()
-        elif mode == 'element':
-            self._sync_repetion_state()
+        self._sync_repetion_state(mode)
 
     def _set_context_parameter(self, parameter, val):
         self._context[parameter] = val
@@ -324,19 +344,19 @@ class ParametricSequencer(Instrument):
             self._outer_index = self._value_to_index(value,
                                                      self._outer_setpoints)
             self.last_outer_index = self._outer_index
-        if self._sync_repetion_state_element:
+        if self._do_sync_repetion_state:
             self._sync_repetion_state()
 
     def _get_repeated_element(self, set_inner):
         # TODO: implement
         return None
 
-    def _sync_repetion_state(self):
-        if self.repeat_mode() == 'sequence':
-            pass
-            # raise RuntimeWarning('Cannot set repeated element when repeat '
-            #                      'mode is "sequence"')
-        if self.repeat_mode() == 'element':
+    def _sync_repetion_state(self, repeat_mode=None):
+        if repeat_mode is None:
+            repeat_mode = self.repeat_mode()
+        if repeat_mode == 'sequence':
+            self.awg.repeat_full_sequence()
+        if repeat_mode == 'element':
             if self._outer_setpoints is None:
                 index = self._inner_index
             else:
@@ -359,7 +379,7 @@ class ParametricSequencer(Instrument):
             # if self.initial_element is not None:
             #     index += 1
             # self.awg.set_repeated_element(index)
-        elif self.repeat_mode() == 'inner':
+        elif repeat_mode == 'inner':
             if not set_inner:
                 raise RuntimeWarning('Cannot set repeated outer setpoint '
                                      'when repeat mode is "inner"')
@@ -377,12 +397,16 @@ class ParametricSequencer(Instrument):
         self.awg.upload(
             self._sequence_object.forge(SR=self.awg.get_SR(),
                                         context=self._sequence_context))
+        # uploading a sequence will clear the state of the current element
+        # so we need to sync the repetition state or revert the value of
+        # repetition mode
+        self._sync_repetion_state()
 
     def _update_sequence(self):
         if self._sequence_up_to_date:
             return
         elements = []
-        # this duplication of code could be done nicer, with some more time
+        # this duplication of code could be done nicer, with some more time...
         if self._outer_setpoints:
             for outer_value in self._outer_setpoints.values:
                 kwarg = {self._outer_setpoints.symbol: outer_value}
