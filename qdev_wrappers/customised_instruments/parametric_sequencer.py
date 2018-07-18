@@ -146,6 +146,7 @@ class SequenceChannel(InstrumentChannel):
     def __init__(self, parent: 'ParametricSequencer', name: str) -> None:
         super().__init__(parent, name)
 
+
 class RepeatChannel(InstrumentChannel):
     """
     This is a dummy InstrumentChannel in order to isolate the name scope
@@ -154,6 +155,7 @@ class RepeatChannel(InstrumentChannel):
     """
     def __init__(self, parent: 'ParametricSequencer', name: str) -> None:
         super().__init__(parent, name)
+
 
 class ParametricSequencer(Instrument):
     """
@@ -175,7 +177,10 @@ class ParametricSequencer(Instrument):
         super().__init__(name)
         self.awg = awg
 
-        self.add_parameter('repeat_mode', set_cmd=self._set_repeat_mode)
+        self.add_parameter('repeat_mode',
+                           vals=validators.Enum('single', 'inner', 'all'),
+                           initial_value='all',
+                           set_cmd=self._set_repeat_mode)
 
         # all symbols are mapped to parameters that live on the SequenceChannel
         # and RepeatChannel respectively
@@ -237,11 +242,11 @@ class ParametricSequencer(Instrument):
             self._upload_sequence()
 
     def set_setpoints(self,
-                      inner: Tuple[Symbol, Sequence],
-                      outer: Tuple[Symbol, Sequence]=None,
+                      inner: Union[Tuple[Symbol, Sequence], None],
+                      outer: Union[Tuple[Symbol, Sequence], None]=None,
                       upload=True):
-        inner = make_named_tuple(Setpoints, inner)
-        outer = make_named_tuple(Setpoints, outer)
+        inner = make_setpoints_tuple(inner)
+        outer = make_setpoints_tuple(outer)
         self._sequence_up_to_date = False
 
         self.last_inner_index = 0
@@ -300,29 +305,38 @@ class ParametricSequencer(Instrument):
             self._upload_sequence()
 
     def _set_repeated_element(self, value, set_inner):
-        # assert correct mode
-        if self._outer_setpoints:
-            if set_inner:
-                inner_index = self._value_to_index(value,
-                                                   self._inner_setpoints)
-                self.last_inner_index = inner_index
-                outer_index = self.last_outer_index
+        if self.repeat_mode() == 'sequence':
+            raise RuntimeWarning('Cannot set repeated element when repeat '
+                                 'mode is "sequence"')
+        elif self.repeat_mode() == 'single':
+            # assert correct mode
+            if self._outer_setpoints:
+                if set_inner:
+                    inner_index = self._value_to_index(value,
+                                                       self._inner_setpoints)
+                    self.last_inner_index = inner_index
+                    outer_index = self.last_outer_index
+                else:
+                    inner_index = self.last_inner_index
+                    outer_index = self._value_to_index(value,
+                                                       self._outer_setpoints)
+                    self.last_outer_index = outer_index
+                index = (outer_index*len(self._outer_setpoints.values) +
+                         inner_index)
             else:
-                inner_index = self.last_inner_index
-                outer_index = self._value_to_index(value,
-                                                   self._outer_setpoints)
-                self.last_outer_index = outer_index
-            index = (outer_index*len(self._outer_setpoints.values) +
-                     inner_index)
-        else:
-            assert set_inner
-            index = self._value_to_index(value, self._inner_setpoints)
-            self.last_inner_index = index
-        # most awgs are 1 indexed not 0 indexed
-        index+=1
-        if self.initial_element is not None:
+                assert set_inner
+                index = self._value_to_index(value, self._inner_setpoints)
+                self.last_inner_index = index
+            # most awgs are 1 indexed not 0 indexed
             index += 1
-        self.awg.set_repeated_element(index)
+            if self.initial_element is not None:
+                index += 1
+            self.awg.set_repeated_element(index)
+        elif self.repeat_mode() == 'inner':
+            if not set_inner:
+                raise RuntimeWarning('Cannot set repeated outer setpoint '
+                                     'when repeat mode is "inner"')
+
 
     @staticmethod
     def _value_to_index(value, setpoints):
@@ -355,7 +369,6 @@ class ParametricSequencer(Instrument):
                 kwarg[self._inner_setpoints.symbol] = inner_value
                 new_element = in_context(self.template_element, **kwarg)
                 elements.append(new_element)
-
 
         # make sequence repeat indefinitely
         elements[-1].sequencing['goto_state'] = 1
