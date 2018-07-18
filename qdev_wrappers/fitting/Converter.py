@@ -11,13 +11,16 @@ def data_to_dict(id, samplefolder=None, datatype='SQL'):
     if datatype == 'qcodes_legacy':
         converter = Legacy_Converter()
 
-    if datatype == 'SQL':
+    elif datatype == 'SQL':
         converter = SQL_Converter()
+
+    else:
+        raise NotImplementedError('datatype {} is not currently supported'.format(datatype))
 
     return converter.convert(id, samplefolder)
 
 
-class DataConverter():
+class DataConverter:
 
     """This is the base class for converters that convert data stored in files into a python dictionary."""
 
@@ -169,7 +172,6 @@ class SQL_Converter(DataConverter):
                 data_dict[name] = variable
             
         return data_dict
-            
 
 
 class Legacy_Converter(DataConverter):
@@ -178,22 +180,22 @@ class Legacy_Converter(DataConverter):
         
         str_id = '{0:03d}'.format(id)
         
-        if samplefolder==None:
+        if samplefolder is None:
             check_experiment_is_initialized()    
-            #check_experiment_is_initialized() doesn't do anything at the moment
+            # check_experiment_is_initialized() doesn't do anything at the moment
             
             path = qc.DataSet.location_provider.fmt.format(counter=str_id)
             data = qc.load_data(path)
 
         else:
-            path = '{}{}{}'.format(samplefolder,sep,str_id)
+            path = '{}{}{}'.format(samplefolder, sep, str_id)
             data = qc.load_data(path)
             
         return data
     
     def find_dependencies(self, id, data, samplefolder=None):  # legacy only needs data, not id or sample folder
         
-        dep_vars   = [key for key in data.arrays.keys() if "_set" not in key[-4:]]
+        dep_vars = [key for key in data.arrays.keys() if "_set" not in key[-4:]]
         indep_vars = [key for key in data.arrays.keys() if "_set" in key[-4:]]
         
         dependencies = {}
@@ -202,7 +204,6 @@ class Legacy_Converter(DataConverter):
             dependencies[variable] = indep_vars
             
         return dependencies
-    
     
     def find_variables(self, data):
         
@@ -213,7 +214,6 @@ class Legacy_Converter(DataConverter):
 
         exp_id = id
         return exp_id
-    
     
     def resize_data(self, data1, data2):
     
@@ -241,12 +241,11 @@ class Legacy_Converter(DataConverter):
             np_data = qc_data.ndarray
             
             data_dict[variable] = {'name': variable,
-                                  'label': label,
+                                   'label': label,
                                    'var_name': name,
-                                  'unit': unit,
-                                  'data': np_data}
-            
-            
+                                   'unit': unit,
+                                   'data': np_data}
+
         '''checks if the data set used set points - if so, it reformats the data
         arrays so that it looks the same as it would look if it were imported
         from SQL. All data is stored as arrays of the same length, rather than
@@ -267,8 +266,6 @@ class Legacy_Converter(DataConverter):
                 data_dict[indep_vars[0]]['data'] = self.resize_data(data1, data2)
             if type(data3[0]) != np.ndarray:
                 data_dict[indep_vars[1]]['data'] = self.resize_data(data1, data3)
-          
-        
         
             '''reformatting nested arrays as a single 1d array, i.e.
             setpoints = [[1, 1, 1], [2, 2, 2], [3, 3, 3]], data = [[a, b, c], [d, e, f], [g, h, i]]
@@ -283,8 +280,5 @@ class Legacy_Converter(DataConverter):
                         new_data.append(datapoint)
                     
                 data_dict[variable]['data'] = np.array(new_data)
-                
-                
+
         return data_dict
-       
-        
