@@ -7,13 +7,13 @@ def plot_fit1d(data, fit1d, fitclass, plottype='scatter'):
     plot = plt.figure()
     axes = plot.add_axes([0.1, 0.1, 0.8, 0.8])
     
-    xname = fit1d['inferred_from']['xdata']
+    xname = fit1d['inferred_from']['inputs'][fitclass.fun_vars[0]]
     xdata = data[xname]['data']
     xlabel = data[xname]['label']
     xunit = data[xname]['unit']
     axes.set_xlabel('{} [{}]'.format(xlabel, xunit))
         
-    yname = fit1d['inferred_from']['ydata']
+    yname = fit1d['inferred_from']['output'][fitclass.fun_output[0]]
     ydata = data[yname]['data']
     ylabel = data[yname]['label']
     yunit = data[yname]['unit']
@@ -42,29 +42,21 @@ def plot_fit2d_slice(data, fits2d, fitclass, setvalue, plottype='scatter'):
     axes = plot.add_axes([0.1, 0.1, 0.8, 0.8])
     axes.set_title('Title')
     
-    setpoint = fits2d['inferred_from']['setpoints']
-    setname = fits2d['inferred_from'][setpoint]
-    setdata = data[setname]['data']
+    setpoint = fits2d['inferred_from']['setpoints'][0]
+    #setname = fits2d['inferred_from'][setpoint]
+    setdata = data[setpoint]['data']
     
     if setvalue not in setdata:
         print('{}: {}'.format(setname, np.unique(setdata)))
         raise RuntimeError('Setvalue not in set points for this fit. Choose from setvalues above.')
-    
-    if setpoint == 'xdata':
-        xname = fits2d['inferred_from']['ydata']
-        xdata = data[xname]['data']
-        xlabel = data[xname]['label']
-        xunit = data[xname]['unit']
-        axes.set_xlabel('{} [{}]'.format(xlabel, xunit))
-        
-    elif setpoint == 'ydata':
-        xname = fits2d['inferred_from']['xdata']
-        xdata = data[xname]['data']
-        xlabel = data[xname]['label']
-        xunit = data[xname]['unit']
-        axes.set_xlabel('{} [{}]'.format(xlabel, xunit))
-        
-    yname = fits2d['inferred_from']['zdata']
+
+    xname = fits2d['inferred_from']['inputs'][fitclass.fun_vars[0]]
+    xdata = data[xname]['data']
+    xlabel = data[xname]['label']
+    xunit = data[xname]['unit']
+    axes.set_xlabel('{} [{}]'.format(xlabel, xunit))
+
+    yname = fits2d['inferred_from']['output'][fitclass.fun_output[0]]
     ydata = data[yname]['data']
     ylabel = data[yname]['label']
     yunit = data[yname]['unit']
