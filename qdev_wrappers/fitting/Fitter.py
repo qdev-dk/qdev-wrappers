@@ -9,6 +9,8 @@ from scipy.optimize import curve_fit
 
 def fit_data(data, fitclass, fun_inputs, fun_output, setpoint_params=None, p0=None, **kwargs):
 
+    check_input_matches_fitclass(fitclass, fun_inputs, fun_output, setpoint_params, p0)
+
     fun_dim = len(fitclass.fun_vars)
     num_inputs = len(fun_inputs)
     if setpoint_params is not None:
@@ -29,6 +31,33 @@ def fit_data(data, fitclass, fun_inputs, fun_output, setpoint_params=None, p0=No
     fit['inferred_from']['estimator']['dill'] = {'fitclass' : dill_fitclass, 'fitter' : dill_fitter}
 
     return fit
+
+def check_input_matches_fitclass(fitclass, inputs, output, setpoints, p0):
+
+    # check input and output are given, and that input, output and setpoints are in correct format
+    if (type(inputs) != dict or type(output) != dict):
+        raise RuntimeError('''Please specify both input and output variables for the function you wish to fit in
+    #                    the format fun_inputs = {'x':'name', 'y':'other_name'}, fun_output = {z: 'another_name'} ''')
+    if (setpoints is not None) and (type(setpoints) != list):
+        raise RuntimeError('''Please specify setpoints as a list ['setpoint_name', ...], even if there is only one.''')
+
+    # check inputs specified match inputs function takes
+    if len(inputs) != len(fitclass.fun_vars):
+        raise RuntimeError('''The function you are fitting to takes {} variables, 
+                        and you have specified {}'''.format(len(fitclass.fun_vars), len(inputs)))
+    for variable in inputs.keys():
+        if variable not in fitclass.fun_vars:
+            raise RuntimeError('''You have specified a variable {}. 
+                                The fit function takes variables {}'''.format(variable, fitclass.fun_vars))
+    for variable in output.keys():
+        if variable not in fitclass.fun_output:
+            raise RuntimeError('''You have specified a variable {}. 
+                                The fit function returns variables {}'''.format(variable, fitclass.fun_output))
+
+    # check that if a guess p0 is specified, the number of parameters is correct for the fit function
+    if (p0 is not None) and (len(p0) != len(fitclass.p_labels)):
+        raise RuntimeError('''You have specified {} start parameters for the fit function: {}. The function takes 
+                        {} start parameters: {}'''.format(len(p0), p0, len(fitclass.p_labels), fitclass.p_labels))
 
 class Fitter:
 
@@ -60,7 +89,6 @@ class Fitter:
 
     def find_fit(self, data, fitclass, fun_inputs, fun_output, setpoint_params=None, p0=None, **kwargs):
 
-        self.check_input_matches_fitclass(fitclass, fun_inputs, fun_output, setpoint_params, p0)
         data_dict, label_dict, name_dict, unit_dict = self.organize_data(data, fun_inputs, fun_output, setpoint_params)
 
         fit = self.perform_fit(data_dict, data, fitclass, setpoint_params, p0, **kwargs)
@@ -83,34 +111,6 @@ class Fitter:
                                 }
 
         return fit
-
-    def check_input_matches_fitclass(self, fitclass, inputs, output, setpoints, p0):
-
-        # check input and output are given, and that input, output and setpoints are in correct format
-        if (type(inputs) != dict or type(output) != dict):
-            raise RuntimeError('''Please specify both input and output variables for the function you wish to fit in
-        #                    the format fun_inputs = {'x':'name', 'y':'other_name'}, fun_output = {z: 'another_name'} ''')
-        if (setpoints is not None) and (type(setpoints) != list):
-            raise RuntimeError('''Please specify setpoints as a list ['setpoint_name', ...], even if there is only one.''')
-
-        # check inputs specified match inputs function takes
-        if len(inputs) != len(fitclass.fun_vars):
-            raise RuntimeError('''The function you are fitting to takes {} variables, 
-                            and you have specified {}'''.format(len(fitclass.fun_vars), len(inputs)))
-        for variable in inputs.keys():
-            if variable not in fitclass.fun_vars:
-                raise RuntimeError('''You have specified a variable {}. 
-                                    The fit function takes variables {}'''.format(variable, fitclass.fun_vars))
-        for variable in output.keys():
-            if variable not in fitclass.fun_output:
-                raise RuntimeError('''You have specified a variable {}. 
-                                    The fit function returns variables {}'''.format(variable, fitclass.fun_output))
-
-        # check that if a guess p0 is specified, the number of parameters is correct for the fit function
-        if (p0 is not None) and (len(p0) != len(fitclass.p_labels)):
-            raise RuntimeError('''You have specified {} start parameters for the fit function: {}. The function takes 
-                            {} start parameters: {}'''.format(len(p0), p0, len(fitclass.p_labels), fitclass.p_labels))
-
 
     def organize_data(self, data, inputs, output, setpoints):
 
