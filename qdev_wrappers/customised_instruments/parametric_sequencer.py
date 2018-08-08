@@ -126,8 +126,8 @@ class ParametricSequencer(Instrument):
         # add it before the upload so that if there is a crash, the
         # state that is causing the crash is captured in the metadata
         # TODO: add serialization of the elements
-        self.metadata['template_element'] = template_element
-        self.metadata['initial_element'] = initial_element
+        # self.metadata['template_element'] = template_element
+        # self.metadata['initial_element'] = initial_element
 
         # add sequence symbols as qcodes parameters
         self.sequence.parameters = {}
