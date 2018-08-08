@@ -14,7 +14,6 @@ class AWG5014_ext(Tektronix_AWG5014):
         self.add_parameter(name='seq_mode',
                            set_cmd=self._set_seq_mode,
                            get_cmd=self._get_seq_mode)
-        self.ref_source('EXT')
         self.clear_message_queue()
 
     def _set_seq_mode(self, status):
