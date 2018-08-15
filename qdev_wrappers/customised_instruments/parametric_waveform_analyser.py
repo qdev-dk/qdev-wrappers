@@ -72,7 +72,7 @@ class AlazarChannel_ext(AlazarChannel):
                 buffer_setpoints=settings['buffer_setpoints'],
                 record_setpoint_name=settings['record_setpoint_name'],
                 buffer_setpoint_name=settings['buffer_setpoint_name'],
-                )
+            )
         self._num = settings['num']
         if self.single_shot():
             self.num_reps._save_val(settings['num'])
@@ -206,7 +206,7 @@ class ParametricWaveformAnalyser(Instrument):
         self._base_demod_freq = heterodyne_source.demodulation_frequency()
         self._carrier_freq = heterodyne_source.frequency()
         self.add_parameter(name='int_time',
-                           set_cmd=self._set_int_time, 
+                           set_cmd=self._set_int_time,
                            initial_value=1e-6)
         self.add_parameter(name='int_delay',
                            set_cmd=self._set_int_delay,
@@ -259,7 +259,7 @@ class ParametricWaveformAnalyser(Instrument):
             return True
         elif self.alazar.seq_mode() == 'off' and self.sequencer.repeat_mode() == 'element':
             return False
-        elif (self.alazar.seq_mode()  == 'off') and (len(self.sequencer.get_inner_setpoints()) == 1 and self.sequencer.get_outer_setpoints() is None):
+        elif (self.alazar.seq_mode() == 'off') and (len(self.sequencer.get_inner_setpoints()) == 1 and self.sequencer.get_outer_setpoints() is None):
             return False
         else:
             raise RuntimeError(
@@ -369,12 +369,12 @@ class ParametricWaveformAnalyser(Instrument):
         self._sequence_settings['units'].update(units)
         self._sequence_settings['labels'].update(labels)
         self.sequencer.set_template(template_element,
-                                     inner_setpoints=inner_setpoints,
-                                     context=self._sequence_settings['context'],
-                                     units=self._sequence_settings['units'],
-                                     labels=self._sequence_settings['labels'],
-                                     first_sequence_element=first_sequence_element,
-                                     initial_element=initial_element)
+                                    inner_setpoints=inner_setpoints,
+                                    context=self._sequence_settings['context'],
+                                    units=self._sequence_settings['units'],
+                                    labels=self._sequence_settings['labels'],
+                                    first_sequence_element=first_sequence_element,
+                                    initial_element=initial_element)
         for ch in list(self.alazar_channels):
             settings = self.get_alazar_ch_settings(
                 ch._num, single_shot=ch.single_shot())
@@ -395,7 +395,6 @@ class ParametricWaveformAnalyser(Instrument):
     def make_all_alazar_channels_play_nice(self):
         raise NotImplementedError
 
-
     def get_alazar_ch_settings(self, num: int, single_shot: bool):
         '''
         If single shot then num is number of reps, else it is the
@@ -411,9 +410,8 @@ class ParametricWaveformAnalyser(Instrument):
             settings['buffer_setpoint_unit'] = None
             if seq_mode and len(self.sequencer.get_inner_setpoints().values) > 1:
                 if self.sequencer.get_outer_setpoints() is not None:
-                    raise RuntimeError(
-                        'Cannot have averaging channel with both '
-                        'outer and inner setpoints')
+                    logger.warn('Averaging channel will average over '
+                                'outer setpoints of AWG sequence')
                 record_symbol = self.sequencer.get_inner_setpoints().symbol
                 record_setpoints = self.sequencer.get_inner_setpoints().values
                 record_param = getattr(self.sequencer.repeat, record_symbol)
@@ -431,7 +429,8 @@ class ParametricWaveformAnalyser(Instrument):
                 samples_per_rec = self.alazar_controller.samples_per_record()
                 tot_samples = num * samples_per_rec
                 if tot_samples > max_samples:
-                    settings['records'] = math.floor(max_samples / samples_per_rec)
+                    settings['records'] = math.floor(
+                        max_samples / samples_per_rec)
                     settings['buffers'] = math.ceil(max_samples / records)
                 else:
                     settings['records'] = num
@@ -458,7 +457,8 @@ class ParametricWaveformAnalyser(Instrument):
                 if self.sequencer.get_outer_setpoints() is not None:
                     buffers_symbol = self.sequencer.get_outer_setpoints().symbol
                     buffers_setpoints = self.sequencer.get_outer_setpoints().values
-                    buffers_param = getattr(self.sequencer.repeat, buffers_symbol)
+                    buffers_param = getattr(
+                        self.sequencer.repeat, buffers_symbol)
                     settings['buffer_setpoints'] = buffers_setpoints
                     settings['buffer_setpoint_name'] = buffers_symbol
                     settings['buffer_setpoint_label'] = buffers_param.label
