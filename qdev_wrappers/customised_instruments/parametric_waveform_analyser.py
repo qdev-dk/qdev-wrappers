@@ -57,13 +57,23 @@ class AlazarChannel_ext(AlazarChannel):
         self._num = val
 
     def update(self, settings):
+        fail = False
+        if settings['average_records'] != self._average_records:
+            fail = True
+        elif settings['average_buffers'] != self._average_buffers:
+            fail = True
+        if fail:
+            raise RuntimeError(
+                'alazar channel cannot be updated to change averaging '
+                'settings, run clear_channels before changing settings')  # TODO
         self.records_per_buffer._save_val(settings['records'])
         self.buffers_per_acquisition._save_val(settings['buffers'])
         if self.dimensions == 1 and self._integrate_samples:
-            self.prepare_channel(setpoints=settings['record_setpoints'],
-                                 setpoint_name=settings['record_setpoint_name'],
-                                 setpoint_label=settings['record_setpoint_label'],
-                                 setpoint_unit=settings['record_setpoint_unit'])
+            self.prepare_channel(
+                setpoints=settings['record_setpoints'],
+                setpoint_name=settings['record_setpoint_name'],
+                setpoint_label=settings['record_setpoint_label'],
+                setpoint_unit=settings['record_setpoint_unit'])
         elif self.dimensions == 1:
             self.prepare_channel()
         else:
@@ -250,9 +260,19 @@ class ParametricWaveformAnalyser(Instrument):
         else:
             self.alazar.seq_mode('off')
             self.sequencer.repeat_mode('element')
+        settings_list = []
         for ch in self.alazar_channels:
-            settings = self.get_alazar_ch_settings(ch._num, ch.single_shot())
-            ch.update(settings)
+            settings = {'demod_channel_index': ch._demod_ch.index,
+                        'demod_type': ch.demod_type()[0],
+                        'integrate_time': ch._integrate_samples,
+                        'single_shot': ch.single_shot(),
+                        'num_reps': ch._num,
+                        'num_averages': ch._num}
+            settings_list.append(settings)
+        self.clear_alazar_channels()
+        for settings in settings_list:
+            self.add_alazar_channel(**settings)
+
 
     def _get_seq_mode(self):
         if self.alazar.seq_mode() == 'on' and self.sequencer.repeat_mode() == 'sequence':
@@ -337,7 +357,7 @@ class ParametricWaveformAnalyser(Instrument):
                                  average_buffers=settings['average_buffers'],
                                  integrate_samples=integrate_time)
         chan.demod_freq(demod_ch.demodulation_frequency())
-        if demod_type == 'm':
+        if demod_type in 'm':
             chan.demod_type('magnitude')
             chan.data.label = 'Cavity Magnitude Response'
         elif demod_type == 'p':
