@@ -7,7 +7,7 @@ from qdev_wrappers.show_num import check_experiment_is_initialized
 from qdev_wrappers.transmon.file_helpers import get_data_num
 
 
-def data_to_dict(run_id, datatype='SQL'):
+def load_data_dict(run_id, datatype='SQL'):
     """
     Args:
         run_id (int)
@@ -56,7 +56,6 @@ class DataConverter:
         """
         Args:
             run_id
-
         Returns:
             corresponding experiment id
         """

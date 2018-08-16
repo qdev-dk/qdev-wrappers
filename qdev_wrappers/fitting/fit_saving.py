@@ -198,12 +198,11 @@ def save_fit_dict(fit_info):
     print("Table {} created".format(table))
 
 
-def fit_to_sql(fit):
+def save_fit_dict(fit):
     """
     Organises and saves the fit dictionary in SQL database
     Args:
         fit (dict): as output by fitter
     """
     fit_info_tuple = reorganise_fit_dict(fit)
-
     save_fit_dict(fit_info_tuple)
