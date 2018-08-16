@@ -177,9 +177,7 @@ class SQL_Converter(DataConverter):
 
         for data_subset in data:
             for variable in data_subset:
-
                 name = variable['name']
-
                 if name in data_dict.keys():
                     if not np.array_equal(variable['data'],
                                           data_dict[name]['data']):

@@ -5,14 +5,9 @@ import scipy.fftpack as fftpack
 class LeastSquaresFit:
     """
     Base class for fit functions to be used with curve_fit. Specifies
-    a particular mathematical function and information that can be used to
-    perform a least squares fit to the data.
-
-    Each class holds the mathematical function itself ('fun'), a function
-    for determining an initial guess for the fit parameters ('guess'), and
-    a list of attributes that set the function inputs and outputs, the fit
-    parameter labels and names, and the relationship between the units on the
-    input and output variables and the units on the parameters.
+    a function for fitting, function for guessing initial parameters for fit
+    and attributes specifying inputs and outputs of fit function as
+    well as and names, labels and units of fit parameters.
     """
 
     def __init__(self, name, fun_str, fun_np, fun_vars,
@@ -22,13 +17,19 @@ class LeastSquaresFit:
         self.fun_np = fun_np
         self.fun_output = fun_output
         self.p_names = p_names
-        self.p_units = p_labels
+        self.p_labes = p_labels
         self.p_units = p_units
 
-    def fun(self, x, a, T, c):
+    def fun(self, *args):
+        """
+        The mathematical function to fit to
+        """
         raise NotImplementedError('This is not implemented in the base class.')
 
-    def guess(self, x, y):
+    def guess(self, *args):
+        """
+        Function for determining an initial guess for the fit parameters
+        """
         raise NotImplementedError('This is not implemented in the base class.')
 
 
