@@ -13,7 +13,17 @@ FitInfo = namedtuple(
     'param_labels table_rows table_columns tablename')
 
 
-def is_table(tablename, cursor):
+def save_fit_dict(fit):
+    """
+    Organises and saves the fit dictionary in SQL database
+    Args:
+        fit (dict): as output by fitter
+    """
+    fit_info_tuple = _reorganise_fit_dict(fit)
+    _save_to_database(fit_info_tuple)
+
+
+def _is_table(tablename, cursor):
     """
     Args:
         tablename (str)
@@ -43,7 +53,7 @@ def is_table(tablename, cursor):
             'instead of 1 or 0.'.format(tablename, count))
 
 
-def make_table(tablename, cursor):
+def _make_table(tablename, cursor):
     """
     Args:
         tablename (str)
@@ -55,7 +65,7 @@ def make_table(tablename, cursor):
     name = tablename
     n = 0
 
-    while is_table(name, cursor):
+    while _is_table(name, cursor):
         n += 1
         name = "{}_{}".format(tablename, n)
 
@@ -63,7 +73,7 @@ def make_table(tablename, cursor):
     return name
 
 
-def reorganise_fit_dict(fit):
+def _reorganise_fit_dict(fit):
     """
     Information from the fit dictionary is retrieved and organized
 
@@ -126,7 +136,7 @@ def reorganise_fit_dict(fit):
         param_labels, table_rows, table_columns, tablename)
 
 
-def save_fit_dict(fit_info):
+def _save_to_database(fit_info):
     """
     A connection to the SQL database is created and the fit data is
     saved to the database.
@@ -141,7 +151,7 @@ def save_fit_dict(fit_info):
 
     # Create table for fit parameter and predicted output values, store data
 
-    table = make_table(fit_info.tablename, cur)
+    table = _make_table(fit_info.tablename, cur)
 
     for column in fit_info.table_columns:
         cur.execute('ALTER TABLE {} ADD {}'.format(table, column))
@@ -153,7 +163,7 @@ def save_fit_dict(fit_info):
 
     # Create 'analyses' table if it does not already exist,
     # store info about analysis in 'analyses'
-    if not is_table('analyses', cur):
+    if not _is_table('analyses', cur):
         cur.execute(
             '''CREATE TABLE analyses
                         (data_run_id INTEGER, exp_id INTEGER, run_id INTEGER, analysis_table_name TEXT,
@@ -197,12 +207,3 @@ def save_fit_dict(fit_info):
 
     print("Table {} created".format(table))
 
-
-def save_fit_dict(fit):
-    """
-    Organises and saves the fit dictionary in SQL database
-    Args:
-        fit (dict): as output by fitter
-    """
-    fit_info_tuple = reorganise_fit_dict(fit)
-    save_fit_dict(fit_info_tuple)
