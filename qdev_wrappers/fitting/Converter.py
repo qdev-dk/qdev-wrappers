@@ -4,12 +4,13 @@ from os.path import expanduser
 from qcodes.dataset.data_export import get_data_by_id
 from qcodes.dataset.sqlite_base import connect
 from qdev_wrappers.show_num import check_experiment_is_initialized
+from qdev_wrappers.transmon.file_helpers import get_data_num
 
 
-def data_to_dict(id, datatype='SQL'):
+def data_to_dict(run_id, datatype='SQL'):
     """
     Args:
-        id (int)
+        run_id (int)
         datatype (str, default 'SQL'): 'SQL' or 'qcodes_legacy'
     """
     if datatype == 'qcodes_legacy':
@@ -22,21 +23,20 @@ def data_to_dict(id, datatype='SQL'):
         raise NotImplementedError(
             'datatype {} is not currently supported'.format(datatype))
 
-    return converter.convert(id)
+    return converter.convert(run_id)
 
 
 class DataConverter:
     """
     Base class for converters that convert data into a python dictionary.
     """
-    def find_data(self, id):
+    def find_data(self, run_id):
         """
         Args:
-            id (int)
+            run_id (int)
         Returns:
             data
         """
-
         raise NotImplementedError(
             'find_data not implemented in the base class.')
 
@@ -49,7 +49,6 @@ class DataConverter:
                 dictionaries in the format
                 {'name': str, 'label': str, 'unit': str, 'data': np.array }
          """
-
         raise NotImplementedError(
             'make_data_dictionary not implemented in the base class.')
 
@@ -61,11 +60,10 @@ class DataConverter:
         Returns:
             corresponding experiment id
         """
-
         raise NotImplementedError(
             'find_experiment not implemented in the base class.')
 
-    def find_dependencies(self, run_id, data):
+    def find_dependencies(self, run_id):
         """
         Args:
             run_id (int)
@@ -75,7 +73,6 @@ class DataConverter:
                 depend on C and D
                 dependencies = {A: [C, D], B: [C, D]}
         """
-
         raise NotImplementedError(
             'find_dependencies not implemented in the base class.')
 
@@ -86,11 +83,10 @@ class DataConverter:
         Returns:
             list of all variables contained in the data dict
         """
-
         raise NotImplementedError(
             'find_variables not implemented in the base class.')
 
-    def convert(self, id):
+    def convert(self, run_id):
         """
         Args:
             run_id (int)
@@ -99,17 +95,15 @@ class DataConverter:
                 run as numpy arrays, plus relevant metadata
                 (experiment id, run id, dependencies, names, labels, and units)
         """
-
-        data = self.find_data(id)
+        data = self.find_data(run_id)
         data_dict = self.make_data_dictionary(data)
 
-        exp_id = self.find_experiment(id)
-        # SQL needs only id, Legacy needs only data
-        dependencies = self.find_dependencies(id, data)
+        exp_id = self.find_experiment(run_id)
+        dependencies = self.find_dependencies(run_id)
         all_variables = self.find_variables(data)
 
         data_dict['exp_id'] = exp_id
-        data_dict['run_id'] = id
+        data_dict['run_id'] = run_id
         data_dict['dependencies'] = dependencies
         data_dict['variables'] = all_variables
 
@@ -118,19 +112,17 @@ class DataConverter:
 
 class SQL_Converter(DataConverter):
 
-    def find_data(self, id):
+    def find_data(self, run_id):
         """
         Uses the database location specified in qc.config to
         get the data using get_data_by_id function.
         """
-
-        data = get_data_by_id(id)
+        data = get_data_by_id(run_id)
         if len(data) == 0:
-            raise RuntimeError('No data found for run id {}'.format(id))
+            raise RuntimeError('No data found for run id {}'.format(run_id))
         return data
 
-    # SQL converter only needs id, not data
-    def find_dependencies(self, id, data):
+    def find_dependencies(self, run_id):
         file = expanduser(qc.config['core']['db_location'])
 
         # connect to SQL database
@@ -141,7 +133,7 @@ class SQL_Converter(DataConverter):
 
         # extract names from layouts table
         for row in cur.execute(
-                'SELECT layout_id, parameter FROM layouts WHERE run_id is ?', str(id)):
+                'SELECT layout_id, parameter FROM layouts WHERE run_id is ?', str(run_id)):
             names[row[0]] = row[1]
 
         # extract dependencies from dependencies table
@@ -169,13 +161,13 @@ class SQL_Converter(DataConverter):
 
         return all_variables
 
-    def find_experiment(self, id):
+    def find_experiment(self, run_id):
         file = expanduser(qc.config['core']['db_location'])
         conn = connect(file)
         cur = conn.cursor()
 
         execute = cur.execute(
-            'SELECT exp_id FROM runs WHERE run_id is {}'.format(id))
+            'SELECT exp_id FROM runs WHERE run_id is {}'.format(run_id))
         exp_id = execute.fetchone()[0]
 
         return exp_id
@@ -203,15 +195,15 @@ class SQL_Converter(DataConverter):
 
 class Legacy_Converter(DataConverter):
 
-    def find_data(self, id):
-        str_id = '{0:03d}'.format(id)
+    def find_data(self, run_id):
+        str_id = '{0:03d}'.format(run_id)
         check_experiment_is_initialized()  # TODO: what does this do?
         path = qc.DataSet.location_provider.fmt.format(counter=str_id)
         data = qc.load_data(path)
         return data
 
-    def find_dependencies(self, id):
-        data = self.find_data(id)
+    def find_dependencies(self, run_id):
+        data = self.find_data(run_id)
         dep_vars = [key for key in data.arrays.keys()
                     if "_set" not in key[-4:]]
         indep_vars = [key for key in data.arrays.keys() if "_set" in key[-4:]]
@@ -224,9 +216,8 @@ class Legacy_Converter(DataConverter):
         all_variables = [variable for variable in data.arrays.keys()]
         return all_variables
 
-    def find_experiment(self, id):
-        exp_id = id
-        return exp_id
+    def find_experiment(self, run_id):
+        return None  # TODO: this will never work for legacy datasets right?
 
     def resize_data(self, data1, data2):
         scan_size = len(data1[0])
@@ -258,7 +249,7 @@ class Legacy_Converter(DataConverter):
         set_points being stored as single numbers
         (i.e. for setpoints = [1, 2, 3] , data = [[a, b, c], [d, e, f], [g, h, i]] 
         becomes setpoints = [[1, 1, 1], [2, 2, 2], [3, 3, 3]], data = data)'''
-        dependencies = self.find_dependencies(id, data)
+        dependencies = self.find_dependencies(get_data_num(data))
 
         dep_vars = [key for key in dependencies.keys()]
         indep_vars = dependencies[dep_vars[0]]
