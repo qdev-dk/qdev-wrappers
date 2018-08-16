@@ -1,17 +1,15 @@
 import qcodes as qc
 import numpy as np
-from os.path import sep, expanduser
+from os.path import expanduser
 from qcodes.dataset.data_export import get_data_by_id
 from qcodes.dataset.sqlite_base import connect
-from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 from qdev_wrappers.show_num import check_experiment_is_initialized
 
 
-def data_to_dict(id, samplefolder=None, datatype='SQL'):
+def data_to_dict(id, datatype='SQL'):
     """
     Args:
         id (int)
-        sample_folder (str or None, default None)
         datatype (str, default 'SQL'): 'SQL' or 'qcodes_legacy'
     """
     if datatype == 'qcodes_legacy':
@@ -24,19 +22,17 @@ def data_to_dict(id, samplefolder=None, datatype='SQL'):
         raise NotImplementedError(
             'datatype {} is not currently supported'.format(datatype))
 
-    return converter.convert(id, samplefolder)
+    return converter.convert(id)
 
 
 class DataConverter:
     """
     Base class for converters that convert data into a python dictionary.
     """
-    def find_data(self, id, samplefolder):
+    def find_data(self, id):
         """
         Args:
             id (int)
-            samplefolder (str or None): None implies the run is part of the
-                current configuration and the samplefolder in qc.config is used
         Returns:
             data
         """
@@ -57,7 +53,7 @@ class DataConverter:
         raise NotImplementedError(
             'make_data_dictionary not implemented in the base class.')
 
-    def find_experiment(self, run_id, samplefolder):
+    def find_experiment(self, run_id):
         """
         Args:
             run_id
@@ -69,12 +65,11 @@ class DataConverter:
         raise NotImplementedError(
             'find_experiment not implemented in the base class.')
 
-    def find_dependencies(self, run_id, data, samplefolder):
+    def find_dependencies(self, run_id, data):
         """
         Args:
             run_id (int)
             data (dict)
-            samplefolder (str)
         Returns:
             dependencies (dict): eg if A and B were measured, and they both
                 depend on C and D
@@ -95,24 +90,22 @@ class DataConverter:
         raise NotImplementedError(
             'find_variables not implemented in the base class.')
 
-    def convert(self, id, samplefolder=None):
+    def convert(self, id):
         """
         Args:
             run_id (int)
-            samplefolder (str or None, default None): only necessary if the run
-                isn't part of the current experimental configuration.
         Returns:
             data (dict): containing all the data from the specified
                 run as numpy arrays, plus relevant metadata
                 (experiment id, run id, dependencies, names, labels, and units)
         """
 
-        data = self.find_data(id, samplefolder)
+        data = self.find_data(id)
         data_dict = self.make_data_dictionary(data)
 
-        exp_id = self.find_experiment(id, samplefolder)
+        exp_id = self.find_experiment(id)
         # SQL needs only id, Legacy needs only data
-        dependencies = self.find_dependencies(id, data, samplefolder)
+        dependencies = self.find_dependencies(id, data)
         all_variables = self.find_variables(data)
 
         data_dict['exp_id'] = exp_id
@@ -125,36 +118,20 @@ class DataConverter:
 
 class SQL_Converter(DataConverter):
 
-    def find_data(self, id, samplefolder):
+    def find_data(self, id):
         """
         Uses the database location specified in qc.config to
         get the data using get_data_by_id function.
-
-        If this were set up to retrieve the data as get_data_by_id does,
-        but with get_DB_location() returning expanduser(sampefolder)
-        instead of expanduser(qcodes.config["core"]["db_location"]),
-        then I think everything would work for manual specification
-        of database location
         """
 
-        if samplefolder is None:
-            data = get_data_by_id(id)
-        else:
-            raise NotImplementedError(
-                'Manual specification of database '
-                'location not implemented for SQL')
-
+        data = get_data_by_id(id)
         if len(data) == 0:
             raise RuntimeError('No data found for run id {}'.format(id))
-
         return data
 
     # SQL converter only needs id, not data
-    def find_dependencies(self, id, data, samplefolder):
-        if samplefolder is None:
-            file = expanduser(qc.config['core']['db_location'])
-        else:
-            file = expanduser(samplefolder)
+    def find_dependencies(self, id, data):
+        file = expanduser(qc.config['core']['db_location'])
 
         # connect to SQL database
         conn = connect(file)
@@ -192,11 +169,8 @@ class SQL_Converter(DataConverter):
 
         return all_variables
 
-    def find_experiment(self, id, samplefolder):
-        if samplefolder is None:
-            file = expanduser(qc.config['core']['db_location'])
-        else:
-            file = expanduser(samplefolder)
+    def find_experiment(self, id):
+        file = expanduser(qc.config['core']['db_location'])
         conn = connect(file)
         cur = conn.cursor()
 
@@ -229,60 +203,42 @@ class SQL_Converter(DataConverter):
 
 class Legacy_Converter(DataConverter):
 
-    def find_data(self, id, samplefolder):
+    def find_data(self, id):
         str_id = '{0:03d}'.format(id)
-
-        if samplefolder is None:
-            check_experiment_is_initialized()
-            # check_experiment_is_initialized() doesn't do anything at the moment
-
-            path = qc.DataSet.location_provider.fmt.format(counter=str_id)
-            data = qc.load_data(path)
-
-        else:
-            path = '{}{}{}'.format(samplefolder, sep, str_id)
-            data = qc.load_data(path)
-
+        check_experiment_is_initialized()  # TODO: what does this do?
+        path = qc.DataSet.location_provider.fmt.format(counter=str_id)
+        data = qc.load_data(path)
         return data
 
-    # legacy only needs data, not id or sample folder
-    def find_dependencies(self, id, data, samplefolder=None):
+    def find_dependencies(self, id):
+        data = self.find_data(id)
         dep_vars = [key for key in data.arrays.keys()
                     if "_set" not in key[-4:]]
         indep_vars = [key for key in data.arrays.keys() if "_set" in key[-4:]]
-
         dependencies = {}
-
         for variable in dep_vars:
             dependencies[variable] = indep_vars
-
         return dependencies
 
     def find_variables(self, data):
         all_variables = [variable for variable in data.arrays.keys()]
         return all_variables
 
-    # samplefolder only needed in sql converter
-    def find_experiment(self, id, samplefolder=None):
+    def find_experiment(self, id):
         exp_id = id
         return exp_id
 
     def resize_data(self, data1, data2):
         scan_size = len(data1[0])
-
         new_data2 = []
-
         for setvalue in data2:
             array = np.array([setvalue for datapoint in range(scan_size)])
             new_data2.append(array)
-
         return np.array(new_data2)
 
     def make_data_dictionary(self, data):
         data_dict = {}
-
         all_variables = self.find_variables(data)
-
         for variable in all_variables:
             qc_data = getattr(data, variable)
             name = getattr(qc_data, 'name', 'No Name')
