@@ -4,14 +4,20 @@ import sqlite3
 import dill
 import qcodes as qc
 from os.path import expanduser
-from qdev_wrappers.fitting.Fitclasses import T1, T2
 
 
 def is_table(tablename, cursor):
+    """
+    Args:
+        tablename (str)
+        cursor: connection to an SQL database
+    Returns:
+        is_table (bool): True if a table with that name exists,
+            False if not.
 
-    """Takes table name (string), and a connection to an SQL database. Returns True if a table with that name
-    exists, and False if it does not. Throws an error if it finds multiple tables with the same name, or if the
-    sql count function returns something unexpected."""
+    Error if it finds multiple tables with the same name, or if the
+    sql count function returns something unexpected.
+    """
 
     table_count = "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name='{}'".format(tablename)
     execute = cursor.execute(table_count)
@@ -24,16 +30,21 @@ def is_table(tablename, cursor):
         return True
 
     else:
-        raise RuntimeError('''Attempt to check existing table names failed. Count of tables with 
-                            name {} returned {} instead of 1 or 0.'''.format(tablename, count))
+        raise RuntimeError(
+            'Attempt to check existing table names failed.'
+            ' Count of tables with name {} returned {} '
+            'instead of 1 or 0.'.format(tablename, count))
 
 
 def make_table(tablename, cursor):
-
-    """Takes suggested table name, and a connection to an SQL database. If the name is already in use, it goes
-    through numbered iterations of the name until it finds an unused table name. Otherwise, it leaves the name as
-    suggested. It creates a table with the name in the database, and returns the name."""
-
+    """
+    Args:
+        tablename (str)
+        cursor: connection to an SQL database.
+    Returns:
+        tablename (str): same as arg if this name was available,
+            otherwise a numbered variant
+    """
     name = tablename
     n = 0
 
@@ -46,12 +57,12 @@ def make_table(tablename, cursor):
 
 
 def fit_to_sql(fit, database=None):
-
-    """Takes the fit (dictionary output by Fitter) and an optional database. If no database name/location
-    is given, it gets the database from qc.config. Stores the information from the fit dictionary in the SQL
-    database. In the first part of this function, the data from the fit dictionary is retrieved and organized
-    for storage in the SQL file. In the second part, a connection to the SQL database is established a
-    series of SQL commands are executed to store the data.
+    """
+    Organises and saves the fit dictionary in SQL database
+    Args:
+        fit (dict): as output by fitter
+        database (str or None, default None): defualt uses database from
+            qc.config
 
     Note: It does not accept file locations of the format './file.db'. It seems you either need to specify
     the full location of the file (e.g. /Users/Username/Desktop/file.db), or have the file in the same folder
@@ -77,7 +88,8 @@ def fit_to_sql(fit, database=None):
     data_run_id = fit['inferred_from']['run_id']
     exp_id = fit['inferred_from']['exp_id']
     predicts = est_name.strip("estimate").strip("_")
-    estimator = "{}, {}".format(fit['inferred_from']['estimator']['method'], fit['inferred_from']['estimator']['type'])
+    estimator = "{}, {}".format(
+        fit['inferred_from']['estimator']['method'], fit['inferred_from']['estimator']['type'])
     analysis = str(fit['inferred_from']['estimator']['function used'])
     dill_obj = str(fit['inferred_from']['estimator']['dill'])
     start_params = str(fit['start_params'])
@@ -104,11 +116,9 @@ def fit_to_sql(fit, database=None):
     for parameter in fitclass.p_labels:
         table_columns.append(parameter)
 
-
-
     # Part2 : A connection to the SQL database is created and the fit data is saved to the database
 
-    #create a connection to the SQL database
+    # create a connection to the SQL database
     if database is not None:
         file = database
     else:
@@ -117,7 +127,8 @@ def fit_to_sql(fit, database=None):
     cur = conn.cursor()
 
     # Create table for fit parameter and predicted output values, store data
-    tablename = 'analysis_{}_{}'.format(fit['inferred_from']['run_id'], fitclass.name)
+    tablename = 'analysis_{}_{}'.format(
+        fit['inferred_from']['run_id'], fitclass.name)
     table = make_table(tablename, cur)
 
     for column in table_columns:
@@ -125,8 +136,8 @@ def fit_to_sql(fit, database=None):
 
     num_cols = len(table_rows[0])
     placeholder = ('?,' * num_cols).strip(',')
-    cur.executemany('INSERT INTO {} VALUES ({})'.format(table, placeholder), table_rows)
-
+    cur.executemany('INSERT INTO {} VALUES ({})'.format(
+        table, placeholder), table_rows)
 
     # Create 'analyses' table if it does not already exist, store info about analysis in 'analyses'
     if not is_table('analyses', cur):
@@ -142,7 +153,6 @@ def fit_to_sql(fit, database=None):
     cur.execute(sql_analyses,
                 (data_run_id, exp_id, run_id, table, predicts, estimator, analysis, start_params, dill_obj))
 
-
     # Store unit and label info in 'layouts' table
     layout_id = 1
     max_id = cur.execute('SELECT MAX(layout_id) FROM layouts').fetchone()[0]
@@ -154,16 +164,16 @@ def fit_to_sql(fit, database=None):
         row = (layout_id, run_id, parameter, label, unit, "inferred_from")
         layout_rows.append(row)
         layout_id += 1
-    layout_rows.append((layout_id, run_id, est_name, est_label, est_unit, "inferred_from"))
+    layout_rows.append((layout_id, run_id, est_name,
+                        est_label, est_unit, "inferred_from"))
 
     sql_layout = 'INSERT INTO layouts VALUES (?,?,?,?,?,?)'
     cur.executemany(sql_layout, layout_rows)
 
-
     # Store summary in 'runs' SQL table, with run type 'analysis' instead of 'result'
     sql_runs = 'INSERT INTO runs VALUES (?,?,?,?,?,?,?,?,?,?)'
-    cur.execute(sql_runs, (run_id, exp_id, 'analysis', table, "", "", "", 1, "", ""))
-
+    cur.execute(sql_runs, (run_id, exp_id, 'analysis',
+                           table, "", "", "", 1, "", ""))
 
     # save changes to SQL database and close connection
     conn.commit()

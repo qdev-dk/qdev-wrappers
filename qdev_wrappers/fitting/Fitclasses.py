@@ -1,25 +1,29 @@
-
-import qcodes as qc
 import numpy as np
 import scipy.fftpack as fftpack
 
 
 class LeastSquaresFit:
+    """
+    Base class for fit functions to be used with curve_fit. Specifies
+    a particular mathematical function and information that can be used to
+    perform a least squares fit to the data.
 
-    """ This is the base class for the other classes in this file. Each class specifies
-    a particular mathematical function and information that can be used to perform a
-    Least Squares Fit to the data.
+    Each class holds the mathematical function itself ('fun'), a function
+    for determining an initial guess for the fit parameters ('guess'), and
+    a list of attributes that set the function inputs and outputs, the fit
+    parameter labels and names, and the relationship between the units on the
+    input and output variables and the units on the parameters.
+    """
 
-    Each class holds the mathematical function itself ('fun'), a function for determining
-    an initial guess for the fit parameters ('guess'), and a list of attributes that set
-    the function inputs and outputs, the fit parameter labels and names, and the relationship
-    between the units on the input and output variables and the units on the parameters. """
-
-    def __init__(self):
-        self.name = 'NoName'
-        self.fun_str = 'None'
-        self.p_names = ['none']
-        self.p_units = ['none']
+    def __init__(self, name, fun_str, fun_np, fun_vars,
+                 fun_output, p_names, p_labels, p_units):
+        self.name = name
+        self.fun_str = fun_str
+        self.fun_np = fun_np
+        self.fun_output = fun_output
+        self.p_names = p_names
+        self.p_units = p_labels
+        self.p_units = p_units
 
     def fun(self, x, a, T, c):
         raise NotImplementedError('This is not implemented in the base class.')
@@ -28,59 +32,57 @@ class LeastSquaresFit:
         raise NotImplementedError('This is not implemented in the base class.')
 
 
-class T1(LeastSquaresFit):
-    
-    def __init__(self):
-        self.name = 'T1fit'
-        self.fun_str = r'$f(x) = a \exp(-x/T) + c$'
-        self.fun_np = 'a*np.exp(-x/T)+c'
-        self.fun_vars = ['x']
-        self.fun_output = ['y']
-        self.p_names = ['$a$', '$T$', '$c$']
-        self.p_labels= ['a', 'T', 'c']
-        self.p_units = ['y', 'x', 'y']                                        
-                                                    
+class ExpDecay(LeastSquaresFit):
+    def __init__(self, name='ExpDecayFit'):
+        super().__init__(
+            name=name,
+            fun_str=r'$f(x) = a \exp(-x/T) + c$',
+            fun_np='a*np.exp(-x/T)+c',
+            fun_vars=['x'],
+            fun_output=['y'],
+            p_names=['$a$', '$T$', '$c$'],
+            p_labels=['a', 'T', 'c'],
+            p_units=['y', 'x', 'y'])
+
     def fun(self, x, a, T, c):
-        val = a*np.exp(-x/T)+c
-        return val
+        return eval(self.fun_np)
 
     def guess(self, x, y):
-        l = len(y)
-        val_init = y[0:round(l/20)].mean()
-        val_fin = y[-round(l/20):].mean()
+        length = len(y)
+        val_init = y[0:round(length / 20)].mean()
+        val_fin = y[-round(length / 20):].mean()
         a = val_init - val_fin
         c = val_fin
         # guess T1 as point where data has fallen to 1/e of init value
-        idx = (np.abs(y-a/np.e-c)).argmin()
+        idx = (np.abs(y - a / np.e - c)).argmin()
         T = x[idx]
         return [a, T, c]
 
 
-class T2(LeastSquaresFit):
-    
-    def __init__(self):
-        self.name = 'T2fit'
-        self.fun_str = r'$f(x) = a \sin(\omega x +\phi)\exp(-x/T) + c$'
-        self.fun_np = 'a*np.exp(-x/T)*np.sin(w*x+p)+c'
-        self.fun_vars = ['x']
-        self.fun_output = ['y']
-        self.p_names = ['$a$', '$T$', '$\omega$', '$\phi$', '$c$']
-        self.p_labels = ['a', 'T', 'w', 'p', 'c']
-        self.p_units = ['y', 'x', '1/x', '', 'y']                 
+class ExpDecaySin(LeastSquaresFit):
+    def __init__(self, name='ExpDecaySinFit'):
+        super().__init__(
+            name=name,
+            fun_str=r'$f(x) = a \sin(\omega x +\phi)\exp(-x/T) + c$',
+            fun_np='a*np.exp(-x/T)*np.sin(w*x+p)+c',
+            fun_vars=['x'],
+            fun_output=['y'],
+            p_names=['$a$', '$T$', '$\omega$', '$\phi$', '$c$'],
+            p_labels=['a', 'T', 'w', 'p', 'c'],
+            p_units=['y', 'x', '1/x', '', 'y'])
 
     def fun(self, x, a, T, w, p, c):
-        val = a*np.exp(-x/T)*np.sin(w*x+p)+c
-        return val
+        return eval(self.fun_np)
 
-    def guess(self,x,y):
+    def guess(self, x, y):
         a = y.max() - y.min()
         c = y.mean()
         # guess T2 as point half way point in data
-        T = x[round(len(x)/2)]
+        T = x[round(len(x) / 2)]
         # Get initial guess for frequency from a fourier transform
-        yhat = fftpack.rfft(y-y.mean())
+        yhat = fftpack.rfft(y - y.mean())
         idx = (yhat**2).argmax()
-        freqs = fftpack.rfftfreq(len(x), d = (x[1]-x[0])/(2*np.pi))
+        freqs = fftpack.rfftfreq(len(x), d=(x[1] - x[0]) / (2 * np.pi))
         w = freqs[idx]
         p = 0
-        return [a,T,w,p,c]
+        return [a, T, w, p, c]
