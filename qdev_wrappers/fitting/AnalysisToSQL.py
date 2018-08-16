@@ -1,9 +1,16 @@
 
-
 import sqlite3
 import dill
 import qcodes as qc
 from os.path import expanduser
+from collections import namedtuple
+
+
+FitInfo = namedtuple(
+    'FitInfo',
+    'fitclass est_name est_label est_unit param_units data_run_id '
+    'exp_id predicts estimator analysis dill_obj start_params '
+    'param_labels table_rows table_columns tablename')
 
 
 def is_table(tablename, cursor):
@@ -56,24 +63,15 @@ def make_table(tablename, cursor):
     return name
 
 
-def fit_to_sql(fit, database=None):
+def reorganise_fit_dict(fit):
     """
-    Organises and saves the fit dictionary in SQL database
+    Information from the fit dictionary is retrieved and organized
+
     Args:
         fit (dict): as output by fitter
-        database (str or None, default None): defualt uses database from
-            qc.config
-
-    Note: It does not accept file locations of the format './file.db'. It seems you either need to specify
-    the full location of the file (e.g. /Users/Username/Desktop/file.db), or have the file in the same folder
-    you are running from and just specify the file name. """
-
-    # Note: the function uses SQL commands to establish the connection. It does not understand './file.db' as a
-    # location. If the database in question is in the same folder that you are running from, it just takes the
-    # file name, 'file.db'. Otherwise it seems to want a full"""
-
-    # Part1 : Information from the fit dictionary is retrieved and organized
-
+    Returns:
+        FitInfo (NamedTuple)
+    """
     fitclass_pckl = fit['inferred_from']['estimator']['dill']['fitclass']
     fitclass = dill.loads(fitclass_pckl)
 
@@ -89,13 +87,15 @@ def fit_to_sql(fit, database=None):
     exp_id = fit['inferred_from']['exp_id']
     predicts = est_name.strip("estimate").strip("_")
     estimator = "{}, {}".format(
-        fit['inferred_from']['estimator']['method'], fit['inferred_from']['estimator']['type'])
+        fit['inferred_from']['estimator']['method'],
+        fit['inferred_from']['estimator']['type'])
     analysis = str(fit['inferred_from']['estimator']['function used'])
     dill_obj = str(fit['inferred_from']['estimator']['dill'])
     start_params = str(fit['start_params'])
     param_labels = fitclass.p_names
 
-    # reorganize parameters to fit into rows, i.e. [a1, a2, a3...] and [b1, b2, b3...] --> [ [a1, b1], [a2, b2]...]
+    # reorganize parameters to fit into rows,
+    # [a1, a2, a3...] and [b1, b2, b3...] --> [ [a1, b1], [a2, b2]...]
     param_list = []
     data_length = len(est_values)
     for i in range(data_length):
@@ -104,7 +104,8 @@ def fit_to_sql(fit, database=None):
             params.append(param_values[parameter][i])
         param_list.append(params)
 
-    # make list of table row contents, i.e. [(row1), (row2), (row3)...], row1 = (id_nr1, estimate1, a1, b1...)
+    # make list of table row contents,
+    # [(row1), (row2), (row3)...], row1 = (id_nr1, estimate1, a1, b1...)
     table_rows = []
     for estimate, parameters, index in zip(est_values, param_list, range(data_length)):
         id_nr = index + 1
@@ -116,32 +117,45 @@ def fit_to_sql(fit, database=None):
     for parameter in fitclass.p_labels:
         table_columns.append(parameter)
 
-    # Part2 : A connection to the SQL database is created and the fit data is saved to the database
+    tablename = 'analysis_{}_{}'.format(
+        fit['inferred_from']['run_id'], fitclass.name)
 
+    return FitInfo(
+        fitclass, est_name, est_label, est_unit, param_units, data_run_id,
+        exp_id, predicts, estimator, analysis, dill_obj, start_params,
+        param_labels, table_rows, table_columns, tablename)
+
+
+def save_fit_dict(fit_info):
+    """
+    A connection to the SQL database is created and the fit data is
+    saved to the database.
+
+    Args:
+        fit_info (FitInfo named_tuple)
+    """
     # create a connection to the SQL database
-    if database is not None:
-        file = database
-    else:
-        file = expanduser(qc.config['core']['db_location'])
+    file = expanduser(qc.config['core']['db_location'])
     conn = sqlite3.connect(file)
     cur = conn.cursor()
 
     # Create table for fit parameter and predicted output values, store data
-    tablename = 'analysis_{}_{}'.format(
-        fit['inferred_from']['run_id'], fitclass.name)
-    table = make_table(tablename, cur)
 
-    for column in table_columns:
+    table = make_table(fit_info.tablename, cur)
+
+    for column in fit_info.table_columns:
         cur.execute('ALTER TABLE {} ADD {}'.format(table, column))
 
-    num_cols = len(table_rows[0])
+    num_cols = len(fit_info.table_rows[0])
     placeholder = ('?,' * num_cols).strip(',')
     cur.executemany('INSERT INTO {} VALUES ({})'.format(
-        table, placeholder), table_rows)
+        table, placeholder), fit_info.table_rows)
 
-    # Create 'analyses' table if it does not already exist, store info about analysis in 'analyses'
+    # Create 'analyses' table if it does not already exist,
+    # store info about analysis in 'analyses'
     if not is_table('analyses', cur):
-        cur.execute('''CREATE TABLE analyses
+        cur.execute(
+            '''CREATE TABLE analyses
                         (data_run_id INTEGER, exp_id INTEGER, run_id INTEGER, analysis_table_name TEXT,
                         predicts TEXT, estimator TEXT, function TEXT, start_parameters TEXT, dill TEXT)''')
     run_id = 1
@@ -151,7 +165,9 @@ def fit_to_sql(fit, database=None):
 
     sql_analyses = 'INSERT INTO analyses VALUES (?,?,?,?,?,?,?,?,?)'
     cur.execute(sql_analyses,
-                (data_run_id, exp_id, run_id, table, predicts, estimator, analysis, start_params, dill_obj))
+                (fit_info.data_run_id, fit_info.exp_id, fit_info.run_id,
+                 table, fit_info.predicts, fit_info.estimator,
+                 fit_info.analysis, fit_info.start_params, fit_info.dill_obj))
 
     # Store unit and label info in 'layouts' table
     layout_id = 1
@@ -160,17 +176,17 @@ def fit_to_sql(fit, database=None):
         layout_id += max_id
 
     layout_rows = []
-    for parameter, label, unit in zip(fitclass.p_labels, param_labels, param_units):
+    for parameter, label, unit in zip(fit_info.fitclass.p_labels, fit_info.param_labels, fit_info.param_units):
         row = (layout_id, run_id, parameter, label, unit, "inferred_from")
         layout_rows.append(row)
         layout_id += 1
-    layout_rows.append((layout_id, run_id, est_name,
-                        est_label, est_unit, "inferred_from"))
+    layout_rows.append((layout_id, run_id, fit_info.est_name,
+                        fit_info.est_label, fit_info.est_unit, "inferred_from"))
 
     sql_layout = 'INSERT INTO layouts VALUES (?,?,?,?,?,?)'
     cur.executemany(sql_layout, layout_rows)
 
-    # Store summary in 'runs' SQL table, with run type 'analysis' instead of 'result'
+    # Store summary in 'runs' SQL table, with run type 'analysis'
     sql_runs = 'INSERT INTO runs VALUES (?,?,?,?,?,?,?,?,?,?)'
     cur.execute(sql_runs, (run_id, exp_id, 'analysis',
                            table, "", "", "", 1, "", ""))
@@ -180,3 +196,14 @@ def fit_to_sql(fit, database=None):
     conn.close()
 
     print("Table {} created".format(table))
+
+
+def fit_to_sql(fit):
+    """
+    Organises and saves the fit dictionary in SQL database
+    Args:
+        fit (dict): as output by fitter
+    """
+    fit_info_tuple = reorganise_fit_dict(fit)
+
+    save_fit_dict(fit_info_tuple)
