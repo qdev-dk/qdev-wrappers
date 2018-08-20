@@ -59,8 +59,8 @@ class Decadac_ext(Decadac):
     """
     A Decadac with one voltage dividers
     """
-    DAC_CHANNEL_CLASS = DacChannel_local
-    DAC_SLOT_CLASS = DacSlot_local
+    DAC_CHANNEL_CLASS = DacChannel_ext
+    DAC_SLOT_CLASS = DacSlot_ext
 
     def __init__(self, name, address, **kwargs):
         deca_physical_min = -10
