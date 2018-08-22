@@ -3,6 +3,7 @@ from copy import deepcopy
 import functools
 from matplotlib import ticker
 import matplotlib.pyplot as plt
+import numpy as np
 
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
@@ -65,8 +66,12 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
             if 'z' in inst_meta_data:
                 xlen, ylen = inst_meta_data['z'].shape
                 rasterized = xlen * ylen > 5000
-                plot.add(inst_meas_data, subplot=j + k + 1,
-                         rasterized=rasterized)
+                po = plot.add(inst_meas_data, subplot=j + k + 1,
+                              rasterized=rasterized)
+                z = inst_meta_data['z']
+                vmin = np.percentile(z, 99)
+                vmax = np.percentile(z, 1)
+                po.set_clim(vmin=vmin, vmax=vmax)
             else:
                 rasterized = False
                 plot.add(inst_meas_data, subplot=j + k + 1, color=color)
