@@ -68,9 +68,9 @@ class ParametricSequencer(Instrument):
                  template_element: Element,
                  inner_setpoints: Tuple[Symbol, Sequence],
                  outer_setpoints: Tuple[Symbol, Sequence]=None,
-                 context: ContextDict={},
-                 units: Dict[Symbol, str]={},
-                 labels: Dict[Symbol, str]={},
+                 context: ContextDict=None,
+                 units: Dict[Symbol, str]=None,
+                 labels: Dict[Symbol, str]=None,
                  first_sequence_element: Element=None,
                  initial_element: Element=None) -> None:
         super().__init__(name)
@@ -103,22 +103,21 @@ class ParametricSequencer(Instrument):
                           initial_element=initial_element,
                           first_sequence_element=first_sequence_element)
 
-
     def set_template(self,
                      template_element: Element,
                      inner_setpoints: Tuple[Symbol, Sequence],
                      outer_setpoints: Tuple[Symbol, Sequence]=None,
-                     context: ContextDict={},
-                     units: Dict[Symbol, str]={},
-                     labels: Dict[Symbol, str]={},
+                     context: ContextDict=None,
+                     units: Dict[Symbol, str]=None,
+                     labels: Dict[Symbol, str]=None,
                      first_sequence_element: Element=None,
                      initial_element: Element=None) -> None:
         self.template_element = template_element
         self.first_sequence_element = first_sequence_element
         self.initial_element = initial_element
-        self._context = context
-        self._units = units
-        self._labels = labels
+        self._context = context or {}
+        self._units = units or {}
+        self._labels = labels or {}
 
         self._sequence_up_to_date = False
 
@@ -189,7 +188,6 @@ class ParametricSequencer(Instrument):
             self._inner_setpoint_parameter = self.repeat.parameters[inner.symbol]
         if outer:
             self._outer_setpoint_parameter = self.repeat.parameters[outer.symbol]
-
 
         if self._do_upload:
             self._upload_sequence()
