@@ -380,6 +380,7 @@ class ParametricWaveformAnalyser(Instrument):
             self,
             template_element: Element,
             inner_setpoints: Tuple[Symbol, Sequence],
+            outer_setpoints: Tuple[Symbol, Sequence]=None,
             context: ContextDict={},
             units: Dict[Symbol, str]={},
             labels: Dict[Symbol, str]={},
@@ -390,6 +391,7 @@ class ParametricWaveformAnalyser(Instrument):
         self._sequence_settings['labels'].update(labels)
         self.sequencer.set_template(template_element,
                                     inner_setpoints=inner_setpoints,
+                                    outer_setpoints=outer_setpoints,
                                     context=self._sequence_settings['context'],
                                     units=self._sequence_settings['units'],
                                     labels=self._sequence_settings['labels'],
