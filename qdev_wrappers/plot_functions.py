@@ -1,3 +1,4 @@
+from typing import Tuple
 from os.path import sep
 from copy import deepcopy
 import functools
@@ -10,12 +11,26 @@ from qcodes.plots.qcmatplotlib import MatPlot
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 from qcodes.instrument.channel import MultiChannelInstrumentParameter
 
-def auto_range_iqr(data_array):
+
+def auto_range_iqr(data_array: np.ndarray) -> Tuple[float, float]:
+    """
+    Get the min and max range of the provided array that excludes outliers
+    following the IQR rule.
+
+    This function computes the inter-quartile-range (IQR), defined by Q3-Q1,
+    i.e. the percentiles for 75% and 25% of the destribution. The region
+    without outliers is defined by [Q1-1.5*IQR, Q3+1.5*IQR].
+    Args:
+        data_array: numpy array of arbitrary dimension containing the
+            statistical data
+    returns:
+        vmin, vmax: region limits [vmin, vmax]
+    """
     z = data_array.flatten()
     zmax = z.max()
     zmin = z.min()
     zrange = zmax-zmin
-    q3, q1 = np.percentile(z, [75 ,25])
+    q3, q1 = np.percentile(z, [75, 25])
     IQR = q3-q1
     # handle corner case of all data zero, such that IQR is zero
     # to counter numerical artifacts do not test IQR == 0, but IQR on its
