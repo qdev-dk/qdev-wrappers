@@ -68,9 +68,24 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
                 rasterized = xlen * ylen > 5000
                 po = plot.add(inst_meas_data, subplot=j + k + 1,
                               rasterized=rasterized)
-                z = inst_meta_data['z']
-                vmin = np.percentile(z, 99)
-                vmax = np.percentile(z, 1)
+                z = inst_meta_data['z'].flatten()
+                zmax = z.max()
+                zmin = z.min()
+                zrange = zmax-zmin
+                q3, q1 = np.percentile(z, [75 ,25])
+                IQR = q3-q1
+                print(f'q3 is {q3}, q1: {q1}')
+                # handle corner case of all data zero, such that IQR is zero
+                # to counter numerical artifacts do not test IQR == 0, but IQR on its
+                # natural scale (zrange) to be smaller than some very small number.
+                # also test for zrange to be 0.0 to avoid division by 0.
+                # all This is possibly to careful...
+                if zrange == 0.0 or IQR/zrange < 1e-8:
+                    vmin = zmin
+                    vmax = zmax
+                else:
+                    vmin = max(q1 - 1.5*IQR, zmin)
+                    vmax = min(q3 + 1.5*IQR, zmax)
                 po.set_clim(vmin=vmin, vmax=vmax)
             else:
                 rasterized = False
