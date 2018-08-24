@@ -5,6 +5,7 @@ import collections
 import matplotlib.pyplot as plt
 
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
+from qdev_wrappers.plot_functions import auto_range_iqr
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
 
@@ -14,8 +15,10 @@ def check_experiment_is_initialized():
                            "use qc.Init(mainfolder, samplename)")
 
 
-def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng=True,
-            fig_size=[6,4],clim=None,dataname=None,xlim=None,ylim=None,transpose=False,**kwargs):
+def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
+             do_plots=True, savepng=True, fig_size=[6,4], clim=None,
+             dataname=None, xlim=None, ylim=None, transpose=False,
+             auto_color_scale=True, **kwargs):
     """
     Show and return plot and data.
     Args:
@@ -109,8 +112,11 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                         xlims[1].append(np.nanmax(arrays.set_arrays[1]))
                         ylims[0].append(np.nanmin(arrays.set_arrays[0]))
                         ylims[1].append(np.nanmax(arrays.set_arrays[0]))
-                        clims[0].append(np.nanmin(arrays.ndarray))
-                        clims[1].append(np.nanmax(arrays.ndarray))
+                        if auto_color_scale:
+                            clims[0], clims[1] = auto_range_iqr(arrays.ndarray)
+                        else:
+                            clims[0].append(np.nanmin(arrays.ndarray))
+                            clims[1].append(np.nanmax(arrays.ndarray))
                     else:
                         xlims[0].append(np.nanmin(arrays.set_arrays[0]))
                         xlims[1].append(np.nanmax(arrays.set_arrays[0]))
