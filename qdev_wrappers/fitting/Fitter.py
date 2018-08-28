@@ -198,5 +198,5 @@ class Fitter:
     def _find_estimate(self, input_data_array, params_values_dict):
         return fitlass.fun(input_data_array, **params_values_dict)
 
-    def plot(self):
+    def plot(self, **setpoint_config):
         raise NotImplementedError

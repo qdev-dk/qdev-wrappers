@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.fftpack as fftpack
+from typing import List
 
 
 class LeastSquaresFit:
@@ -11,18 +12,20 @@ class LeastSquaresFit:
 
     Only one input and one output is currently allowed.
 
-    Order of param_names, param_labels, param_units must match function guess output and
-    order of appearance in fun
+    Order of param_names, param_labels, param_units must match function guess
+    output and order of appearance in fun
     """
 
     def __init__(self, name, fun_str, fun_np,
-                 fun_output, param_names, param_labels, param_units):
+                 fun_output, param_names, param_labels, param_units,
+                 guess: List[float]=None):
         self.name = name
         self.fun_str = fun_str
         self.fun_np = fun_np
         self.param_names = param_names
         self.param_labels = param_labels
         self.param_units = param_units
+        self.guess = guess
 
     def fun(self, *args):
         """
@@ -32,25 +35,36 @@ class LeastSquaresFit:
 
     def guess(self, *args):
         """
+        Function for determining an initial guess for the fit parameters from
+        given values or based on perform guess function
+        """
+        if guess is not None:
+            return guess
+        else:
+            return self.perform_guess(*args)
+
+    def perform_guess(self, *args):
+        """
         Function for determining an initial guess for the fit parameters
         """
         raise NotImplementedError('This is not implemented in the base class.')
 
 
 class ExpDecay(LeastSquaresFit):
-    def __init__(self, name='ExpDecayFit'):
+    def __init__(self, name='ExpDecayFit', guess=None):
         super().__init__(
             name=name,
             fun_str=r'$f(x) = a \exp(-x/T) + c$',
             fun_np='a*np.exp(-x/T)+c',
             param_labels=['$a$', '$T$', '$c$'],
             param_names=['a', 'T', 'c'],
-            param_units=['', 's', ''])
+            param_units=['', 's', ''],
+            guess=guess)
 
     def fun(self, x, a, T, c):
         return eval(self.fun_np)
 
-    def guess(self, x, y):
+    def perform_guess(self, x, y):
         length = len(y)
         val_init = y[0:round(length / 20)].mean()
         val_fin = y[-round(length / 20):].mean()
@@ -63,19 +77,20 @@ class ExpDecay(LeastSquaresFit):
 
 
 class ExpDecaySin(LeastSquaresFit):
-    def __init__(self, name='ExpDecaySinFit'):
+    def __init__(self, name='ExpDecaySinFit', guess=None):
         super().__init__(
             name=name,
             fun_str=r'$f(x) = a \sin(\omega x +\phi)\exp(-x/T) + c$',
             fun_np='a*np.exp(-x/T)*np.sin(w*x+p)+c',
             param_labels=['$a$', '$T$', '$\omega$', '$\phi$', '$c$'],
             param_names=['a', 'T', 'w', 'p', 'c'],
-            param_units=['', 's', 'Hz', '', ''])
+            param_units=['', 's', 'Hz', '', ''],
+            guess=guess)
 
     def fun(self, x, a, T, w, p, c):
         return eval(self.fun_np)
 
-    def guess(self, x, y):
+    def perform_guess(self, x, y):
         a = y.max() - y.min()
         c = y.mean()
         # guess T2 as point half way point in data
