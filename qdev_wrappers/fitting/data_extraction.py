@@ -47,7 +47,7 @@ class DataConverter:
         Returns:
             data (dict): keys are variables from the data, values are
                 dictionaries in the format
-                {'name': str, 'label': str, 'unit': str, 'data': np.array }
+                {'label': str, 'unit': str, 'data': np.array }
          """
         raise NotImplementedError(
             'make_data_dictionary not implemented in the base class.')
@@ -62,7 +62,7 @@ class DataConverter:
         raise NotImplementedError(
             'find_experiment not implemented in the base class.')
 
-    def find_dependencies(self, run_id):
+    def find_dependencies(self, run_id):  # TODO: why do we need this? 
         """
         Args:
             run_id (int)
@@ -97,14 +97,11 @@ class DataConverter:
         data = self.find_data(run_id)
         data_dict = self.make_data_dictionary(data)
 
-        exp_id = self.find_experiment(run_id)
-        dependencies = self.find_dependencies(run_id)
-        all_variables = self.find_variables(data)
-
-        data_dict['exp_id'] = exp_id
+        data_dict['exp_id'] = self.find_experiment(run_id)
         data_dict['run_id'] = run_id
-        data_dict['dependencies'] = dependencies
-        data_dict['variables'] = all_variables
+        data_dict['sample_name'] = self.find_sample_name(run_id)
+        data_dict['dependencies'] = self.find_dependencies(run_id)
+        data_dict['variables'] = self.find_variables(data)
 
         return data_dict
 
@@ -171,9 +168,11 @@ class SQL_Converter(DataConverter):
 
         return exp_id
 
+    def find_sample_name(self, run_id):
+        return None  # TODO
+
     def make_data_dictionary(self, data):
         data_dict = {}
-
         for data_subset in data:
             for variable in data_subset:
                 name = variable['name']

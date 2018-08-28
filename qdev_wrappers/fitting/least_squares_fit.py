@@ -9,22 +9,20 @@ class LeastSquaresFit:
     and attributes specifying inputs and output of fit function as
     well as and names, labels and units of fit parameters.
 
-    Only one output is currently allowed.
+    Only one input and one output is currently allowed.
 
-    Order of p_names, p_labels, p_units must match function guess output and
+    Order of param_names, param_labels, param_units must match function guess output and
     order of appearance in fun
     """
 
-    def __init__(self, name, fun_str, fun_np, fun_vars,
-                 fun_output, p_names, p_labels, p_units):
+    def __init__(self, name, fun_str, fun_np,
+                 fun_output, param_names, param_labels, param_units):
         self.name = name
         self.fun_str = fun_str
         self.fun_np = fun_np
-        self.fun_vars = fun_vars
-        self.fun_output = fun_output
-        self.p_names = p_names
-        self.p_labes = p_labels
-        self.p_units = p_units
+        self.param_names = param_names
+        self.param_labels = param_labels
+        self.param_units = param_units
 
     def fun(self, *args):
         """
@@ -45,11 +43,9 @@ class ExpDecay(LeastSquaresFit):
             name=name,
             fun_str=r'$f(x) = a \exp(-x/T) + c$',
             fun_np='a*np.exp(-x/T)+c',
-            fun_vars=['x'],
-            fun_output='y',
-            p_labels=['$a$', '$T$', '$c$'],
-            p_names=['a', 'T', 'c'],
-            p_units=['y', 'x', 'y'])
+            param_labels=['$a$', '$T$', '$c$'],
+            param_names=['a', 'T', 'c'],
+            param_units=['', 's', ''])
 
     def fun(self, x, a, T, c):
         return eval(self.fun_np)
@@ -72,11 +68,9 @@ class ExpDecaySin(LeastSquaresFit):
             name=name,
             fun_str=r'$f(x) = a \sin(\omega x +\phi)\exp(-x/T) + c$',
             fun_np='a*np.exp(-x/T)*np.sin(w*x+p)+c',
-            fun_vars=['x'],
-            fun_output='y',
-            p_labels=['$a$', '$T$', '$\omega$', '$\phi$', '$c$'],
-            p_names=['a', 'T', 'w', 'p', 'c'],
-            p_units=['y', 'x', '1/x', '', 'y'])
+            param_labels=['$a$', '$T$', '$\omega$', '$\phi$', '$c$'],
+            param_names=['a', 'T', 'w', 'p', 'c'],
+            param_units=['', 's', 'Hz', '', ''])
 
     def fun(self, x, a, T, w, p, c):
         return eval(self.fun_np)

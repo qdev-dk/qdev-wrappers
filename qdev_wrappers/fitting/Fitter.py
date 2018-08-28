@@ -1,94 +1,97 @@
 import qcodes as qc
 import numpy as np
-
 from scipy.optimize import curve_fit
 from itertools import product
-from qcodes.config.config import DotDict
-
-
-def fit_data(data, fitclass, fun_inputs, fun_output, **kwargs):
-    """
-    Fits the data in the data dictionary using the fit class provided and the
-    mappings provided to generate a fit dictionary.
-
-    Args:
-        data (dict)
-        fitclass (currently limited to LeastSquaresFit)
-        fun_input (dict): mapping between data name in data dictionary and
-            argument of fitclass function eg {'x': 'pulse_readout_delay'}
-        fun_output (dict: mapping between data name in data dictionary and
-            return of fit class function eg {'y': 'data'}
-        **kwargs (optional): passed to find_fit function of fit class
-
-    Returns:
-        fit (dict): containing the fitted parameters and an array of
-            "estimated" outputs given the fit as well as some metadata about
-            the fit.
-    """
-
-    check_input_matches_fitclass(fitclass, fun_input, fun_output)
-
-    setpoints = [v for v in data['variables'] if
-                 v not in set([*fun_input.values(),
-                               *fun_output.values()])]
-    return Fitter(data, fitclass, fun_input, fun_output, setpoints)
+from least_squares_fit import LeastSquaresFit
 
 
 class Fitter:
     """
-    Class which performs fit for data based on data, fitclass, mapping between
-    paramter names and fit function arguments/returns and setpoints
+    Class which performs fit for data based on data, fitclass and names of
+
+    Args:
+        data (dict)
+        fitclass (currently limited to LeastSquaresFit)
+        indept_var (str): name of parameter in data dict to be used as
+            independent variable in fit procedure. eg 'pulse_readout_delay'
+        dept_var (str): name of parameter in data dict which represents
+            dependent variable for fitting. eg 'cavity_magnitude_result'
     """
 
-    def __ init__(self, data, fitclass, fun_input, fun_output, setpoints):
-        """
-        Args:
-            data (dict)
-        """
+    def __ init__(self, data: dict, fitclass: LeastSquaresFit,
+                  indept_var: str, dept_var: str):
         self.fitclass = fitclass
-        self.fun_input = fun_input
-        self.fun_output = fun_output
-        self.setpoints = {setpoint: set(data[setpoint].flatten()) for
-                          setpoint in setpoints}
+        self.experiment_info = {'exp_id': data['exp_id'],
+                                'run_id': data['run_id'],
+                                'sample_name': data['sample_name']}
+        self.indept_var = data[indept_var]
+        self.dept_var = data[dept_var]
+        self.setpoints = {k: data[k] for k in data.keys() if
+                          k not in [indept_var, dept_var]}
+        self.fit_parameters = {
+            fitclass.param_names[i]:
+            {'name': fitclass.param_names[i],
+             'label': fitclass.param_labels[i],
+             'unit': fitclass.param_units[i]} for
+            i in len(fitclass.param_names)}
         self.estimator = {'method': 'LSF',
                           'type': fitclass.name,
-                          'fit_function_str': fitclass.fun_str}
-        self.inferred_from = data.run_id
-        self.fit_results = []
-        self._do_fitting_procedure()
+                          'fit_function_str': fitclass.fun_str}  # TODO: add dill here
+        self.fit_results = self._do_fitting_procedure()
 
     def _do_fitting_procedure(self):
         """
         Populates fit_results list with one dictionary per combination
-        of setpoints. Dictionaries are of the form:
+        of setpoints.
 
-        for self.setpoints = {'temperature': [0.01, 0.02, 0.03]}
+        eg
+        for self.setpoints = {'frequency':
+                                {'label': '',
+                                 'unit': 'Hz',
+                                 'data': [1e9, 2e9, 3e9]},
+                              'power':
+                                {'label': '',
+                                 'unit': 'dBm',
+                                 'data': [-10, -30]}}
 
+        will make 6 dictionaries of the form
         {
-            'temperature': 0.02,
+            'setpoint_names': ['frequency', 'power'],
+            'setpoint_labels': {'frequency': '' , 'power': ''},
+            'setpoint_units': {'frequency': 'Hz' , 'power': 'dBm'},
+            'setpoint_values': {'frequency': 1e9 , 'power': -10},
             'param_names': ['a', 'b'],
             'param_labels': {'a': 'T1', 'b': 'b'},
             'param_units': {'a': 's', 'b': ''},
             'param_start_values': {'a': 3, 'b': 10},
             'param_values': {'a': 2.5, 'b': 11},
             'param_variance': {'a': 0.1, 'b': 2},
-            'input': [0.1, 0.2, 0.3, 0.4],
-            'output': [1.15, 1.26, 1.34, 1.23]
-            'estimate' [1.1, 1.2, 1.3, 1.4]
+            'indept_var_name': 'pulse_readout_delay',
+            'indept_var_label': 'Pulse Readout Delay',
+            'indept_var_unit': 's',
+            'indept_var_values': [0.1, 0.2, 0.3, 0.4],
+            'dept_var_name': 'cavity_magnitude_response',
+            'dept_var_label': 'Cavity Response',
+            'dept_var_unit': '',
+            'dept_var_values': [1.15, 1.26, 1.34, 1.23],
+            'estimate_values' [1.1, 1.2, 1.3, 1.4]
         }
         """
-
+        fit_results = []
         # if setpoints then perform fit for all
         if len(self.setpoints) > 0:
-            setpoint_combinations = product(*self.setpoints.values())
-            setpoint_names = self.setpints.keys()
+            setpoint_combinations = product(
+                *[v['data'] for v in self.setpoints.values()])
+            setpoint_names = list(self.setpoints.keys())
+            setpoint_labels = [v['label'] for v in self.setpoints.values()]
+            setpoint_units = [v['unit'] for v in self.setpoints.values()]
             for setpoint_combination in setpoint_combinations:
                 # find indices where where setpoing combination is satisfied
                 setpoint_0_indices = list(np.argwhere(
-                    data[setpoint_names[0]] == setpoint_combination[0]))
+                    data[setpoint_names[0]['data']] == setpoint_combination[0]))
                 for i in range(1, len(setpoint_names)):
                     new_setpoint_indices = list(np.argwhere(
-                        data[setpoint_names[i]] == setpoint_combination[i]))
+                        data[setpoint_names[i]['data']] == setpoint_combination[i]))
                     union_setpoint_indices = []
                     for index in indices:
                         for new_index in new_indices:
@@ -96,47 +99,75 @@ class Fitter:
                                 union_setpoint_indices.append(index)
                 index = union_setpoint_indices[0]
                 try:
-                    result = {}
-                    input_data_array = {k: data[v][index]
-                                        for k, v in fun_input.items()}
-                    output_data_array = {k: data[v][index]
-                                         for k, v in fun_output.items()}
-                    param_dict = self._perform_fit(input_data_array,
-                                                   output_data_array)
-                    result.update(dict(zip(self.setpoints.keys(),
-                                           setpoint_combination)))
-                    result.update({'input': input_data_array,
-                                   'output': output_data_array})
+                    input_data_array = data[self.indept_var['name']
+                                            ]['data'][index]
+                    output_data_array = data[self.dept_var['name']
+                                             ]['data'][index]
+                    result = self._perform_fit(input_data_array,
+                                               output_data_array)
                     result.update(
-                        {'estimate':
+                        {'setpoint_names': setpoint_names,
+                         'setpoint_labels': dict(zip(setpoint_names,
+                                                     setpoint_labels)),
+                         'setpoint_units': dict(zip(setpoint_names,
+                                                    setpoint_units)),
+                         'setpoint_values': dict(zip(setpoint_names,
+                                                     setpoint_combination)),
+                         'indept_var_values': input_data_array,
+                         'dept_var_values': output_data_array,
+                         'indept_var_name': self.indept_var['name'],
+                         'dept_var_name': self.dept_var['name'],
+                         'indept_var_label': self.indept_var['label'],
+                         'dept_var_label': data[self.dept_var]['label'],
+                         'indept_var_unit': data[self.indept_var]['unit'],
+                         'dept_var_unit': data[self.dept_var]['unit'],
+                         'estimate_values':
                             self.find_estimate(input_data_array,
                                                param_dict['param_values'])})
-                    result.update(result)
-                    self.fit_results.append(result)
+                    fit_results.append(result)
                 except Exception:  # TODO: what kind of exception
                     print('no data for setpoint combination ', dict(
                         zip(self.setpoints.keys(), setpoint_combination)))
         else:
-            input_data_array = {k: data.get_data(v) for
-                                k, v in fun_input.items()}
-            output_data_array = {k: data.get_data(v) for
-                                 k, v in fun_output.items()}
-            param_dict = self.perform_fit(input_data_array,
-                                          output_data_array)
-            result.update({'input': input_data_array,
-                           'output': output_data_array})
+            input_data_array = data[self.indept_var]['data'][index]
+            output_data_array = data[self.dept_var]['data'][index]
+            result = self._perform_fit(input_data_array,
+                                       output_data_array)
             result.update(
-                {'estimate':
+                {'setpoint_names': [],
+                 'indept_var_values': input_data_array,
+                 'dept_var_values': output_data_array,
+                 'indept_var_name': self.indept_var['name'],
+                 'dept_var_name': self.dept_var['name'],
+                 'indept_var_label': data[self.indept_var]['label'],
+                 'dept_var_label': data[self.dept_var]['label'],
+                 'indept_var_unit': data[self.indept_var]['unit'],
+                 'dept_var_unit': data[self.dept_var]['unit'],
+                 'estimate_values':
                     self.find_estimate(input_data_array,
                                        param_dict['param_values'])})
-            self.fit_dict['fit_results'].append(result)
+            fit_results.append(result)
+            except Exception:  # TODO: what kind of exception
+                print('no data for setpoint combination ', dict(
+                    zip(self.setpoints.keys(), setpoint_combination)))
+        return fit_results
 
     def get_result(**setpoint_values):
+        """
+        Args:
+            kwargs for each setpoints
+                eg 'frequency=1e9, power=-10'
+        Returns:
+            dict for fit where these conditions are satisfiedxw
+        """
         if len(setpoint_values) != len(self.setpoints):
             raise RuntimeError('Must specify a value for each setpoint')
-        return next(res for res in self.fit_results if
-                    all(res[setpoint] == value for
-                        setpoint, value in setpoint_values.items()))
+        elif len(self.setpoints) == 0:
+            return self.fit_results[0]
+        else:
+            return next(res for res in self.fit_results if
+                        all(res[setpoint] == value for
+                            setpoint, value in setpoint_values.items()))
 
     def _perform_fit(self, input_data_array, output_data_array):
 
@@ -157,57 +188,15 @@ class Fitter:
                                p0=p_guess)
 
         # add guess and fit results to dict
-        for i, param_name in enumerate(self.fitclass.p_names):
+        for i, param_name in enumerate(self.fitclass.param_names):
             params_dict['param_start_values'][param_name] = p_guess[i]
             params_dict['param_values'][param_name] = popt[i]
             params_dict['param_variance'][param_name] = pcov[i, i]
 
         return params_dict
 
-    def find_estimate(self, input_data_array, params_values_dict):
+    def _find_estimate(self, input_data_array, params_values_dict):
         return fitlass.fun(input_data_array, **params_values_dict)
 
-
-    def check_input_matches_fitclass(self):
-        """
-        Checks that the given arguments are in the correct format for the
-        'fit_data' function to proceed, and that they match the expected inputs for
-        the specified fit class.
-
-        Each fit class describes a mathematical function to be fitted to,
-        with a set of attributes, including which variables the function has as
-        inputs, and what outputs it has. This function makes sure that the correct
-        inputs and outputs are specified compared to what inputs and outputs the
-        mathematical function has, and that they are specified in the correct
-        format.
-
-        Args:
-            fitclass (currently only LeastSquaresFit implemented)
-            inputs (dict)
-            output (dict)
-        """
-
-        # check input and output are given, and that input,
-        # output and setpoints are in correct format
-        if (type(inputs) != dict or type(output) != dict):
-            raise RuntimeError(
-                'Please specify both input and output variables for the function '
-                'you wish to fit in the format fun_inputs = '
-                '{"x": "name", "y": "other_name"}, fun_output ='
-                ' {"z": "another_name"}')
-
-        # check inputs/outputs specified match inputs/outputs function takes
-        if len(inputs) != len(fitclass.fun_vars):
-            raise RuntimeError(
-                'The function you are fitting to takes {} variables, and you '
-                'have specified {}'.format(len(fitclass.fun_vars), len(inputs)))
-        for variable in inputs.keys():
-            if variable not in fitclass.fun_vars:
-                raise RuntimeError(
-                    'You have specified a variable {}. The fit function takes'
-                    'variables {}'.format(variable, fitclass.fun_vars))
-        for variable in output.keys():
-            if variable not in fitclass.fun_output:
-                raise RuntimeError(
-                    'You have specified a variable {}. The fit function returns '
-                    'variables {}'.format(variable, fitclass.fun_output))
+    def plot(self):
+        raise NotImplementedError
