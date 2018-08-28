@@ -1,5 +1,6 @@
 from qcodes.instrument.base import Instrument
 from qcodes.utils import validators as vals
+from qcodes.instrument.parameter import InstrumentRefParameter
 from qdev_wrappers.parameters import DelegateParameter
 
 # TODO: name help pleaaase!
@@ -22,7 +23,12 @@ class HeterodyneSource(Instrument):
             raise RuntimeError('must initialise with microwave sources '
                                'for cavity and local oscillator')
         super().__init__(name)
-
+        self.add_parameter(name='cavity',
+                           initial_value=cavity.name,
+                           parameter_class=InstrumentRefParameter)
+        self.add_parameter(name='localos',
+                           initial_value=localos.name,
+                           parameter_class=InstrumentRefParameter)
         self.add_parameter(name='frequency',
                            set_cmd=self._set_drive_frequency,
                            get_cmd=self._cavity.frequency,
