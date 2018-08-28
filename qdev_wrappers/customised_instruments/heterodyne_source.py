@@ -1,6 +1,5 @@
 from qcodes.instrument.base import Instrument
 from qcodes.utils import validators as vals
-import logging
 from qdev_wrappers.parameters import DelegateParameter
 
 # TODO: name help pleaaase!
@@ -69,9 +68,10 @@ class HeterodyneSource(Instrument):
         if cav_source == lo_source:
             return cav_source
         else:
-            logging.warning(
+            raise RuntimeError(
                 'cavity and local oscillator do not have the '
-                'same reference source: {}, {}'.format(cav_source, lo_source))
+                'same reference source: {}, {}'.format(cav_source,
+                                                       lo_source))
 
     def _set_ref_osc_external_freq(self, ref_osc_external_freq):
         self._cavity.ref_osc_external_freq(ref_osc_external_freq)
@@ -83,9 +83,10 @@ class HeterodyneSource(Instrument):
         if cav_source_freq == lo_source_freq:
             return cav_source_freq
         else:
-            logging.warning('cavity and local oscillator do '
-                            'not have the same reference source frequency: '
-                            '{}, {}'.format(cav_source_freq, lo_source_freq))
+            raise RuntimeError(
+                'cavity and local oscillator do '
+                'not have the same reference source frequency: '
+                '{}, {}'.format(cav_source_freq, lo_source_freq))
 
     def _set_status(self, status):
         if str(status).upper() in ['TRUE', '1', 'ON']:
