@@ -5,7 +5,7 @@ import collections
 import matplotlib.pyplot as plt
 
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
-from qdev_wrappers.plot_functions import auto_range_iqr
+from qcodes.utils.plotting import auto_range_iqr
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
 
