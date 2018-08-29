@@ -30,10 +30,15 @@ class HeterodyneSource(Instrument):
                            initial_value=localos.name,
                            parameter_class=InstrumentRefParameter)
         self.add_parameter(name='frequency',
+                           docstring='Sets cavity frequency to the input '
+                           'frequency and localos frequency to input frequency'
+                           ' + demodulation_frequency',
                            set_cmd=self._set_drive_frequency,
                            get_cmd=self._cavity.frequency,
                            vals=vals.Numbers(1e6, 20e9))
         self.add_parameter(name='demodulation_frequency',
+                           docstring='Sets localos frequency to cavity '
+                           'frequency + demodulation_frequency',
                            set_cmd=self._set_demod_frequency,
                            initial_value=demodulation_frequency,
                            vals=vals.Numbers(1e6, 200e6))
