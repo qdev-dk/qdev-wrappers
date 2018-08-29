@@ -18,6 +18,22 @@ logger = logging.getLogger(__name__)
 
 
 class AlazarChannel_ext(AlazarChannel):
+    """
+    An extension to the Alazar channel which has added functionality
+    for nun_reps/num_averages based on whether or not it is a
+    single shot channel and the settings on the associated 
+    parametric waveform analyser
+
+    Args:
+        parent (alazar controller)
+        pwa (parametric_waveform_analyser)
+        name (str)
+        demod (bool, default False)
+        alazar_channel (str, default A): phsyical alazar channel
+        average_buffers (bool, default True)
+        average_records (bool, default True)
+        integrate_samples (bool, default True)
+    """
     def __init__(self, parent, pwa, name: str,
                  demod: bool=False,
                  demod_ch=None,
@@ -33,7 +49,9 @@ class AlazarChannel_ext(AlazarChannel):
         del self.parameters['num_averages']
         self.add_parameter(name='single_shot',
                            set_cmd=False,
-                           get_cmd=self._get_single_shot_status)
+                           get_cmd=self._get_single_shot_status,
+                           docstring='Specifies whether there is any'
+                           'averaging allowed (other than in time)')
         if self.single_shot():
             self.add_parameter(name='num_reps',
                                set_cmd=self._set_num,
@@ -93,27 +111,24 @@ class AlazarChannel_ext(AlazarChannel):
 class DemodulationChannel(InstrumentChannel):
     def __init__(self, parent, name: str, index: int, drive_frequency=None) -> None:
         """
-        This is a channel which does the logic assuming a carrier
-        microwave source and a local os separated by 'base_demod'
-        which the parent of this channel knows about. The channel then
-        takes care of working out what frequency will actually be output
-        ('drive') if we sideband the carrier byt a 'sideband' and what the
-        total demodulation frequency is in this case 'demodulation'.
+        This is a channel which does the logic assuming a heterodyne_source
+        comprising a 'carrier' microwave source and a 'localos' microwave
+        source outputting signals separated by 'base_demod'. This
+        heterodyne_source lives on the parametric_waveform_analyser which is
+        also the parent of this channel. The channel then takes care of working
+        out which frequency will actually be output ('drive') if we sideband
+        the 'carrier' by a 'sideband' generated on an AWG and what is then the
+        total difference between this 'drive' frequency and the 'localos'
+        frequency. This is the 'demodulation' frequency which any associated
+        alazar channels must be told about.
 
-        Note that no actual mocrowave sources are updated and we expect any
-        heterodyne source used with this to do the legwork and update the
-        parent carrier and base_demod
-
-        Note that no awg is actaully connected so all it does is mark a flag
-        as False
-
-        Note that it DOES however have access to alazar channels so it can
-        update their demod frequency and there is also a channel list so you
-        could get the measurmenemts for everything demodulated at this one
-        frequency which should correspond to measuring one qubit :)
-
-        # TODO: what about if we have new fancy version with only one microwave
-        source or if we don't sideband?
+        Args:
+            parent (parametric_waveform_analyser)
+            name (str)
+            index (int): used for labelling this channel
+            drive_frequency (float, default None): if specified this sets up
+                the heterodyne_source and awg sideband so that the heterodyne
+                source is sidebanded to output a tone at this frequency.
         """
         super().__init__(parent, name)
         self.index = index
@@ -128,7 +143,10 @@ class DemodulationChannel(InstrumentChannel):
             parameter_class=NonSettableDerivedParameter)
         self.add_parameter(
             name='drive_frequency',
-            set_cmd=self._set_drive_freq)
+            set_cmd=self._set_drive_freq,
+            docstring='Sets sideband frequency in order to get the required '
+            'drive and updates the demodulation frequencies on the relevant '
+            'alazar channels')
         alazar_channels = ChannelList(
             self, "Channels", AlazarChannel,
             multichan_paramclass=AlazarMultiChannelParameter)
@@ -137,11 +155,6 @@ class DemodulationChannel(InstrumentChannel):
             self.drive_frequency(drive_frequency)
 
     def _set_drive_freq(self, drive_frequency):
-        """
-        changes the sideband frequencies in order to get the required drive,
-        marks the awg as not up to date and updates the demodulation
-        frequencies on the relevant alazar channels
-        """
         sideband = self._parent._carrier_freq - drive_frequency
         demod = self._parent._base_demod_freq + sideband
         sequencer_sideband = getattr(
@@ -155,10 +168,14 @@ class DemodulationChannel(InstrumentChannel):
 
     def update(self, sideband=None, drive=None):
         """
-        updates everything based on the carrier and base demod of
-        the parent, either using existing settings or if a new drive
-        is specified will update the sideband
-        or a new sideband specified will cause the drive to be updated
+        Based on the carrier and base demod of
+        the parent updates the sideband and drive frequencies,
+        either using existing settings or a specified
+        sideband OR drive to set the other of the two.
+
+        Args:
+            sideband (float, default None)
+            drive (float, default None)
         """
         base_demod = self._parent._base_demod_freq
         carrier = self._parent._carrier_freq
