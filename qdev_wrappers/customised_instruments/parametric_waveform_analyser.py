@@ -432,9 +432,9 @@ class ParametricWaveformAnalyser(Instrument):
             template_element: Element,
             inner_setpoints: Tuple[Symbol, Sequence],
             outer_setpoints: Tuple[Symbol, Sequence]=None,
-            context: ContextDict={},
-            units: Dict[Symbol, str]={},
-            labels: Dict[Symbol, str]={},
+            context: ContextDict=None,
+            units: Dict[Symbol, str]=None,
+            labels: Dict[Symbol, str]=None,
             first_sequence_element: Element=None,
             initial_element: Element=None):
         """
@@ -443,23 +443,16 @@ class ParametricWaveformAnalyser(Instrument):
         one but does not overwrite it.
 
         Args:
-            template_element (broadben Element)
-            inner_setpoints: tuple of symbol and the sequence of values it
-                takes
-            outer_setpoints: tuple of symbol and the sequence of values it
-                takes
-            context (dict): dict used to updated the existing context
-                dictionary which is then used to create the sequence
-            units (dict): updates units so that parametric sequencer
-                parameters and alazar setpoints are meaningful
-            labels (dict): updates labels so that parametric sequencer
-                parameters and alazar setpoints plot well
-            first_sequence_element (default None)
-            initial_element (default None)
+            template_element (Element)
+            inner_setpoints (tuple): symbol and the sequence of values it takes
+            outer_setpoints (tuple): symbol and the sequence of values it takes
+            context (dict, default None): used to update sequence_settings
+            units (dict, default None): used to update sequence_settings
+            labels (dict, default None): used to update sequence_settings
+            first_sequence_element (Element, default None)
+            initial_element (Element, default None)
         """
-        self._sequence_settings['context'].update(context)
-        self._sequence_settings['units'].update(units)
-        self._sequence_settings['labels'].update(labels)
+        self.update_sequence_settings(context, units, labels)
         self.sequencer.set_template(
             template_element,
             inner_setpoints=inner_setpoints,
@@ -474,7 +467,29 @@ class ParametricWaveformAnalyser(Instrument):
                 ch._num, single_shot=ch.single_shot())
             ch.update(settings)
 
-    def clear_saved_sequence_settings(self):
+    def update_sequence_settings(self, context: Dict=None,
+                                 units: Dict=None, labels: Dict=None):
+        """
+        Updates the sequence settings which are used when the sequencer
+        template is updated
+
+        Args:
+            context (dict, default None): dict used to updated the existing
+                context dictionary which is then used to create the sequence
+            units (dict, default None): updates units so that parametric
+                sequencer parameters and alazar setpoints are meaningful
+            labels (dict, default None): updates labels so that parametric
+                sequencer parameters and alazar setpoints plot well
+        """
+        self._sequence_settings['context'].update(context or {})
+        self._sequence_settings['units'].update(units or {})
+        self._sequence_settings['labels'].update(labels or {})
+
+    def clear_sequence_settings(self):
+        """
+        Clears the sequence settings which are used when the sequencer
+        template is updated.
+        """
         self._sequence_settings = {'context': {}, 'units': {}, 'labels': {}}
 
     def clear_alazar_channels(self):
