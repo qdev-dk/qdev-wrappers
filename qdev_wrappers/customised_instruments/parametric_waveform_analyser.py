@@ -495,16 +495,13 @@ class ParametricWaveformAnalyser(Instrument):
     def clear_alazar_channels(self):
         """
         Clears all alazar channels and removes references from the demodulation
-        channels
+        channels.
         """
         for demod_ch in list(self.demod_channels):
             for alazar_ch in demod_ch.alazar_channels:
                 demod_ch.alazar_channels.remove(alazar_ch)
                 self.alazar_channels.remove(alazar_ch)
                 del alazar_ch
-
-    def make_all_alazar_channels_play_nice(self):
-        raise NotImplementedError
 
     def get_alazar_ch_settings(self, num: int, single_shot: bool):
         """
