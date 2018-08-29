@@ -21,7 +21,7 @@ class AlazarChannel_ext(AlazarChannel):
     """
     An extension to the Alazar channel which has added functionality
     for nun_reps/num_averages based on whether or not it is a
-    single shot channel and the settings on the associated 
+    single shot channel and the settings on the associated
     parametric waveform analyser
 
     Args:
@@ -34,6 +34,7 @@ class AlazarChannel_ext(AlazarChannel):
         average_records (bool, default True)
         integrate_samples (bool, default True)
     """
+
     def __init__(self, parent, pwa, name: str,
                  demod: bool=False,
                  demod_ch=None,
@@ -75,6 +76,9 @@ class AlazarChannel_ext(AlazarChannel):
         self._num = val
 
     def update(self, settings):
+        """
+        """
+
         fail = False
         if settings['average_records'] != self._average_records:
             fail = True
@@ -83,7 +87,7 @@ class AlazarChannel_ext(AlazarChannel):
         if fail:
             raise RuntimeError(
                 'alazar channel cannot be updated to change averaging '
-                'settings, run clear_channels before changing settings')  # TODO
+                'settings, run clear_channels before changing settings')
         self.records_per_buffer._save_val(settings['records'])
         self.buffers_per_acquisition._save_val(settings['buffers'])
         if self.dimensions == 1 and self._integrate_samples:
@@ -109,7 +113,7 @@ class AlazarChannel_ext(AlazarChannel):
 
 
 class DemodulationChannel(InstrumentChannel):
-    def __init__(self, parent, name: str, index: int, drive_frequency=None) -> None:
+    def __init__(self, parent, name: str, index: int, drive_frequency=None):
         """
         This is a channel which does the logic assuming a heterodyne_source
         comprising a 'carrier' microwave source and a 'localos' microwave
@@ -229,6 +233,7 @@ class ParametricWaveformAnalyser(Instrument):
     """
     # TODO: write code for single microwave source
     # TODO: go through and use right types of parameters
+
     def __init__(self,
                  name: str,
                  sequencer,
@@ -278,8 +283,10 @@ class ParametricWaveformAnalyser(Instrument):
         self._sequence_settings = {'context': {}, 'units': {}, 'labels': {}}
         if initial_sequence_settings is not None:
             self._sequence_settings.update(initial_sequence_settings)
-        awg_seq_mode = True if self.sequencer.repeat_mode() == 'sequence' else False
-        self.seq_mode(awg_seq_mode)
+        if self.sequencer.repeat_mode() == 'sequence':
+            self.seq_mode(True)
+        else:
+            self.seq_mode(False)
 
     def _set_int_time(self, int_time):
         self.alazar_controller.int_time(int_time)
@@ -312,13 +319,16 @@ class ParametricWaveformAnalyser(Instrument):
         for settings in settings_list:
             self.add_alazar_channel(**settings)
 
-
     def _get_seq_mode(self):
-        if self.alazar.seq_mode() == 'on' and self.sequencer.repeat_mode() == 'sequence':
+        if (self.alazar.seq_mode() == 'on' and
+                self.sequencer.repeat_mode() == 'sequence'):
             return True
-        elif self.alazar.seq_mode() == 'off' and self.sequencer.repeat_mode() == 'element':
+        elif (self.alazar.seq_mode() == 'off' and
+              self.sequencer.repeat_mode() == 'element'):
             return False
-        elif (self.alazar.seq_mode() == 'off') and (len(self.sequencer.get_inner_setpoints()) == 1 and self.sequencer.get_outer_setpoints() is None):
+        elif ((self.alazar.seq_mode() == 'off') and
+                (len(self.sequencer.get_inner_setpoints()) == 1 and
+                    self.sequencer.get_outer_setpoints() is None)):
             return False
         else:
             raise RuntimeError(
@@ -358,8 +368,8 @@ class ParametricWaveformAnalyser(Instrument):
             self.alazar_channels.remove(ch)
 
     def add_alazar_channel(
-            self, demod_ch_index: int, demod_type: str, single_shot: bool=False,
-            num: int=1, integrate_time: bool=True):
+            self, demod_ch_index: int, demod_type: str,
+            single_shot: bool=False, num: int=1, integrate_time: bool=True):
         """
         Creates an alazar channel attached to the specified demodulation
         channel and with setting which match the demodulation channel and
@@ -383,7 +393,7 @@ class ParametricWaveformAnalyser(Instrument):
         name = 'ch_{}_{}'.format(demod_ch_index, demod_type)
         averaging_settings = {
             'integrate_time': integrate_time,
-            **{k: settings[k] for k in ('average_records', 'average_buffers')}, }
+            **{k: settings[k] for k in ('average_records', 'average_buffers')}}
         appending_string = '_'.join(
             [k.split('_')[1] for k, v in averaging_settings.items() if not v])
         if appending_string:
@@ -411,7 +421,8 @@ class ParametricWaveformAnalyser(Instrument):
             chan.data.label = 'Cavity Real Response'
         else:
             raise NotImplementedError(
-                'only magnitude and phase, imaginary and real currently implemented')
+                'only magnitude, phase, imaginary and real currently '
+                'implemented')
         self.alazar_controller.channels.append(chan)
         chan.update(settings)
         demod_ch.alazar_channels.append(chan)
@@ -449,14 +460,15 @@ class ParametricWaveformAnalyser(Instrument):
         self._sequence_settings['context'].update(context)
         self._sequence_settings['units'].update(units)
         self._sequence_settings['labels'].update(labels)
-        self.sequencer.set_template(template_element,
-                                    inner_setpoints=inner_setpoints,
-                                    outer_setpoints=outer_setpoints,
-                                    context=self._sequence_settings['context'],
-                                    units=self._sequence_settings['units'],
-                                    labels=self._sequence_settings['labels'],
-                                    first_sequence_element=first_sequence_element,
-                                    initial_element=initial_element)
+        self.sequencer.set_template(
+            template_element,
+            inner_setpoints=inner_setpoints,
+            outer_setpoints=outer_setpoints,
+            context=self._sequence_settings['context'],
+            units=self._sequence_settings['units'],
+            labels=self._sequence_settings['labels'],
+            first_sequence_element=first_sequence_element,
+            initial_element=initial_element)
         for ch in list(self.alazar_channels):
             settings = self.get_alazar_ch_settings(
                 ch._num, single_shot=ch.single_shot())
@@ -488,7 +500,7 @@ class ParametricWaveformAnalyser(Instrument):
 
         Returns:
             settings (dict): dictionary which specified averaging settings
-                for records and buffers dimensions and accompanying setpoints, 
+                for records and buffers dimensions and accompanying setpoints,
                 setpoint names, labels and units
         """
         seq_mode = self.seq_mode()
@@ -499,7 +511,8 @@ class ParametricWaveformAnalyser(Instrument):
             settings['buffer_setpoint_name'] = None
             settings['buffer_setpoint_label'] = None
             settings['buffer_setpoint_unit'] = None
-            if seq_mode and len(self.sequencer.get_inner_setpoints().values) > 1:
+            if (seq_mode and
+                    len(self.sequencer.get_inner_setpoints().values) > 1):
                 if self.sequencer.get_outer_setpoints() is not None:
                     logger.warn('Averaging channel will average over '
                                 'outer setpoints of AWG sequence')
@@ -533,8 +546,10 @@ class ParametricWaveformAnalyser(Instrument):
         else:
             settings['average_buffers'] = False
             settings['average_records'] = False
-            if seq_mode and len(self.sequencer.get_inner_setpoints().values) > 1:
-                if self.sequencer.get_outer_setpoints() is not None and num > 1:
+            if (seq_mode and
+                    len(self.sequencer.get_inner_setpoints().values) > 1):
+                if (self.sequencer.get_outer_setpoints() is not None and
+                        num > 1):
                     raise RuntimeError(
                         'Cannot have outer setpoints and multiple nreps')
                 record_symbol = self.sequencer.get_inner_setpoints().symbol
