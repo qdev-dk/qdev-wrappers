@@ -493,13 +493,15 @@ class ParametricWaveformAnalyser(Instrument):
         self._sequence_settings = {'context': {}, 'units': {}, 'labels': {}}
 
     def clear_alazar_channels(self):
-        if self.alazar_channels is not None:
-            for ch in list(self.alazar_channels):
-                self.alazar_channels.remove(ch)
-                del ch
-            for demod_ch in list(self.demod_channels):
-                for alazar_ch in demod_ch.alazar_channels:
-                    demod_ch.alazar_channels.remove(alazar_ch)
+        """
+        Clears all alazar channels and removes references from the demodulation
+        channels
+        """
+        for demod_ch in list(self.demod_channels):
+            for alazar_ch in demod_ch.alazar_channels:
+                demod_ch.alazar_channels.remove(alazar_ch)
+                self.alazar_channels.remove(alazar_ch)
+                del alazar_ch
 
     def make_all_alazar_channels_play_nice(self):
         raise NotImplementedError
