@@ -289,8 +289,7 @@ class ParametricWaveformAnalyser(Instrument):
                         'demod_type': ch.demod_type()[0],
                         'integrate_time': ch._integrate_samples,
                         'single_shot': ch.single_shot(),
-                        'num_reps': ch._num,
-                        'num_averages': ch._num}
+                        'num': ch._num}
             settings_list.append(settings)
         self.clear_alazar_channels()
         for settings in settings_list:
@@ -343,9 +342,11 @@ class ParametricWaveformAnalyser(Instrument):
 
     def add_alazar_channel(
             self, demod_ch_index: int, demod_type: str, single_shot: bool=False,
-            num_averages: int=1, num_reps: int=1, integrate_time: bool=True):
+            num: int=1, integrate_time: bool=True):
         """
-        Creates an alazar channel 
+        Creates an alazar channel attached to the specified demodulation
+        channel and with setting which match the demodulation channel and
+        the current sequence uploaded.
 
         Args:
             demod_ch_index (int): the demodulation channel index for the alazar
@@ -355,15 +356,12 @@ class ParametricWaveformAnalyser(Instrument):
             single_shot (bool, default False): whether ot not averaging is
                 used, if True then num_averages can be set, if False then
                 num_reps can be set
-            num_averages (int, default 1): valid if not single shot
-            num_reps (int, default 1): valid if single_shot
+            num (int, default 1): specifies num_averages or num_reps depending
+                on single_shot status
             integrate_time (bool, default True): determines whether to average
                 samples
         """
-        if single_shot:
-            settings = self.get_alazar_ch_settings(num_reps, True)
-        else:
-            settings = self.get_alazar_ch_settings(num_averages, False)
+        settings = self.get_alazar_ch_settings(num, single_shot)
         demod_ch = self.demod_channels[demod_ch_index]
         name = 'ch_{}_{}'.format(demod_ch_index, demod_type)
         averaging_settings = {
