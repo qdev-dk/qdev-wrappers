@@ -189,25 +189,39 @@ class DemodulationChannel(InstrumentChannel):
 
 class ParametricWaveformAnalyser(Instrument):
     """
-    The PWA represents a composite instrument. It is similar to a
-    spectrum analyzer, but instead of a sine wave it probes using
-    waveforms described through a set of parameters.
-    For that functionality it compises an AWG and a Alazar as a high speed ADC.
+    The PWA represents a composite instrument. It comprises a parametric
+    sequencer, a high speed ADC (currently only works with the Alazar card)
+    and a heterodyne source. The idea is that the parametric sequencer is used
+    to sideband the heterodyne source to create various readout tones and also
+    optionally to vary some parameter in a sequence. The
+    setpoints of this sequence and the demodulation frequencies
+    calculated from the heterodyne source demodulation frequency and the
+    parametric sequencer sideband frequencies are communicated to the Alazar
+    controller.
+
+    Args:
+        name
+        sequencer
+        alazar
+        heterodyne_source
+        initial_sequence_settings (optional dict): symbols and their units,
+            labels and values to be passed to the parameteric_sequencer
+            eg {'context': {'cycle_duration': 1, 'cycle_time': 2},
+                'units': {'cycle_duration': 's', 'cycle_time': 's'},
+                'labels': {'cycle_duration': '', 'cycle_time': 'Time'}}
     """
     # TODO: write code for single microwave source
     # TODO: go through and use right types of parameters
-
     def __init__(self,
                  name: str,
                  sequencer,
                  alazar,
                  heterodyne_source,
-                 initial_sequence_settings: Dict=None,
-                 station: Station=None) -> None:
+                 initial_sequence_settings: Dict=None) -> None:
         super().__init__(name)
         self.add_parameter('')
-        self.station, self.sequencer = station, sequencer
-        self.alazar, self.heterodyne_source = alazar, heterodyne_source
+        self.sequencer, self.alazar = sequencer, alazar
+        self.heterodyne_source = heterodyne_source
         self.alazar_controller = ATSChannelController(
             'alazar_controller', alazar.name)
         self.alazar_channels = self.alazar_controller.channels
@@ -223,14 +237,30 @@ class ParametricWaveformAnalyser(Instrument):
                            initial_value=0)
         self.add_parameter(name='seq_mode',
                            set_cmd=self._set_seq_mode,
-                           get_cmd=self._get_seq_mode)
+                           get_cmd=self._get_seq_mode,
+                           docstring='Sets the repeat_mode on the sequencer'
+                           'and the seq_mode on the alazar and reinstates all'
+                           'existing alazar channels accordingly.')
         self.add_parameter(name='carrier_frequency',
                            set_cmd=self._set_carrier_frequency,
-                           initial_value=self._carrier_freq)
+                           initial_value=self._carrier_freq,
+                           docstring='Sets the frequency on the '
+                           'heterodyne_source and updates the demodulation '
+                           'channels carrier_freq so that the resultant '
+                           'sidebanded readout tones are updated.')
         self.add_parameter(name='base_demodulation_frequency',
                            set_cmd=self._set_base_demod_frequency,
-                           initial_value=self._base_demod_freq)
-        self._sequence_settings = initial_sequence_settings
+                           initial_value=self._base_demod_freq,
+                           docstring='Sets the demodulation_frequency of the'
+                           ' heterodyne_source and updates the base '
+                           'demodulation frequency of the demodulation '
+                           'channels which propagate the information to the '
+                           'alazar channels so that they have the correct  '
+                           'demodulation frequencies (base_demod_freq + '
+                           'sideband_freq).')
+        self._sequence_settings = {'context': {}, 'units': {}, 'labels': {}}
+        if initial_sequence_settings is not None:
+            self._sequence_settings.update(initial_sequence_settings)
         awg_seq_mode = True if self.sequencer.repeat_mode() == 'sequence' else False
         self.seq_mode(awg_seq_mode)
 
@@ -247,13 +277,6 @@ class ParametricWaveformAnalyser(Instrument):
                 ch.prepare_channel()
 
     def _set_seq_mode(self, mode):
-        """
-        updated the sequencing mode on the alazar and the awg and reset all
-        the alazar channels so that they average over everything which is a
-        sensible default for if we are just playing one element on loop
-        # TODO: what if we also want statistics or a time trace?
-        # TODO: num_averages
-        """
         if str(mode).upper() in ['TRUE', '1', 'ON']:
             self.alazar.seq_mode('on')
             self.sequencer.repeat_mode('sequence')
@@ -286,12 +309,6 @@ class ParametricWaveformAnalyser(Instrument):
                 'seq modes on sequencer and alazar do not match')
 
     def _set_base_demod_frequency(self, demod_freq):
-        """
-        update the demodulation frequency locally and also runs update
-        on the demodulation channels to propagate this to the demodulation
-        frequencies after sidebanding which should end up on the alazar
-        channels
-        """
         self._base_demod_freq = demod_freq
         self.heterodyne_source.demodulation_frequency(demod_freq)
         for demod_ch in self.demod_channels:
@@ -306,14 +323,6 @@ class ParametricWaveformAnalyser(Instrument):
             demod_ch.update(drive=old_drives[i])
 
     def _set_carrier_frequency(self, carrier_freq):
-        """
-        update the carrier frequency locally and also runs update
-        on the demodulation channels to propagate this to the demodulation
-        frequencies after sidebanding which should end up on the alazar
-        channels there is option to change the sidebands to keep the resultant
-        drive frequencies the same or to leave them as is and then the drive
-        changes
-        """
         self._carrier_freq = carrier_freq
         self.heterodyne_source.frequency(carrier_freq)
         for demod_ch in self.demod_channels:
@@ -335,6 +344,22 @@ class ParametricWaveformAnalyser(Instrument):
     def add_alazar_channel(
             self, demod_ch_index: int, demod_type: str, single_shot: bool=False,
             num_averages: int=1, num_reps: int=1, integrate_time: bool=True):
+        """
+        Creates an alazar channel 
+
+        Args:
+            demod_ch_index (int): the demodulation channel index for the alazar
+                channel to be associated with
+            demod_type ('m', 'p', 'i' or 'r'): magnitude, phase, real or
+                imaginary, choose one!
+            single_shot (bool, default False): whether ot not averaging is
+                used, if True then num_averages can be set, if False then
+                num_reps can be set
+            num_averages (int, default 1): valid if not single shot
+            num_reps (int, default 1): valid if single_shot
+            integrate_time (bool, default True): determines whether to average
+                samples
+        """
         if single_shot:
             settings = self.get_alazar_ch_settings(num_reps, True)
         else:
@@ -386,6 +411,26 @@ class ParametricWaveformAnalyser(Instrument):
             labels: Dict[Symbol, str]={},
             first_sequence_element: Element=None,
             initial_element: Element=None):
+        """
+        Sets up the sequencing on the parametric sequencer and the
+        setpoints on alazar channels. The context updates the existing
+        one but does not overwrite it.
+
+        Args:
+            template_element (broadben Element)
+            inner_setpoints: tuple of symbol and the sequence of values it
+                takes
+            outer_setpoints: tuple of symbol and the sequence of values it
+                takes
+            context (dict): dict used to updated the existing context
+                dictionary which is then used to create the sequence
+            units (dict): updates units so that parametric sequencer
+                parameters and alazar setpoints are meaningful
+            labels (dict): updates labels so that parametric sequencer
+                parameters and alazar setpoints plot well
+            first_sequence_element (default None)
+            initial_element (default None)
+        """
         self._sequence_settings['context'].update(context)
         self._sequence_settings['units'].update(units)
         self._sequence_settings['labels'].update(labels)
@@ -418,10 +463,19 @@ class ParametricWaveformAnalyser(Instrument):
         raise NotImplementedError
 
     def get_alazar_ch_settings(self, num: int, single_shot: bool):
-        '''
-        If single shot then num is number of reps, else it is the
-        number of averages
-        '''
+        """
+        Based on the current instrument settings calculates the settings
+        configuration for an alazar channel.
+
+        Args:
+            num (int): sets num_reps if single_shot, num_averages otherwise
+            single_shot (bool): whether averaging is allowed
+
+        Returns:
+            settings (dict): dictionary which specified averaging settings
+                for records and buffers dimensions and accompanying setpoints, 
+                setpoint names, labels and units
+        """
         seq_mode = self.seq_mode()
         settings = {'num': num}
         if not single_shot:
