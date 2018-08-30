@@ -75,8 +75,17 @@ class AlazarChannel_ext(AlazarChannel):
         self.update(settings)
         self._num = val
 
-    def update(self, settings):
+    def update(self, settings: Dict):
         """
+        Updates the setpoints, setpoint names and setpoint labels and
+        the num_averages/num_reps of the channel.
+
+        NB Fails if the new settings require a change in averaging
+            settings such as changing the state of 'average_records'
+
+        Args:
+            settings (dict): dictionary containing averaging settings
+                and setpoint information
         """
         fail = False
         if settings['average_records'] != self._average_records:
