@@ -1,0 +1,131 @@
+is_default: false
+qubits:
+- DRAG_amplitude:
+    label: DRAG Amplitude
+    unit: ''
+    value: 0.2
+  pi_half_pulse_amplitude:
+    label: Pi Pulse Amplitude
+    unit: ''
+    value: 0.5
+  pi_pulse_amplitude:
+    label: Pi Pulse Amplitude
+    unit: ''
+    value: 1.0
+  qubit_sideband:
+    label: Qubit Sideband
+    unit: Hz
+    value: 0
+  readout_amplitude:
+    label: Readout Amplitude
+    unit: ''
+    value: 1.0
+  readout_sideband:
+    label: Readout Sideband
+    unit: Hz
+    value: 1000000
+- DRAG_amplitude:
+    label: DRAG Amplitude
+    unit: ''
+    value: 0.2
+  pi_half_pulse_amplitude:
+    label: Pi Pulse Amplitude
+    unit: ''
+    value: 0.5
+  pi_pulse_amplitude:
+    label: Pi Pulse Amplitude
+    unit: ''
+    value: 1.0
+  qubit_sideband:
+    label: Qubit Sideband
+    unit: Hz
+    value: 0
+  readout_amplitude:
+    label: Readout Amplitude
+    unit: ''
+    value: 1.0
+  readout_sideband:
+    label: Readout Sideband
+    unit: Hz
+    value: 1000000
+sample:
+  cycle_duration:
+    label: Cycle Duration
+    unit: s
+    value: 2.0e-05
+  drive_readout_delay:
+    label: Drive Readout Delay
+    unit: s
+    value: 1.0e-08
+  drive_stage_duration:
+    label: Drive Stage Duration
+    unit: s
+    value: 1.0e-05
+  gate_drive_duration:
+    label: Gate Drive Pulse Duration
+    unit: s
+    value: 5.0e-08
+  int_delay:
+    label: Integration Delay
+    unit: s
+    value: 4.0e-07
+  int_time:
+    label: Integration Time
+    unit: s
+    value: 1.0e-06
+  marker_duration:
+    label: Marker Duration
+    unit: s
+    value: 5.0e-08
+  marker_readout_delay:
+    label: Marker Readout Delay
+    unit: s
+    value: 5.0e-09
+  modulation_marker_duration:
+    label: Modulation Marker Duration
+    unit: s
+    value: 2.0e-06
+  operation_index:
+    label: Operation Index
+    unit: ''
+    value: null
+  pulse_separation:
+    label: Pulse Separation
+    unit: s
+    value: 1.0e-07
+  qubit_carrier_frequency:
+    label: Qubit Carrier Frequency
+    unit: Hz
+    value: 5000000000
+  qubit_carrier_gate_power:
+    label: Qubit Carrier Gate Power
+    unit: dBm
+    value: -10
+  qubit_carrier_spectroscopy_power:
+    label: Qubit Carrier Spectroscopy Power
+    unit: dBm
+    value: -30
+  readout_carrier_frequency:
+    label: Readout Carrier Frequency
+    unit: Hz
+    value: 7000000000
+  readout_carrier_power:
+    label: Readout Carrier Power
+    unit: dBm
+    value: -30
+  readout_demodulation_frequency:
+    label: Readout Base Demodulation Frequency
+    unit: Hz
+    value: 15000000
+  readout_duration:
+    label: Readout Pulse Duration
+    unit: s
+    value: 4.0e-06
+  sigma_cutoff:
+    label: Sigma Cutoff
+    unit: ''
+    value: 4.0
+  spectroscopy_drive_duration:
+    label: Spectroscopy Drive Pulse Duration
+    unit: s
+    value: 1.0e-06
