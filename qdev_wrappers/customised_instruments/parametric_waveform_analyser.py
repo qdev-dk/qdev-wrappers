@@ -78,7 +78,6 @@ class AlazarChannel_ext(AlazarChannel):
     def update(self, settings):
         """
         """
-
         fail = False
         if settings['average_records'] != self._average_records:
             fail = True
@@ -302,10 +301,10 @@ class ParametricWaveformAnalyser(Instrument):
 
     def _set_seq_mode(self, mode):
         if str(mode).upper() in ['TRUE', '1', 'ON']:
-            self.alazar.seq_mode('on')
+            self.alazar.seq_mode(True)
             self.sequencer.repeat_mode('sequence')
         else:
-            self.alazar.seq_mode('off')
+            self.alazar.seq_mode(True)
             self.sequencer.repeat_mode('element')
         settings_list = []
         for ch in self.alazar_channels:
@@ -320,13 +319,13 @@ class ParametricWaveformAnalyser(Instrument):
             self.add_alazar_channel(**settings)
 
     def _get_seq_mode(self):
-        if (self.alazar.seq_mode() == 'on' and
+        if (self.alazar.seq_mode() and
                 self.sequencer.repeat_mode() == 'sequence'):
             return True
-        elif (self.alazar.seq_mode() == 'off' and
+        elif (self.alazar.seq_mode() and
               self.sequencer.repeat_mode() == 'element'):
             return False
-        elif ((self.alazar.seq_mode() == 'off') and
+        elif (self.alazar.seq_mode() and
                 (len(self.sequencer.get_inner_setpoints()) == 1 and
                     self.sequencer.get_outer_setpoints() is None)):
             return False
