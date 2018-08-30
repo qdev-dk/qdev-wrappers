@@ -25,10 +25,10 @@ class AWG5014_ext(Tektronix_AWG5014):
                 self.set_sqel_loopcnt_to_inf(i)
 
     def _get_seq_mode(self):
-        if self.get_sqel_loopcnt() == '1':
-            return False
+        if self.sequence_length() > 1:
+            return self.get_sqel_loopcnt() != '1'
         else:
-            return True
+            return False
 
     def send_and_load_awg_file(self, awg_file, filename):
         self.visa_handle.write('MMEMory:CDIRectory ' +
