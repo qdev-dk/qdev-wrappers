@@ -345,8 +345,9 @@ class ParametricWaveformAnalyser(Instrument):
         old_drives = [demod_ch.drive_frequency()
                       for demod_ch in self.demod_channels]
         yield
-        for i, demod_ch in enumerate(self.demod_channels):
-            demod_ch.update(drive=old_drives[i])
+        with self.sequencer.single_upload():
+            for i, demod_ch in enumerate(self.demod_channels):
+                demod_ch.update(drive=old_drives[i])
 
     def _set_carrier_frequency(self, carrier_freq):
         self._carrier_freq = carrier_freq
