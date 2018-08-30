@@ -1,0 +1,102 @@
+is_default: true
+
+sample:
+    cycle_duration: 
+        label: Cycle Duration
+        unit: s
+        value: 0.00002
+    drive_stage_duration: 
+        label: Drive Stage Duration
+        unit: s
+        value: 0.00001
+    readout_duration: 
+        label: Readout Pulse Duration
+        unit: s
+        value: 0.000004
+    marker_duration:
+        label: Marker Duration
+        unit: s
+        value: 0.00000005
+    marker_readout_delay:
+        label: Marker Readout Delay
+        unit: s
+        value: 0.000000005
+    modulation_marker_duration: 
+        label: Modulation Marker Duration
+        unit: s
+        value: 0.000002
+    drive_readout_delay:
+        label: Drive Readout Delay
+        unit: s
+        value: 0.00000001
+    spectroscopy_drive_duration:
+        label: Spectroscopy Drive Pulse Duration
+        unit: s
+        value: 0.000001
+    gate_drive_duration:
+        label: Gate Drive Pulse Duration
+        unit: s
+        value: 0.00000005
+    sigma_cutoff:
+        label: Sigma Cutoff
+        value: 4.0
+    pulse_separation:
+        label: Pulse Separation
+        unit: s
+        value: 0.0000001
+    operation_index:
+        label: Operation Index
+    readout_carrier_frequency:
+        label: Readout Carrier Frequency
+        unit: Hz
+        value: 7000000000
+    readout_demodulation_frequency:
+        label: Readout Base Demodulation Frequency
+        unit: Hz
+        value: 15000000
+    readout_carrier_power:
+        label: Readout Carrier Power
+        unit: dBm
+        value: -30
+    qubit_carrier_frequency:
+        label: Qubit Carrier Frequency
+        unit: Hz
+        value: 5000000000
+    qubit_carrier_gate_power:
+        label: Qubit Carrier Gate Power
+        unit: dBm
+        value: -10
+    qubit_carrier_spectroscopy_power:
+        label: Qubit Carrier Spectroscopy Power
+        unit: dBm
+        value: -30
+    int_time:
+        label: Integration Time
+        unit: s
+        value: 0.000001
+    int_delay:
+        label: Integration Delay
+        unit: s
+        value: 0.0000004
+
+qubits:
+    pi_pulse_amplitude: 
+        label: Pi Pulse Amplitude
+        value: 1.0
+    pi_half_pulse_amplitude: 
+        label: Pi Pulse Amplitude
+        value: 0.5
+    DRAG_amplitude: 
+        label: DRAG Amplitude
+        value: 0.2
+    qubit_sideband:
+        label: Qubit Sideband
+        unit: Hz
+        value: 0
+    readout_amplitude:
+        label: Readout Amplitude
+        value: 1.0
+    readout_sideband:
+        label: Readout Sideband
+        unit: Hz
+        value: 1000000
