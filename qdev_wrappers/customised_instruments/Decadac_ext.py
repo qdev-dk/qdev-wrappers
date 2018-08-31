@@ -62,64 +62,10 @@ class Decadac_ext(Decadac):
     DAC_CHANNEL_CLASS = DacChannel_ext
     DAC_SLOT_CLASS = DacSlot_ext
 
-    def __init__(self, name, address, config, **kwargs):
-        self.config = config
+    def __init__(self, name, address, **kwargs):
         deca_physical_min = -10
         deca_physical_max = 10
         kwargs.update({'min_val': deca_physical_min,
                        'max_val': deca_physical_max})
 
         super().__init__(name, address, **kwargs)
-        '''
-        config file redesigned to have all channels for overview. Indices in
-        config_settings[] for each channel are:
-        0: Channels name for deca.{}
-        1: Channel label
-        2: Channels unit (included as we are using decadac to control
-            the magnet)
-        3: Voltage division factor
-        4: step size
-        5: delay
-        6: max value
-        7: min value
-        8: Fine or coarse mode channel
-        '''
-
-        for channelNum, settings in config.get(name).items():
-            channel = self.channels[int(channelNum)]
-            config_settings = settings.split(',')
-
-            name = config_settings[0]
-            label = config_settings[1]
-            unit = config_settings[2]
-            divisor = float(config_settings[3])
-            step = float(config_settings[4])
-            delay = float(config_settings[5])
-            rangemin = float(config_settings[6])
-            rangemax = float(config_settings[7])
-            fine_mode = config_settings[8]
-
-            if fine_mode == 'fine':
-                param = channel.fine_volt
-            elif fine_mode == 'coarse':
-                param = channel.volt
-            else:
-                raise RuntimeError(
-                    'Invalid config file. Need to specify \'fine\' '
-                    'or \'coarse\' not {}'.format(fine_mode))
-
-            channel.volt.set_step(step)
-            channel.volt.set_delay(delay)
-
-            param.label = label
-            param.unit = unit
-            param.set_validator(vals.Numbers(rangemin, rangemax))
-
-            if divisor != 1.:
-                # maybe we want a different label
-                setattr(self, name, VoltageDivider(
-                    param, divisor, label=label))
-                param.division_value = divisor
-                param._meta_attrs.extend(["division_value"])
-            else:
-                setattr(self, name, param)
