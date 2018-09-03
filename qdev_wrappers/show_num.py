@@ -5,8 +5,10 @@ import collections
 import matplotlib.pyplot as plt
 
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
+from qcodes.utils.plotting import auto_range_iqr
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
+from qcodes import config
 
 def check_experiment_is_initialized():
     if not getattr(CURRENT_EXPERIMENT, "init", True): 
@@ -14,8 +16,10 @@ def check_experiment_is_initialized():
                            "use qc.Init(mainfolder, samplename)")
 
 
-def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng=True,
-            fig_size=[6,4],clim=None,dataname=None,xlim=None,ylim=None,transpose=False,**kwargs):
+def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
+             do_plots=True, savepng=True, fig_size=[6,4], clim=None,
+             dataname=None, xlim=None, ylim=None, transpose=False,
+             smart_colorscale=None, **kwargs):
     """
     Show and return plot and data.
     Args:
@@ -37,7 +41,9 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
         data, plots : returns the plots and the datasets
 
     """
-    
+    # default values
+    smart_colorscale = smart_colorscale or config.gui.smart_colorscale
+
     if not isinstance(ids, collections.Iterable):
         ids = (ids,)
 
@@ -48,6 +54,7 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
     if samplefolder==None:
         check_experiment_is_initialized()
         samplefolder = qc.DataSet.location_provider.fmt.format(counter='')
+
 
     # Load all datasets into list
     for id in ids:
@@ -109,8 +116,11 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                         xlims[1].append(np.nanmax(arrays.set_arrays[1]))
                         ylims[0].append(np.nanmin(arrays.set_arrays[0]))
                         ylims[1].append(np.nanmax(arrays.set_arrays[0]))
-                        clims[0].append(np.nanmin(arrays.ndarray))
-                        clims[1].append(np.nanmax(arrays.ndarray))
+                        if smart_colorscale:
+                            clims[0], clims[1] = auto_range_iqr(arrays.ndarray)
+                        else:
+                            clims[0].append(np.nanmin(arrays.ndarray))
+                            clims[1].append(np.nanmax(arrays.ndarray))
                     else:
                         xlims[0].append(np.nanmin(arrays.set_arrays[0]))
                         xlims[1].append(np.nanmax(arrays.set_arrays[0]))
