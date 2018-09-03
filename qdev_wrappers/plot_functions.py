@@ -1,15 +1,23 @@
+from typing import Tuple
 from os.path import sep
 from copy import deepcopy
 import functools
 from matplotlib import ticker
 import matplotlib.pyplot as plt
+import numpy as np
 
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 from qcodes.instrument.channel import MultiChannelInstrumentParameter
+from qcodes.utils.plotting import auto_range_iqr
+from qcodes import config
 
-def _plot_setup(data, inst_meas, useQT=True, startranges=None):
+
+def _plot_setup(data, inst_meas, useQT=True, startranges=None,
+                smart_colorscale=None):
+    # default values
+    smart_colorscale = smart_colorscale or config.gui.smart_colorscale
     title = "{} #{:03d}".format(CURRENT_EXPERIMENT["sample_name"],
                                 data.location_provider.counter)
     rasterized_note = " rasterized plot"
@@ -37,6 +45,7 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
             j: The current sub-measurement
             k: -
         """
+
         color = 'C' + str(counter_two)
         if issubclass(i.__class__, MultiChannelInstrumentParameter) or i._instrument is None:
             inst_meas_name = name
@@ -65,8 +74,11 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None):
             if 'z' in inst_meta_data:
                 xlen, ylen = inst_meta_data['z'].shape
                 rasterized = xlen * ylen > 5000
-                plot.add(inst_meas_data, subplot=j + k + 1,
-                         rasterized=rasterized)
+                po = plot.add(inst_meas_data, subplot=j + k + 1,
+                              rasterized=rasterized)
+                if smart_colorscale:
+                    vmin, vmax = auto_range_iqr(inst_meta_data['z'])
+                    po.set_clim(vmin=vmin, vmax=vmax)
             else:
                 rasterized = False
                 plot.add(inst_meas_data, subplot=j + k + 1, color=color)
