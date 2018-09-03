@@ -3,11 +3,12 @@
 # `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted`
 # to temporarily elevate the rights to executed foreign scripts
 
-# This script installs all you need to use qcodes:
+# This script installs (almost) all you need to use qcodes:
 # - Miniconda (Python), including spyder and jupyter
 # - Git (version control)
 # - Qcodes, qdev-wrappers, broadbean
 # - creates links on desktop and quick access
+# Additionally you will need to install the NI-VISA drivers manually.
 # To make sure everything works as expected go to "Start->Add or remove programs"
 # and search for "Python" to remove any previous installation of Anaconda,
 # Miniconda or similiar. Beware that this removes all your python environments
