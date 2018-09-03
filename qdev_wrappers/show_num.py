@@ -41,8 +41,9 @@ def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
         data, plots : returns the plots and the datasets
 
     """
-    # default values
-    smart_colorscale = smart_colorscale or config.gui.smart_colorscale
+    # Defaults
+    if smart_colorscale is None:
+        smart_colorscale = config.gui.smart_colorscale
 
     if not isinstance(ids, collections.Iterable):
         ids = (ids,)
