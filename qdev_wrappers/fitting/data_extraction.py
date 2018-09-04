@@ -100,7 +100,7 @@ class DataConverter:
         data_dict['exp_id'] = self.find_experiment(run_id)
         data_dict['run_id'] = run_id
         data_dict['sample_name'] = self.find_sample_name(run_id)
-        data_dict['dependencies'] = self.find_dependencies(run_id)
+#        data_dict['dependencies'] = self.find_dependencies(run_id)
         data_dict['variables'] = self.find_variables(data)
 
         return data_dict
