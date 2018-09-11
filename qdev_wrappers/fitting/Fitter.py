@@ -5,6 +5,14 @@ from itertools import product
 from qdev_wrappers.fitting.least_squares_fit import LeastSquaresFit
 from typing import Dict
 
+import matplotlib.pyplot as plt
+from qcodes.dataset.data_set import load_by_id
+from qcodes.dataset.data_export import get_data_by_id
+from qcodes.dataset.data_export import (datatype_from_setpoints_1d,
+                          datatype_from_setpoints_2d, reshape_2D_data)
+from qcodes.dataset.plotting import _rescale_ticks_and_units
+
+
 
 class Fitter:
     """
@@ -195,5 +203,86 @@ class Fitter:
     def _find_estimate(self, input_data_array, params_values_dict):
         return self.fitclass.fun(input_data_array, **params_values_dict)
 
-    def plot(self, **setpoint_config):
-        raise NotImplementedError
+    def plot(self, rescale_axes: bool=True):
+
+        run_id = self.experiment_info['run_id']
+
+        data_info = load_by_id(run_id)
+        experiment_name = data_info.exp_name
+        sample_name = data_info.sample_name
+        title = f"Run #{run_id} fitted, Experiment {experiment_name} ({sample_name})"
+
+        alldata = get_data_by_id(run_id)
+        data = alldata[0]
+        # ToDo: fix so that this always accesses the data that matches the dependent and independent variables
+
+        fig, ax = plt.subplots(1, 1)
+        axes = [ax]
+
+        if len(self.setpoints) == 0:  # 1D PLOTTING
+
+            parameter_values = self.fit_results[0]['param_values']
+
+            # sort data for plotting
+            order = self.indept_var['data'].argsort()
+            xpoints = self.indept_var['data'][order]
+            ypoints = self.dept_var['data'][order]
+
+            # returns 'point' if all xpoints are identical, otherwise returns 'line'
+            plottype = datatype_from_setpoints_1d(xpoints)
+
+            if plottype == 'line':
+            # or maybe it should just always be a scatter plot anyway? Thorvald's is a scatter plot with a fit line.
+                ax.plot(xpoints, ypoints, marker='.',markersize=5,linestyle='',color='C0')
+
+                x = np.linspace(xpoints.min(), xpoints.max(), len(xpoints) * 10)
+                ax.plot(x, self.fitclass.fun(x, **parameter_values), color='C1')
+
+            elif plottype == 'point':
+                # ToDo: does this even make sense? Would we ever do a fit of this type for a scatter plot? What even would that be?
+                x = xpoints[0]
+                ax.scatter(xpoints, ypoints)
+                ax.scatter(x, fitclass.fun(x, **parameter_values))
+            else:
+                raise ValueError('Unknown plottype. Something is way wrong.')
+
+            # axes labels and title
+            ax.set_xlabel(f"{self.indept_var['label']} ({self.indept_var['unit']})")
+            ax.set_ylabel(f"{self.dept_var['label']} ({self.dept_var['unit']})")
+
+            if rescale_axes:
+                data_lst = [self.indept_var, self.dept_var]
+                _rescale_ticks_and_units(ax, data_lst)
+
+            ax.set_title(title)
+
+            # fit result box
+            p_label_list = [self.fitclass.fun_str]
+            for parameter in parameter_values:
+                value = parameter_values[parameter]
+                unit = self.fit_results[0]['param_units'][parameter]
+                p_label_list.append('{} = {:.3g} {}'.format(parameter, value, unit))
+            textstr = '\n'.join(p_label_list)
+
+            ax.text(1.05, 0.7, textstr, transform=ax.transAxes, fontsize=14,
+                    verticalalignment='top', bbox={'ec':'k','fc':'w'})
+            # Todo: scaling for fit result numbers and units
+
+        elif len(self.setpoints) == 1: # 2D PLOTTING
+
+            xdata = self.indept_var
+            ydata = self.setpoints
+            zdata = self.dept_var
+
+            # Don't understand this fully. Seems to make color scale-bar for 2D plots.
+            colorbars = len(axes) * [None]  # ToDo: what does this do?
+            new_colorbars: List[matplotlib.colorbar.Colorbar] = []  # ToDo: what does this do?
+
+            raise NotImplementedError
+
+        elif len(self.setpoints) > 1: # Are we even going to do this?
+            raise NotImplementedError
+
+
+
+

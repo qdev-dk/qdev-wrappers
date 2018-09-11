@@ -1,5 +1,5 @@
 from qcodes import ParamSpec, new_data_set, new_experiment
-from qdev_wrappers.fitting.fitter import Fitter
+from qdev_wrappers.fitting.Fitter import Fitter
 from qcodes.dataset.database import initialise_database
 from qcodes.dataset.data_set import load_by_id
 
