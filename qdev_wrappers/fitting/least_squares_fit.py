@@ -100,3 +100,26 @@ class ExpDecaySin(LeastSquaresFit):
         w = freqs[idx]
         p = 0
         return [a, T, w, p, c]
+
+
+class PowerDecay(LeastSquaresFit):
+    def __init__(self, name='PowerFit', guess: List=None):
+        super().__init__(
+            name=name,
+            fun_str=r'$f(x) = A p^x + B$',
+            fun_np='a * p**x + b',
+            param_labels=['$A$', '$p$', '$B$'],
+            param_names=['a', 'p', 'b'],
+            param_units=['V', '', 'V'])
+        self.guess_params = guess
+
+    def fun(self, x, a, p, b):
+        return eval(self.fun_np)
+
+    def guess(self, x, y):     # NOTE: This guess is only valid for a decaying power function (i.e. 0 < p < 1)
+        if self.guess_params is not None:
+            return self.guess_params
+        a = y.max() - y.min()
+        b = y.min()
+        p = 1
+        return [a, p, b]

@@ -1,5 +1,5 @@
 from qcodes import ParamSpec, new_data_set, new_experiment
-from qdev_wrappers.fitting.Fitter import Fitter
+from qdev_wrappers.fitting.fitter import Fitter
 from qcodes.dataset.database import initialise_database
 from qcodes.dataset.data_set import load_by_id
 
@@ -68,10 +68,11 @@ def save_fit_result(fitter: Fitter):
         for setpoint_name in r['setpoint_names']:
             result[setpoint_name] = r['setpoint_values'][setpoint_name]
         for param_name in r['param_names']:
-            result.update(
-                {param_name: r['param_values'][param_name],
-                 param_name + '_initial_val': r['param_start_values'][param_name],
-                 param_name + '_variance': r['param_variance'][param_name]})
+            if r['param_values'] is not None:
+                result.update(
+                    {param_name: r['param_values'][param_name],
+                    param_name + '_initial_val': r['param_start_values'][param_name],
+                    param_name + '_variance': r['param_variance'][param_name]})
         for j in range(len(r['indept_var_values'])):
             result = result.copy()
             result.update(
