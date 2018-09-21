@@ -83,9 +83,9 @@ class AlazarNDParameter(ArrayParameter):
                  average_buffers: bool=True,
                  average_records: bool=True,
                  integrate_samples: bool=True,
-                 setpoint_names=None,
-                 setpoint_labels=None,
-                 setpoint_units=None) -> None:
+                 setpoint_names: Optional[Sequence[str]]=None,
+                 setpoint_labels: Optional[Sequence[str]]=None,
+                 setpoint_units: Optional[Sequence[str]]=None) -> None:
         self._integrate_samples = integrate_samples
         self._average_records = average_records
         self._average_buffers = average_buffers
