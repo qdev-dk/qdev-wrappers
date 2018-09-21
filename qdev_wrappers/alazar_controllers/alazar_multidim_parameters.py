@@ -235,16 +235,16 @@ class Alazar2DParameter(AlazarNDParameter):
                  shape: Sequence[int] = (1, 1)) -> None:
 
         if average_buffers:
-            setpoint_names = ('time', 'records')
-            setpoint_labels = ('Time', 'Records')
-            setpoint_units = ('s', '')
+            setpoint_names = ('records', 'time')
+            setpoint_labels = ('Records', 'Time')
+            setpoint_units = ('', 's')
         elif average_records:
-            setpoint_names = ('time', 'buffers')
-            setpoint_labels = ('Time', 'Buffers')
-            setpoint_units = ('s', '')
+            setpoint_names = ('buffers', 'time')
+            setpoint_labels = ('Buffers', 'Time')
+            setpoint_units = ('', 's')
         else:
-            setpoint_names = ('records', 'buffers')
-            setpoint_labels = ('Records', 'Buffers')
+            setpoint_names = ('buffers', 'records')
+            setpoint_labels = ('Buffers', 'Records')
             setpoint_units = ('', '')
 
         super().__init__(name,
@@ -276,22 +276,22 @@ class Alazar2DParameter(AlazarNDParameter):
             outer_shape = buffers
             if buffer_setpoints is not None:
                 outer_setpoints = tuple(buffer_setpoints,)
-            elif self.setpoints is None or len(self.setpoints[-1]) != buffers:
+            elif self.setpoints is None or len(self.setpoints[0]) != buffers:
                 outer_setpoints = tuple(np.arange(buffers))
             else:
-                outer_setpoints = self.setpoints[-1]
+                outer_setpoints = self.setpoints[0]
             if buffer_setpoint_name is not None:
                 outer_setpoint_name = buffer_setpoint_name
             else:
-                outer_setpoint_name = self.setpoint_names[-1]
+                outer_setpoint_name = self.setpoint_names[0]
             if buffer_setpoint_label is not None:
                 outer_setpoint_label = buffer_setpoint_label
             else:
-                outer_setpoint_label = self.setpoint_labels[-1]
+                outer_setpoint_label = self.setpoint_labels[0]
             if buffer_setpoint_unit is not None:
                 outer_setpoint_unit = buffer_setpoint_unit
             else:
-                outer_setpoint_unit = self.setpoint_units[-1]
+                outer_setpoint_unit = self.setpoint_units[0]
 
         if not self._integrate_samples:
             inner_shape = samples
@@ -308,62 +308,49 @@ class Alazar2DParameter(AlazarNDParameter):
             outer_shape = records
             if record_setpoints is not None:
                 outer_setpoints = tuple(record_setpoints,)
-            elif self.setpoints is None or len(self.setpoints[-1]) != records:
+            elif self.setpoints is None or len(self.setpoints[0]) != records:
                 outer_setpoints = tuple(np.arange(records))
             else:
-                outer_setpoints = self.setpoints[-1]
+                outer_setpoints = self.setpoints[0]
             if record_setpoint_name is not None:
                 outer_setpoint_name = record_setpoint_name
             else:
-                outer_setpoint_name = self.setpoint_names[-1]
+                outer_setpoint_name = self.setpoint_names[0]
             if record_setpoint_label is not None:
                 outer_setpoint_label = record_setpoint_label
             else:
-                outer_setpoint_label = self.setpoint_labels[-1]
+                outer_setpoint_label = self.setpoint_labels[0]
             if record_setpoint_unit is not None:
                 outer_setpoint_unit = record_setpoint_unit
             else:
-                outer_setpoint_unit = self.setpoint_units[-1]
+                outer_setpoint_unit = self.setpoint_units[0]
         elif not self._average_records and not self._average_buffers:
             inner_shape = records
             if record_setpoints is not None:
                 inner_setpoints = tuple(record_setpoints,)
-            elif self.setpoints is None or len(self.setpoints[0]) != records:
+            elif self.setpoints is None or len(self.setpoints[-1][0]) != records:
                 inner_setpoints = tuple(np.arange(records))
             else:
-                inner_setpoints = self.setpoints[0]
+                inner_setpoints = self.setpoints[-1][0]
             if record_setpoint_name is not None:
                 inner_setpoint_name = record_setpoint_name
             else:
-                inner_setpoint_name = self.setpoint_names[0]
+                inner_setpoint_name = self.setpoint_names[-1]
             if record_setpoint_label is not None:
                 inner_setpoint_label = record_setpoint_label
             else:
-                inner_setpoint_label = self.setpoint_labels[0]
+                inner_setpoint_label = self.setpoint_labels[-1]
             if record_setpoint_unit is not None:
                 inner_setpoint_unit = record_setpoint_unit
             else:
                 inner_setpoint_unit = self.setpoint_units[-1]
 
-        if outer_shape == 1:
-            self.shape = (inner_shape,)
-            self.setpoints = (inner_setpoints,)
-            self.setpoint_names = (inner_setpoint_name,)
-            self.setpoint_labels = (inner_setpoint_label,)
-            self.setpoint_units = (inner_setpoint_unit,)
-        elif inner_shape == 1:
-            self.shape = (outer_shape,)
-            self.setpoints = (outer_setpoints,)
-            self.setpoint_names = (outer_setpoint_name,)
-            self.setpoint_labels = (outer_setpoint_label,)
-            self.setpoint_units = (outer_setpoint_unit,)
-        else:
-            self.shape = (outer_shape, inner_shape)
-            self.setpoints = (outer_setpoints, tuple(
-                inner_setpoints for _ in range(len(outer_setpoints))))
-            self.setpoint_names = (outer_setpoint_name, inner_setpoint_name)
-            self.setpoint_labels = (outer_setpoint_label, inner_setpoint_label)
-            self.setpoint_units = (outer_setpoint_name, inner_setpoint_unit)
+        self.shape = (outer_shape, inner_shape)
+        self.setpoints = (outer_setpoints, tuple(
+            inner_setpoints for _ in range(len(outer_setpoints))))
+        self.setpoint_names = (outer_setpoint_name, inner_setpoint_name)
+        self.setpoint_labels = (outer_setpoint_label, inner_setpoint_label)
+        self.setpoint_units = (outer_setpoint_name, inner_setpoint_unit)
 
 
 class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
