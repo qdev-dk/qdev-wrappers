@@ -157,7 +157,9 @@ class Alazar1DParameter(AlazarNDParameter):
                  average_buffers: bool=True,
                  average_records: bool=True,
                  integrate_samples: bool=True,
-                 shape: Sequence[int] = (1,)):
+                 shape: Optional[Sequence[int]] = None):
+
+        shape = (1,) if shape is None else shape
 
         if not integrate_samples:
             setpoint_names = ('time',)
@@ -184,10 +186,10 @@ class Alazar1DParameter(AlazarNDParameter):
                          setpoint_units=setpoint_units)
 
     def set_setpoints_and_labels(self,
-                                 setpoints=None,
-                                 setpoint_name=None,
-                                 setpoint_label=None,
-                                 setpoint_unit=None) -> None:
+                                 setpoints: Optional[Sequence[float]]=None,
+                                 setpoint_name: Optional[str]=None,
+                                 setpoint_label: Optional[str]=None,
+                                 setpoint_unit: Optional[str]=None) -> None:
 
         if not self._integrate_samples:
             samples = self._instrument._parent.samples_per_record.get()
@@ -232,8 +234,8 @@ class Alazar2DParameter(AlazarNDParameter):
                  average_buffers: bool=True,
                  average_records: bool=True,
                  integrate_samples: bool=True,
-                 shape: Sequence[int] = (1, 1)) -> None:
-
+                 shape: Optional[Sequence[int]]=None) -> None:
+        shape = (1, 1) if shape is None else shape
         if average_buffers:
             setpoint_names = ('records', 'time')
             setpoint_labels = ('Records', 'Time')
@@ -260,14 +262,14 @@ class Alazar2DParameter(AlazarNDParameter):
                          setpoint_units=setpoint_units)
 
     def set_setpoints_and_labels(self,
-                                 record_setpoints=None,
-                                 buffer_setpoints=None,
-                                 record_setpoint_name=None,
-                                 buffer_setpoint_name=None,
-                                 record_setpoint_label=None,
-                                 buffer_setpoint_label=None,
-                                 record_setpoint_unit=None,
-                                 buffer_setpoint_unit=None):
+                                 record_setpoints: Optional[Sequence[float]]=None,
+                                 buffer_setpoints: Optional[Sequence[float]]=None,
+                                 record_setpoint_name: Optional[str]=None,
+                                 buffer_setpoint_name: Optional[str]=None,
+                                 record_setpoint_label: Optional[str]=None,
+                                 buffer_setpoint_label: Optional[str]=None,
+                                 record_setpoint_unit: Optional[str]=None,
+                                 buffer_setpoint_unit: Optional[str]=None):
         records = self._instrument.records_per_buffer()
         buffers = self._instrument.buffers_per_acquisition()
         samples = self._instrument._parent.samples_per_record.get()
