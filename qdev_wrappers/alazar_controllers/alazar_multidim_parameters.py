@@ -55,9 +55,11 @@ class Alazar0DParameter(Parameter):
         params_to_kwargs = ['samples_per_record', 'records_per_buffer',
                             'buffers_per_acquisition', 'allocated_buffers']
         acq_kwargs = self._instrument.acquisition_kwargs.copy()
-        controller_acq_kwargs = {key: val.get() for key, val in cntrl.parameters.items() if
+        controller_acq_kwargs = {key: val.get() for
+                                 key, val in cntrl.parameters.items() if
                                  key in params_to_kwargs}
-        channel_acq_kwargs = {key: val.get() for key, val in channel.parameters.items() if
+        channel_acq_kwargs = {key: val.get() for
+                              key, val in channel.parameters.items() if
                               key in params_to_kwargs}
         acq_kwargs.update(controller_acq_kwargs)
         acq_kwargs.update(channel_acq_kwargs)
@@ -130,9 +132,11 @@ class AlazarNDParameter(ArrayParameter):
         params_to_kwargs = ['samples_per_record', 'records_per_buffer',
                             'buffers_per_acquisition', 'allocated_buffers']
         acq_kwargs = self._instrument.acquisition_kwargs.copy()
-        controller_acq_kwargs = {key: val.get() for key, val in cntrl.parameters.items() if
+        controller_acq_kwargs = {key: val.get() for
+                                 key, val in cntrl.parameters.items() if
                                  key in params_to_kwargs}
-        channel_acq_kwargs = {key: val.get() for key, val in channel.parameters.items() if
+        channel_acq_kwargs = {key: val.get() for
+                              key, val in channel.parameters.items() if
                               key in params_to_kwargs}
         acq_kwargs.update(controller_acq_kwargs)
         acq_kwargs.update(channel_acq_kwargs)
@@ -185,11 +189,12 @@ class Alazar1DParameter(AlazarNDParameter):
                          setpoint_labels=setpoint_labels,
                          setpoint_units=setpoint_units)
 
-    def set_setpoints_and_labels(self,
-                                 setpoints: Optional[Sequence[float]]=None,
-                                 setpoint_name: Optional[str]=None,
-                                 setpoint_label: Optional[str]=None,
-                                 setpoint_unit: Optional[str]=None) -> None:
+    def set_setpoints_and_labels(
+            self,
+            setpoints: Optional[Sequence[float]]=None,
+            setpoint_name: Optional[str]=None,
+            setpoint_label: Optional[str]=None,
+            setpoint_unit: Optional[str]=None) -> None:
 
         if not self._integrate_samples:
             samples = self._instrument._parent.samples_per_record.get()
@@ -211,14 +216,16 @@ class Alazar1DParameter(AlazarNDParameter):
             self.setpoint_units = (setpoint_unit,)
         if not self._average_records:
             records = self._instrument.records_per_buffer.get()
-            if setpoints is None and (self.setpoints is None or (len(self.setpoints[0]) != records)):
+            if setpoints is None and (self.setpoints is None or
+                                      (len(self.setpoints[0]) != records)):
                 self.setpoints = (tuple(np.arange(records)),)
             elif setpoints is not None:
                 self.setpoints = (tuple(setpoints),)
             self.shape = (records,)
         elif not self._average_buffers:
             buffers = self._instrument.buffers_per_acquisition.get()
-            if setpoints is None and (self.setpoints is None or len(self.setpoints[0]) != buffers):
+            if setpoints is None and (self.setpoints is None or
+                                      len(self.setpoints[0]) != buffers):
                 self.setpoints = (tuple(np.arange(buffers)),)
             elif setpoints is not None:
                 self.setpoints = (tuple(setpoints),)
@@ -261,15 +268,16 @@ class Alazar2DParameter(AlazarNDParameter):
                          setpoint_labels=setpoint_labels,
                          setpoint_units=setpoint_units)
 
-    def set_setpoints_and_labels(self,
-                                 record_setpoints: Optional[Sequence[float]]=None,
-                                 buffer_setpoints: Optional[Sequence[float]]=None,
-                                 record_setpoint_name: Optional[str]=None,
-                                 buffer_setpoint_name: Optional[str]=None,
-                                 record_setpoint_label: Optional[str]=None,
-                                 buffer_setpoint_label: Optional[str]=None,
-                                 record_setpoint_unit: Optional[str]=None,
-                                 buffer_setpoint_unit: Optional[str]=None):
+    def set_setpoints_and_labels(
+            self,
+            record_setpoints: Optional[Sequence[float]]=None,
+            buffer_setpoints: Optional[Sequence[float]]=None,
+            record_setpoint_name: Optional[str]=None,
+            buffer_setpoint_name: Optional[str]=None,
+            record_setpoint_label: Optional[str]=None,
+            buffer_setpoint_label: Optional[str]=None,
+            record_setpoint_unit: Optional[str]=None,
+            buffer_setpoint_unit: Optional[str]=None):
         records = self._instrument.records_per_buffer()
         buffers = self._instrument.buffers_per_acquisition()
         samples = self._instrument._parent.samples_per_record.get()
@@ -330,7 +338,8 @@ class Alazar2DParameter(AlazarNDParameter):
             inner_shape = records
             if record_setpoints is not None:
                 inner_setpoints = tuple(record_setpoints,)
-            elif self.setpoints is None or len(self.setpoints[-1][0]) != records:
+            elif (self.setpoints is None or
+                  len(self.setpoints[-1][0]) != records):
                 inner_setpoints = tuple(np.arange(records))
             else:
                 inner_setpoints = self.setpoints[-1][0]
@@ -360,7 +369,7 @@ class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
 
 
     """
-    
+
     def get_raw(self) -> np.ndarray:
         if self._param_name == 'data':
             channel = self._channels[0]
@@ -408,11 +417,13 @@ class AlazarMultiChannelParameter(MultiChannelInstrumentParameter):
             params_to_kwargs = ['samples_per_record', 'records_per_buffer',
                                 'buffers_per_acquisition', 'allocated_buffers']
             acq_kwargs = channel.acquisition_kwargs.copy()
-            controller_acq_kwargs = {key: val.get() for key, val in cntrl.parameters.items() if
+            controller_acq_kwargs = {key: val.get() for
+                                     key, val in cntrl.parameters.items() if
                                      key in params_to_kwargs}
             channels_acq_kwargs = []
             for i, channel in enumerate(self._channels):
-                channels_acq_kwargs.append({key: val.get() for key, val in channel.parameters.items() if
+                channels_acq_kwargs.append({key: val.get() for
+                                            key, val in channel.parameters.items() if
                                             key in params_to_kwargs})
                 if channels_acq_kwargs[i] != channels_acq_kwargs[0]:
                     raise RuntimeError(
