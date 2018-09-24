@@ -10,17 +10,11 @@ from qcodes.dataset.data_set import load_by_id
 from qcodes.dataset.data_export import get_data_by_id, flatten_1D_data_for_plot
 from qcodes.dataset.data_export import (datatype_from_setpoints_1d,
                           datatype_from_setpoints_2d, reshape_2D_data)
-from qcodes.dataset.plotting import _rescale_ticks_and_units, plot_on_a_plain_grid, plot_2d_scatterplot
+from qcodes.dataset.plotting import _rescale_ticks_and_units, plot_on_a_plain_grid
 
 import warnings
 warnings.simplefilter("always")
 
-#alldata = get_data_by_id(run_id)
-#data_info = load_by_id(run_id)
-#data_info = load_by_id(run_id)
-#experiment_name = data_info.exp_name
-#sample_name = data_info.sample_name
-# ToDo: use this to get data instead of making data dictionary
 
 
 class Fitter:
@@ -36,16 +30,17 @@ class Fitter:
             dependent variable for fitting. eg 'cavity_magnitude_result'
     """
 
-    def __init__(self, data: Dict, fitclass: LeastSquaresFit,
+    def __init__(self, run_id, fitclass: LeastSquaresFit,
                   indept_var: str, dept_var: str, r2_limit = 0.6):
         self.fitclass = fitclass
-        self.experiment_info = {'exp_id': data['exp_id'],
-                                'run_id': data['run_id'],
-                                'sample_name': data['sample_name']}
-        self.indept_var = data[indept_var]
-        self.dept_var = data[dept_var]
-        self.setpoints = {k: data[k] for k in data.keys() if
-                          (k not in [indept_var, dept_var]) and (k in data['variables'])}  # Todo: this will mark phase as a setpoint if magnitude is chosen as a variable
+        self.experiment_info = {'exp_id': load_by_id(run_id).exp_name,
+                                'run_id': run_id,
+                                'sample_name': load_by_id(run_id).sample_name}
+        self.all_data = self._select_relevant_data(run_id, indept_var, dept_var)
+        self.indept_var = [ data for data in self.all_data if data['name'] == indept_var ][0]
+        self.dept_var = [ data for data in self.all_data if data['name'] == dept_var ][0]
+        self.setpoints = {data['name']: data for data in self.all_data if
+                          (data['name'] != dept_var) and (data['name'] != indept_var)}
         self.fit_parameters = {
             fitclass.param_names[i]:
             {'name': fitclass.param_names[i],
@@ -56,9 +51,44 @@ class Fitter:
                           'type': fitclass.name,
                           'fit_function_str': fitclass.fun_str,
                           'r2_limit': r2_limit}  # TODO: add dill here
-        self.fit_results = self._do_fitting_procedure(data)
+        self.fit_results = self._do_fitting_procedure()
 
-    def _do_fitting_procedure(self, data):
+    def _select_relevant_data(self, run_id, indept_var, dept_var):
+        """ 
+        This function goes through the all the data retrieved by 
+        get_data_by_id(run_id), and returns the data that contains 
+        the dependent variable, or throws an error if no matching 
+        data is found. 
+
+        Calling get_data_by_id(run_id) returns data as a list of lists 
+        of dictionaries:
+
+            [
+              # each element in this list refers
+              # to one dependent (aka measured) parameter
+                [
+                  # each element in this list is a dictionary referring
+                  # to one independent (aka setpoint) parameter
+                  # that the dependent parameter depends on;
+                  # a dictionary with the data and metadata of the dependent
+                  # parameter is in the *last* element in this list
+
+                ]
+            ]
+        """
+
+        index = None
+        for idx, measured_data in enumerate(get_data_by_id(run_id)):
+            if measured_data[-1]['name'] == dept_var:
+                index = idx
+        if index == None:
+            raise RuntimeError(f"No data found with dependent variable {dept_var}")
+        all_data = get_data_by_id(run_id)[index]
+        if indept_var not in [data['name'] for data in all_data]:
+            raise RuntimeError(f"Specified independent variable not found in data")
+        return all_data
+
+    def _do_fitting_procedure(self):
         """
         Populates fit_results list with one dictionary per combination
         of setpoints.
@@ -106,6 +136,7 @@ class Fitter:
             setpoint_names = list(self.setpoints.keys())
             setpoint_labels = [v['label'] for v in self.setpoints.values()]
             setpoint_units = [v['unit'] for v in self.setpoints.values()]
+            data = {data['name'] : data for data in self.all_data}
             for setpoint_combination in setpoint_combinations:
                 # find indices where where setpoint combination is satisfied
                 indices = set(np.argwhere(
@@ -115,10 +146,8 @@ class Fitter:
                             data[setpoint_names[0]]['data'] == setpoint_combination[0]).flatten()
                     indices = indices.intesection(new_indices)
                 indices = list(indices)
-                input_data_array = data[self.indept_var['name']
-                                        ]['data'][indices]
-                output_data_array = data[self.dept_var['name']
-                                         ]['data'][indices]
+                input_data_array = self.indept_var['data'][indices]
+                output_data_array = self.dept_var['data'][indices]
                 param_dict = self._perform_fit(input_data_array,
                                                output_data_array)
                 result = param_dict.copy()
@@ -146,8 +175,8 @@ class Fitter:
 #                    print('no data for setpoint combination ', dict(
 #                        zip(self.setpoints.keys(), setpoint_combination)))
         else:
-            input_data_array = data[self.indept_var['name']]['data']
-            output_data_array = data[self.dept_var['name']]['data']
+            input_data_array = self.indept_var['data']
+            output_data_array = self.dept_var['data']
             param_dict = self._perform_fit(input_data_array,
                                        output_data_array)
             result = param_dict.copy()
@@ -157,10 +186,10 @@ class Fitter:
                  'dept_var_values': output_data_array,
                  'indept_var_name': self.indept_var['name'],
                  'dept_var_name': self.dept_var['name'],
-                 'indept_var_label': data[self.indept_var['name']]['label'],
-                 'dept_var_label': data[self.dept_var['name']]['label'],
-                 'indept_var_unit': data[self.indept_var['name']]['unit'],
-                 'dept_var_unit': data[self.dept_var['name']]['unit'],
+                 'indept_var_label': self.indept_var['label'],
+                 'dept_var_label': self.dept_var['label'],
+                 'indept_var_unit': self.indept_var['unit'],
+                 'dept_var_unit': self.dept_var['unit'],
                  'estimate_values':
                     self._find_estimate(input_data_array,
                                                param_dict['param_values'])})
@@ -187,8 +216,6 @@ class Fitter:
     def get_r2(self, estimate, data):
         """
         Finds residual and total sum of squares, calculates the R^2 value
-        Args:
-            A np.array of data, and a corresponding np.array of data estimate based off a fit to the data.
         """
         ss_res = np.sum((data - estimate) ** 2)
         ss_tot = np.sum((data - np.mean(data)) ** 2)
@@ -208,10 +235,17 @@ class Fitter:
 
         # find start parameters, run curve_fit function to perform fit
         p_guess = self.fitclass.guess(input_data_array, output_data_array)
-        popt, pcov = curve_fit(self.fitclass.fun,
+        try:
+            popt, pcov = curve_fit(self.fitclass.fun,
                                input_data_array,
                                output_data_array,
                                p0=p_guess)
+        except RuntimeError:
+            params_dict['param_values'] = None
+            params_dict['param_variance'] = None
+            warnings.warn('Unsuccessful fit - curve_fit did not find optimal parameters')
+
+            return params_dict
 
         # add guess and fit results to dict
         for i, param_name in enumerate(self.fitclass.param_names):
@@ -222,10 +256,13 @@ class Fitter:
         # r2 test to approve fit
         est_data = self._find_estimate(input_data_array, params_dict['param_values'])
         r2 = self.get_r2(est_data, output_data_array)
-        if r2 < self.estimator['r2_limit']:
+        if self.estimator['r2_limit'] == None:
+            pass
+        elif r2 < self.estimator['r2_limit']:
             params_dict['param_values'] = None
             params_dict['param_variance'] = None
-            warnings.warn('Unsuccessful fit')
+            warnings.warn('Unsuccessful fit - r2 for fit is below limit {}'
+                                                    .format(self.estimator['r2_limit']))
 
         return params_dict
 
@@ -237,6 +274,7 @@ class Fitter:
 
     def _plot_1d(self, ax, xdata, ydata, parameter_values, parameter_variance, rescale_axes):
 
+        # plot data, and fit if successful
         ax.plot(xdata, ydata, marker='.', markersize=5, linestyle='', color='C0')
         if parameter_values is None:
             pass
@@ -244,7 +282,7 @@ class Fitter:
             x = np.linspace(xdata.min(), xdata.max(), len(xdata) * 10)
             ax.plot(x, self.fitclass.fun(x, **parameter_values), color='C1')
 
-        # axes labels and title
+        # set axes labels and title
         ax.set_xlabel(f"{self.indept_var['label']} ({self.indept_var['unit']})")
         ax.set_ylabel(f"{self.dept_var['label']} ({self.dept_var['unit']})")
 
@@ -252,7 +290,7 @@ class Fitter:
             data_lst = [self.indept_var, self.dept_var]
             _rescale_ticks_and_units(ax, data_lst)
 
-        # fit result box
+        # add fit result summary box
         if parameter_values is None:
             textstr = '{} \n Unsuccessful fit'.format(self.fitclass.fun_str)
         else:
@@ -261,30 +299,28 @@ class Fitter:
                 value = parameter_values[parameter]
                 unit = self.fit_results[0]['param_units'][parameter]
                 standard_dev = np.sqrt(parameter_variance[parameter])
-                p_label_list.append('{} = {:.3g} $\pm$ {:.3g} {}'.format(parameter, value, standard_dev, unit))
+                p_label_list.append(r'{} = {:.3g} +/- {:.3g} {}'
+                                        .format(parameter, value, standard_dev, unit))
             textstr = '\n'.join(p_label_list)
 
         ax.text(1.05, 0.7, textstr, transform=ax.transAxes, fontsize=14,
                 verticalalignment='top', bbox={'ec': 'k', 'fc': 'w'})
-        # Todo: scaling for fit result numbers and units, units based on input
 
     def plot(self, setpoint=None, rescale_axes: bool=True):
-        # setpoint should be None or a list of the form {setpoint_name: value, setpoint_name2: value, ...}
-        #Todo: should this really be part of the fitter? What about if you want to plot the fit from the fit_id later?
-        #Todo: wouldn't it be better to save the fit first, and then plot from the experiment database?
-
-        # make figure, axes
+        """ 
+        setpoint : None or a dict of form {name: value, name2: value, ...} 
+        """ 
+        # make figure, axes, title
         fig, ax = plt.subplots(1, 1)
+        axes = [ax]
         colorbar = None
+        title = "Run #{} fitted, Experiment {} ({})".format(self.experiment_info['run_id'], 
+                        self.experiment_info['exp_id'], self.experiment_info['sample_name'])
 
-        # make title
-        run_id = self.experiment_info['run_id']
-        experiment_name = self.experiment_info['exp_id']
-        sample_name = self.experiment_info['sample_name']
-        title = f"Run #{run_id} fitted, Experiment {experiment_name} ({sample_name})"
-        ax.set_title(title)
 
         if len(self.setpoints) == 0:  # 1D PLOTTING
+
+            ax.set_title(title)
 
             parameter_values = self.fit_results[0]['param_values']
             parameter_variance = self.fit_results[0]['param_variance']
@@ -292,14 +328,13 @@ class Fitter:
             ypoints = self.dept_var['data']
 
             self._plot_1d(ax, xpoints, ypoints, parameter_values, parameter_variance, rescale_axes)
-
+         
 
         elif len(self.setpoints) >= 1 : # 2D PLOTTING
 
-            # make copy of fit_results
+            # make copy of fit_results, remove all results not at specified setpoints
             plot_results = self.fit_results.copy()
 
-            # if setpoints are specified, remove all results from plot_results that are not at the specified setpoints
             if setpoint is not None:
                 setpoint_names = [key for key in setpoint.keys()]
                 for name in setpoint_names:
@@ -307,8 +342,7 @@ class Fitter:
                         if result['setpoint_values'][name] != setpoint[name]:
                             plot_results.remove(result)
 
-
-            # if, after removing all results not at specified setpoint, only 1 fit is left, plot the 1D fit of this cut
+            # if only 1 fit is left, plot the 1D fit of this cut
             if len(plot_results) == 1:
 
                 title += '\n' + str(setpoint)
@@ -321,112 +355,83 @@ class Fitter:
 
                 self._plot_1d(ax, xpoints, ypoints, parameter_values, parameter_variance, rescale_axes)
 
-
-            # if, after removing all results, there are many fits left in plot_results, attempt 2D plot + params plots
+            # if there are many fits left in plot_results, make 2D plot + params plots
             elif len(plot_results) > 1:
 
-                # confirm that there is only 1 setpoint type besides the independent variable i.e. that data is 2D
+                # confirm that there is at most 1 variable setpoint 
                 if setpoint is None:
-                    setpoint_list = [name for name in self.setpoints]
+                    unspecified_setpoints = [name for name in self.setpoints]
                 else:
-                    setpoint_list = [name for name in self.setpoints if name not in setpoint]
-                if len(setpoint_list) > 1:
-                    raise NotImplementedError('Function has too many ({}) unspecified setpoints.'.format(len(setpoint_list)))
-
+                    unspecified_setpoints = [name for name in self.setpoints if name not in setpoint]
+                if len(unspecified_setpoints) > 1:
+                    raise NotImplementedError('Function has too many ({}) unspecified setpoints.'
+                                                                    .format(len(setpoint_list)))
 
                 # get setpoint info for plot labels
-                setpoint_name = setpoint_list[0]
+                setpoint_name = unspecified_setpoints[0]
                 setpoint_unit = self.setpoints[setpoint_name]['unit']
                 setpoint_label = self.setpoints[setpoint_name]['label']
 
-                # retrieve independent variable and setpoint data, output estimate, parameter values
-                x = []
-                y = []
-                z = []
+                # organize all data for plotting
+                x, y, z = [], [], []
                 params = {'param_setpoints' : []}
                 for param_name in self.fit_parameters:
                     params[param_name] = []
                     params[param_name + '_variance'] = []
 
-
                 for result in plot_results:
                     setpoint_value = result['setpoint_values'][setpoint_name]
-                    for xvalue in result['indept_var_values']:
-                        x.append(xvalue)
-                        y.append(setpoint_value)
-                    for est_value in result['estimate_values']:
-                        z.append(est_value)
+                    data_length = len(result['indept_var_values'])
+                    x.append(list(result['indept_var_values']))
+                    y.append([setpoint_value] * data_length)
+                    z.append(list(result['estimate_values']))
+                    
                     if result['param_values'] is not None:
                         params['param_setpoints'].append(setpoint_value)
                         for parameter in result['param_values']:
                             params[parameter].append( result['param_values'][parameter] )
                             params[parameter + '_variance'].append( result['param_variance'][parameter] )
 
-
-
-
-                xdata = np.array(x)
-                ydata = np.array(y)
-                zdata = np.array(z)
+                xpoints = np.array(x).flatten()
+                ypoints = np.array(y).flatten()
+                zpoints = np.array(z).flatten()
                 for item in params: params[item] = np.array(params[item])
 
-
-
-                # 2D heatmap plot
-                # how to plot - is this necessary? Don't we always want to plot on a grid?
-                how_to_plot = {'grid': plot_on_a_plain_grid,
-                               'equidistant': plot_on_a_plain_grid,
-                               'point': plot_2d_scatterplot,
-                               'unknown': plot_2d_scatterplot}
-
-                plottype = datatype_from_setpoints_2d([xdata ,ydata])
-
-                xpoints = flatten_1D_data_for_plot(xdata)
-                ypoints = flatten_1D_data_for_plot(ydata)
-                zpoints = flatten_1D_data_for_plot(zdata)
-                plot_func = how_to_plot[plottype]
-
-                ax, colorbar = plot_func(xpoints, ypoints, zpoints, ax, colorbar)
+                # Make 2D heatmap plot
+                ax, colorbar = plot_on_a_plain_grid(xpoints, ypoints, zpoints, ax, colorbar)
 
                 ax.set_xlabel(f"{self.indept_var['label']} ({self.indept_var['unit']})")
                 ax.set_ylabel(f"{setpoint_label} ({setpoint_unit})")
+                ax.set_title(title)
                 colorbar.set_label(f"{self.dept_var['label']} ({self.dept_var['unit']})")
 
                 if rescale_axes:
-                    # create list of dictionaries for x, y and z containing units and labels
                     data_lst = [self.indept_var, self.setpoints[setpoint_name], self.dept_var]
-                    #run rescale function to create new, scaled axes
                     _rescale_ticks_and_units(ax, data_lst, colorbar)
 
-
-
-
-                # Parameter vs setpoint plots
+                # Select data for parameter vs setpoint plots
                 order = params['param_setpoints'].argsort()
-                setpoint_data_dict = self.setpoints[setpoint_name]
-                setpoint_data_dict['data'] = params['param_setpoints'][order]
+                xdata = self.setpoints[setpoint_name]
+                xpoints = params['param_setpoints'][order]
 
                 for param in self.fit_parameters:
-                        # Todo: this should be like in plot_by_id, containing n subplots where ax holds all of them
-                    fig, ax = plt.subplots(1, 1)
-
-                    param_data_dict = self.fit_parameters[param]
-                    param_data_dict['data'] = params[param][order]
+                    ydata = self.fit_parameters[param]
+                    ydata['data'] = params[param][order]
                     param_variance = params[param + '_variance'][order]
                     param_standard_dev = np.array( [np.sqrt(variance) for variance in param_variance] )
 
-                    ax.errorbar(setpoint_data_dict['data'], param_data_dict['data'], param_standard_dev, None, 'g.-')
-
+                    #Make parameter vs setpoint plot
+                    fig, ax = plt.subplots(1, 1)
+                    ax.errorbar(xpoints, ydata['data'], param_standard_dev, None, 'g.-')
                     ax.set_title(title)
-                    ax.set_xlabel(f"{setpoint_data_dict['label']} ({setpoint_data_dict['unit']})")
-                    ax.set_ylabel(f"{param_data_dict['label']} ({param_data_dict['unit']})")
+                    ax.set_xlabel(f"{xdata['label']} ({xdata['unit']})")
+                    ax.set_ylabel(f"{ydata['label']} ({ydata['unit']})")
                     if rescale_axes:
-                        # create list of dictionaries for x, y and z containing units and labels
-                        data_lst = [setpoint_data_dict, param_data_dict]
-                        # run rescale function to create new, scaled axes
+                        data_lst = [xdata, ydata]
                         _rescale_ticks_and_units(ax, data_lst)
+                    axes.append(ax)
 
-        return ax, colorbar
+        return axes, colorbar
 
 
 
