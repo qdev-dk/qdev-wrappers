@@ -5,8 +5,10 @@ import collections
 import matplotlib.pyplot as plt
 
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
+from qcodes.utils.plotting import auto_range_iqr
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
+from qcodes import config
 
 def check_experiment_is_initialized():
     if not getattr(CURRENT_EXPERIMENT, "init", True): 
@@ -14,8 +16,10 @@ def check_experiment_is_initialized():
                            "use qc.Init(mainfolder, samplename)")
 
 
-def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng=True,
-            fig_size=[6,4],clim=None,dataname=None,xlim=None,ylim=None,**kwargs):
+def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
+             do_plots=True, savepng=True, fig_size=[6,4], clim=None,
+             dataname=None, xlim=None, ylim=None, transpose=False,
+             smart_colorscale=None, **kwargs):
     """
     Show and return plot and data.
     Args:
@@ -30,13 +34,17 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
         clim [cmin,cmax]: Set min and max of colorbar to cmin and cmax respectrively
         xlim [xmin,xmax]: Set limits on x axis
         ylim [ymin,ymax]: set limits on y axis
+        transpose (boolean): Transpose data to be plotted (only works for 2D scans and qc.MatPlot)
         **kwargs: Are passed to plot function
 
     Returns:
         data, plots : returns the plots and the datasets
 
     """
-    
+    # Defaults
+    if smart_colorscale is None:
+        smart_colorscale = config.gui.smart_colorscale
+
     if not isinstance(ids, collections.Iterable):
         ids = (ids,)
 
@@ -47,6 +55,7 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
     if samplefolder==None:
         check_experiment_is_initialized()
         samplefolder = qc.DataSet.location_provider.fmt.format(counter='')
+
 
     # Load all datasets into list
     for id in ids:
@@ -60,8 +69,8 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                 raise ValueError('qcodes.QtPlot does not support multigraph plotting. Set useQT=False to plot multiple datasets.')
             if dataname is not None:
                 if dataname not in [key for key in data.arrays.keys() if "_set" not in key]:
-                    raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\'', \
-                        'while dataname(s) in dataset are: {}.'.format(dataname,', '.join(data.arrays.keys())))
+                    raise RuntimeError('Dataname not in dataset. Input dataname was: \'{}\''.format(dataname), \
+                        'while dataname(s) in dataset are: \'{}\'.'.format('\', \''.join(data.arrays.keys())))
                 keys = [dataname]
             else:
                 keys = [key for key in data.arrays.keys() if "_set" not in key]
@@ -73,7 +82,6 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
         plots = []
         num = ''
         l = len(unique_keys)
-
         for j, key in enumerate(unique_keys):
             array_list = []
             xlims = [[],[]]
@@ -83,12 +91,24 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
             for data, keys in zip(data_list,keys_list):
                 if key in keys:
                     arrays = getattr(data, key)
+                    if transpose and len(arrays.set_arrays)==2:
+                        if useQT:
+                            raise AttributeError('Transpose only works for qc.MatPlot.')
+                        if dataname is None and l != 1:
+                            raise ValueError('Dataname has to be provided to plot data transposed for dataset with more '
+                                    'than 1 measurement. Datanames in dataset are: \'{}\'.'.format('\', \''.join(unique_keys)))
+                        arrays.ndarray = arrays.ndarray.T
+                        set0_temp = arrays.set_arrays[0]
+                        set1_temp = arrays.set_arrays[1]
+                        set0_temp.ndarray = set0_temp.ndarray.T
+                        set1_temp.ndarray = set1_temp.ndarray.T
+                        arrays.set_arrays = (set1_temp,set0_temp,)
                     if avg_sub == 'row':
-                        for i in range(np.shape(arrays)[0]):
-                            arrays[i,:] -= np.nanmean(arrays[i,:])
+                        for i in range(np.shape(arrays.ndarray)[0]):
+                            arrays.ndarray[i,:] -= np.nanmean(arrays.ndarray[i,:])
                     if avg_sub == 'col':
-                        for i in range(np.shape(arrays)[1]):
-                            arrays[:,i] -= np.nanmean(arrays[:,i])
+                        for i in range(np.shape(arrays.ndarray)[1]):
+                            arrays.ndarray[:,i] -= np.nanmean(arrays.ndarray[:,i])
                     array_list.append(arrays)
 
                     # Find axis limits for dataset
@@ -97,8 +117,11 @@ def show_num(ids, samplefolder=None,useQT=False,avg_sub='',do_plots=True,savepng
                         xlims[1].append(np.nanmax(arrays.set_arrays[1]))
                         ylims[0].append(np.nanmin(arrays.set_arrays[0]))
                         ylims[1].append(np.nanmax(arrays.set_arrays[0]))
-                        clims[0].append(np.nanmin(arrays.ndarray))
-                        clims[1].append(np.nanmax(arrays.ndarray))
+                        if smart_colorscale:
+                            clims[0], clims[1] = auto_range_iqr(arrays.ndarray)
+                        else:
+                            clims[0].append(np.nanmin(arrays.ndarray))
+                            clims[1].append(np.nanmax(arrays.ndarray))
                     else:
                         xlims[0].append(np.nanmin(arrays.set_arrays[0]))
                         xlims[1].append(np.nanmax(arrays.set_arrays[0]))

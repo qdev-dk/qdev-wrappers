@@ -1,8 +1,9 @@
 from contextlib import suppress
 from typing import Optional
+from functools import partial
 import importlib
 import logging
-import yaml
+import warnings
 import os
 from copy import deepcopy
 import qcodes
@@ -12,6 +13,14 @@ import qcodes.utils.validators as validators
 from qcodes.instrument.parameter import Parameter
 from qcodes.monitor.monitor import Monitor
 from .parameters import DelegateParameter
+use_pyyaml = False
+try:
+    from ruamel.yaml import YAML
+except ImportError:
+    use_pyyaml = True
+    warnings.warn("ruamel yaml not found station configurator is falling back to pyyaml. "
+                           "It's highly recommended to install ruamel.yaml. This fixes issues with "
+                           "scientific notation and duplicate instruments in the YAML file")
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +40,7 @@ class StationConfigurator:
     """
 
     PARAMETER_ATTRIBUTES = ['label', 'unit', 'scale', 'inter_delay', 'delay',
-                            'step']
+                            'step', 'offset']
 
     def __init__(self, filename: Optional[str] = None,
                  station: Optional[Station] = None) -> None:
@@ -43,8 +52,25 @@ class StationConfigurator:
         self.filename = filename
 
         self.load_file(self.filename)
+        for instrument_name in self._instrument_config.keys():
+            # TODO: check if name is valid (does not start with digit, contain
+            # dot, other signs etc.)
+            method_name = f'load_{instrument_name}'
+            if method_name.isidentifier():
+                setattr(self, method_name,
+                        partial(self.load_instrument,
+                                identifier=instrument_name))
+            else:
+                log.warning(f'Invalid identifier: ' +
+                            f'for the instrument {instrument_name} no ' +
+                            f'lazy loading method {method_name} could be ' +
+                            'created in the StationConfigurator')
 
     def load_file(self, filename: Optional[str] = None):
+        if use_pyyaml:
+            import yaml
+        else:
+            yaml=YAML()
         if filename is None:
             filename = default_file
         try:
