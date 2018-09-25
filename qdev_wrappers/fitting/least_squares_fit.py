@@ -100,7 +100,7 @@ class ExpDecaySin(LeastSquaresFit):
             name=name,
             fun_str=r'$f(x) = a \sin(\omega x +\phi)\exp(-x/T) + c$',
             fun_np='a*np.exp(-x/T)*np.sin(w*x+p)+c',
-            param_labels=['$a$', '$T$', '$\omega$', '$\phi$', '$c$'],
+            param_labels=['$a$', '$T$', r'$\omega$', r'$\phi$', '$c$'],
             param_names=['a', 'T', 'w', 'p', 'c'],
             param_units=['', 's', 'Hz', '', ''])
         self.guess_params = guess
@@ -132,6 +132,42 @@ class PowerDecay(LeastSquaresFit):
             param_units=['V', '', 'V'])
         self.guess_params = guess
 
+    def fun(self, x, a, p, b):
+        return eval(self.fun_np)
+
+    def guess(self, x, y):
+        if self.guess_params is not None:
+            return self.guess_params
+        
+        length = len(y)
+        val_init = y[0:round(length / 20)].mean()
+        val_fin = y[-round(length / 20):].mean()
+        a = val_init - val_fin
+        b = val_fin
+
+        # guess T as point where data has fallen to 1/e of init value
+        idx = (np.abs(y - a / np.e - b)).argmin()
+        T = x[idx]
+        #guess p as e^(-1/T):
+        p = np.e**(-1/T)
+
+        return [a, p, b]
+
+
+class FirstOrderBM(LeastSquaresFit):
+    def __init__(self, name='1st order benchmarking', guess: List=None):
+        super().__init__(
+            name=name,
+            fun_str=r'$f(x) = A p^x + C(x-1)p^{x-2} + B$',
+            fun_np='a * p**x + c*(x-1)*p**(x-2) + b',
+            param_labels=['$A$', '$p$', '$B$'],
+            param_names=['a', 'p', 'b'],
+            param_units=['V', '', 'V'])
+        self.guess_params = guess
+
+    def fun(self, x, a, p, b):
+        return eval(self.fun_np)
+
     def guess(self, x, y):
         if self.guess_params is not None:
             return self.guess_params
@@ -145,6 +181,12 @@ class PowerDecay(LeastSquaresFit):
         idx = (np.abs(y - a / np.e - c)).argmin()
         T = x[idx]
         # guess p as e^(-1/T)
+        b = val_fin
+
+        # guess T as point where data has fallen to 1/e of init value
+        idx = (np.abs(y - a / np.e - b)).argmin()
+        T = x[idx]
+        #guess p as e^(-1/T):
         p = np.e**(-1/T)
 
         return [a, p, b]
