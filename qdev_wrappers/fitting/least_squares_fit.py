@@ -59,11 +59,6 @@ class LeastSquaresFit(Instrument):
         given values or based on perform guess function
         """
         raise NotImplementedError
-#        if guess is not None:
-#            return guess
-#        else:
-#            return self.perform_guess(*args)
-
 
 
 class ExpDecay(LeastSquaresFit):
@@ -104,6 +99,9 @@ class ExpDecaySin(LeastSquaresFit):
             param_names=['a', 'T', 'w', 'p', 'c'],
             param_units=['', 's', 'Hz', '', ''])
         self.guess_params = guess
+
+    def fun(self, x, a, T, w, p, c):
+        return eval(self.fun_np)
 
     def guess(self, x, y):
         if self.guess_params is not None:
