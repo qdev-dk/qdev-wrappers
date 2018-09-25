@@ -1,9 +1,11 @@
 import numpy as np
 import scipy.fftpack as fftpack
 from typing import List
+from qcodes import Instrument
+from scipy.optimize import curve_fit
 
 
-class LeastSquaresFit:
+class LeastSquaresFit(Instrument):
     """
     Base class for fit functions to be used with curve_fit. Specifies
     a function for fitting, function for guessing initial parameters for fit
@@ -18,12 +20,32 @@ class LeastSquaresFit:
 
     def __init__(self, name, fun_str, fun_np,
                  param_names, param_labels, param_units):
-        self.name = name
+        super().__init__(name)
         self.fun_str = fun_str
         self.fun_np = fun_np
         self.param_names = param_names
-        self.param_labels = param_labels
-        self.param_units = param_units
+
+        for idx, parameter in enumerate(self.param_names):
+            self.add_parameter(name=parameter,
+                               unit=param_units[idx],
+                               label=param_labels[idx],
+                               set_cmd=False)
+        del self.parameters['IDN']
+
+    def perform_fit(self, input_data_array, output_data_array):
+
+        # find start parameters, run curve_fit function to perform fit
+        p_guess = self.guess(input_data_array, output_data_array)
+        popt, pcov = curve_fit(self.fun,
+                               input_data_array,
+                               output_data_array,
+                               p0=p_guess)
+
+        # update guess and fit results in fit parameters
+        for i, param in enumerate(self.param_names):
+            self.parameters[param]._save_val(popt[i])
+            self.parameters[param].start_value = p_guess[i]
+            self.parameters[param].variance = pcov[i, i]
 
     def fun(self, *args):
         """
@@ -83,9 +105,6 @@ class ExpDecaySin(LeastSquaresFit):
             param_units=['', 's', 'Hz', '', ''])
         self.guess_params = guess
 
-    def fun(self, x, a, T, w, p, c):
-        return eval(self.fun_np)
-
     def guess(self, x, y):
         if self.guess_params is not None:
             return self.guess_params
@@ -113,13 +132,19 @@ class PowerDecay(LeastSquaresFit):
             param_units=['V', '', 'V'])
         self.guess_params = guess
 
-    def fun(self, x, a, p, b):
-        return eval(self.fun_np)
-
-    def guess(self, x, y):     # NOTE: This guess is only valid for a decaying power function (i.e. 0 < p < 1)
+    def guess(self, x, y):
         if self.guess_params is not None:
             return self.guess_params
-        a = y.max() - y.min()
-        b = y.min()
-        p = 1
+
+        length = len(y)
+        val_init = y[0:round(length / 20)].mean()
+        val_fin = y[-round(length / 20):].mean()
+        a = val_init - val_fin
+        c = val_fin
+        # guess T1 as point where data has fallen to 1/e of init value
+        idx = (np.abs(y - a / np.e - c)).argmin()
+        T = x[idx]
+        # guess p as e^(-1/T)
+        p = np.e**(-1/T)
+
         return [a, p, b]
