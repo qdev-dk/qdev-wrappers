@@ -5,6 +5,40 @@ from qcodes import Instrument
 from scipy.optimize import curve_fit
 
 
+class MockInstrument(qc.Instrument):
+    parameters = OrderedDict()
+
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
+        for param_name, param_kwargs in self.parameters.items():
+            self.add_parameter(param_name, set_cmd=False, **kwargs)
+
+    def funtion(self):
+        raise NotImplementedError
+
+    def guess(self):
+        raise NotImplementedError
+
+    def perform_fit(self):
+        # TODO
+
+
+class ExpDecay(MockInstrument):
+    parameters = {'a': {'unit': 'V', 'label': 'A'}, }
+
+    def __init__(self, guess=None):
+        self.guess = guess
+        super().__init__()
+
+        def guess(self):
+            if self.guess is not None:
+                return self.guess
+            else:
+                # TODO
+
+        def function(self):
+            # TODO
+
 class LeastSquaresFit(Instrument):
     """
     Base class for fit functions to be used with curve_fit. Specifies
