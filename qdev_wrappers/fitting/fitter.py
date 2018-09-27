@@ -202,7 +202,7 @@ class Fitter:
             kwargs for each setpoints
                 eg 'frequency=1e9, power=-10'
         Returns:
-            dict for fit where these conditions are satisfiedxw
+            dict for fit where these conditions are satisfied
         """
         if len(setpoint_values) != len(self.setpoints):
             raise RuntimeError('Must specify a value for each setpoint')
@@ -270,7 +270,7 @@ class Fitter:
         if params_values_dict is None:
             return [None] * len(input_data_array)
         else:
-            return self.fitclass.fun(input_data_array, **params_values_dict)
+            return self.fitclass.func(input_data_array, **params_values_dict)
 
     def _plot_1d(self, ax, xdata, ydata, parameter_values, parameter_variance, rescale_axes):
 
@@ -280,7 +280,7 @@ class Fitter:
             pass
         else:
             x = np.linspace(xdata.min(), xdata.max(), len(xdata) * 10)
-            ax.plot(x, self.fitclass.fun(x, **parameter_values), color='C1')
+            ax.plot(x, self.fitclass.func(x, **parameter_values), color='C1')
 
         # set axes labels and title
         ax.set_xlabel(f"{self.indept_var['label']} ({self.indept_var['unit']})")

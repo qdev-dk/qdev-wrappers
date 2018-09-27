@@ -25,8 +25,6 @@ class LeastSquaresFit(Instrument):
             self.add_parameter(param_name, set_cmd=False, **kwargs)
         del self.parameters['IDN']
 
-
-
     def func(self, *args):
         """
         The mathematical function to fit to
