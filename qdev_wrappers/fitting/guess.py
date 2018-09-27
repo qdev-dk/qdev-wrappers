@@ -74,7 +74,7 @@ class PowerDecayGuess(Guess):
         return [a, b, c]
 
 
-class RabiT2Guess(Guess):
+class RabiT1Guess(Guess):
 
     """Guess for f(x) = e^(-x/T) cos^2(wx/2)"""
 

@@ -2,13 +2,15 @@ from collections import OrderedDict
 import numpy as np
 
 
-class LeastSquaresModel:
-
+class LeastSquaresModel(object):
     def __init__(self, model_parameters, model_function):
         self.modelparam_names = [key for key in model_parameters]
         self.model_parameters = model_parameters
         self.func_str = model_function['str']
         self.func_np = model_function['np']
+
+        arg_list = ", ".join(self.modelparam_names)
+        self.func = eval(f"lambda {arg_list}: {self.func_np}")
 
     def func(self, *args):
 
@@ -67,7 +69,7 @@ class Benchmarking(LeastSquaresModel):
         return eval(self.func_np)
 
 
-class RabiT2(LeastSquaresModel):
+class RabiT1(LeastSquaresModel):
 
     def __init__(self):
         model_parameters = OrderedDict({'T': {'label': '$T_2$',      'unit': 's'  },
