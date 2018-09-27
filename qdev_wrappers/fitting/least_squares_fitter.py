@@ -9,7 +9,7 @@ class LeastSquaresFitter(Instrument):
         self.guess = guess
 
         for param_name, param_kwargs in self.model.model_parameters.items():
-            self.add_parameter(param_name, set_cmd=False, **param_kwargs)
+            self.add_parameter(param_name, **param_kwargs) #set_cmd=False,
 
     def update(self, input_data_array, output_data_array):
 
