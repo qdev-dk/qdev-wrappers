@@ -74,8 +74,8 @@ class RabiT1(LeastSquaresModel):
     def __init__(self):
         model_parameters = OrderedDict({'T': {'label': '$T_2$',      'unit': 's'  },
                                         'w': {'label': '$w_{rabi}$', 'unit': 'Hz' } })
-        model_function = {'str': r'$f(x) = e^(-x/T_2) \cos^2(\omega x / 2)$',
-                          'np': 'np.exp(-x/T) * np.cos(w * x / 2) ** 2'}
+        model_function = {'str': r'$f(x) = e^(-x/T_1) \cos^2(\omega x / 2) + (1 - e^(-x/T_1)) / 2$',
+                          'np': 'np.exp(-x/T) * np.cos(w * x / 2) ** 2 + (1 - np.exp(-x/T_1)) / 2'}
 
         super().__init__(model_parameters, model_function)
 

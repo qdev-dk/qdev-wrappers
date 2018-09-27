@@ -76,7 +76,7 @@ class PowerDecayGuess(Guess):
 
 class RabiT1Guess(Guess):
 
-    """Guess for f(x) = e^(-x/T) cos^2(wx/2)"""
+    """Guess for f(x) = e^(-x/b) cos^2(wx/2)"""
 
     def make_guess(self, x, y):
 
