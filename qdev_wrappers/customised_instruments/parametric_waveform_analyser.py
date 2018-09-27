@@ -261,8 +261,12 @@ class ParametricWaveformAnalyser(Instrument):
         self._carrier_freq = heterodyne_source.frequency()
         self.add_parameter(name='int_time',
                            set_cmd=self._set_int_time,
+                           label='Integration Time',
+                           unit='s',
                            initial_value=1e-6)
         self.add_parameter(name='int_delay',
+                           label='Measurement Delay',
+                           unit='s',
                            set_cmd=self._set_int_delay,
                            initial_value=0)
         self.add_parameter(name='seq_mode',
@@ -274,12 +278,16 @@ class ParametricWaveformAnalyser(Instrument):
         self.add_parameter(name='carrier_frequency',
                            set_cmd=self._set_carrier_frequency,
                            initial_value=self._carrier_freq,
+                           label='PWA Carrier Frequency',
+                           unit='Hz',
                            docstring='Sets the frequency on the '
                            'heterodyne_source and updates the demodulation '
                            'channels carrier_freq so that the resultant '
                            'sidebanded readout tones are updated.')
         self.add_parameter(name='base_demodulation_frequency',
                            set_cmd=self._set_base_demod_frequency,
+                           label='PWA Base Demodulation Frequency',
+                           unit='Hz',
                            initial_value=self._base_demod_freq,
                            docstring='Sets the demodulation_frequency of the'
                            ' heterodyne_source and updates the base '
@@ -313,11 +321,11 @@ class ParametricWaveformAnalyser(Instrument):
             self.alazar.seq_mode(True)
             self.sequencer.repeat_mode('sequence')
         else:
-            self.alazar.seq_mode(True)
+            self.alazar.seq_mode(False)
             self.sequencer.repeat_mode('element')
         settings_list = []
         for ch in self.alazar_channels:
-            settings = {'demod_channel_index': ch._demod_ch.index,
+            settings = {'demod_ch_index': ch._demod_ch.index,
                         'demod_type': ch.demod_type()[0],
                         'integrate_time': ch._integrate_samples,
                         'single_shot': ch.single_shot(),
@@ -331,10 +339,10 @@ class ParametricWaveformAnalyser(Instrument):
         if (self.alazar.seq_mode() and
                 self.sequencer.repeat_mode() == 'sequence'):
             return True
-        elif (self.alazar.seq_mode() and
+        elif (not self.alazar.seq_mode() and
               self.sequencer.repeat_mode() == 'element'):
             return False
-        elif (self.alazar.seq_mode() and
+        elif (not self.alazar.seq_mode() and
                 (len(self.sequencer.get_inner_setpoints()) == 1 and
                     self.sequencer.get_outer_setpoints() is None)):
             return False
@@ -507,10 +515,8 @@ class ParametricWaveformAnalyser(Instrument):
         channels.
         """
         for demod_ch in list(self.demod_channels):
-            for alazar_ch in demod_ch.alazar_channels:
-                demod_ch.alazar_channels.remove(alazar_ch)
-                self.alazar_channels.remove(alazar_ch)
-                del alazar_ch
+            demod_ch.alazar_channels.clear()
+        self.alazar_channels.clear()
 
     def get_alazar_ch_settings(self, num: int, single_shot: bool):
         """
