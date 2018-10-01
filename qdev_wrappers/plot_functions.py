@@ -10,14 +10,12 @@ from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
 from qcodes.instrument.channel import MultiChannelInstrumentParameter
-from qcodes.utils.plotting import auto_range_iqr
-from qcodes import config
+from qcodes.utils.plotting import auto_range_iqr, auto_color_scale_from_config
+import qcodes
 
 
 def _plot_setup(data, inst_meas, useQT=True, startranges=None,
-                smart_colorscale=None):
-    # default values
-    smart_colorscale = smart_colorscale or config.gui.smart_colorscale
+                auto_color_scale=None, cutoff_percentile=None):
     title = "{} #{:03d}".format(CURRENT_EXPERIMENT["sample_name"],
                                 data.location_provider.counter)
     rasterized_note = " rasterized plot"
@@ -49,7 +47,7 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None,
         color = 'C' + str(counter_two)
         if issubclass(i.__class__, MultiChannelInstrumentParameter) or i._instrument is None:
             inst_meas_name = name
-        else:            
+        else:
             parent_instr_name = (i._instrument.name + '_') if i._instrument else ''
             inst_meas_name = "{}{}".format(parent_instr_name, name)
         try:
@@ -76,9 +74,9 @@ def _plot_setup(data, inst_meas, useQT=True, startranges=None,
                 rasterized = xlen * ylen > 5000
                 po = plot.add(inst_meas_data, subplot=j + k + 1,
                               rasterized=rasterized)
-                if smart_colorscale:
-                    vmin, vmax = auto_range_iqr(inst_meta_data['z'])
-                    po.set_clim(vmin=vmin, vmax=vmax)
+
+                auto_color_scale_from_config(po.colorbar, auto_color_scale,
+                                             inst_meta_data['z'], cutoff_percentile)
             else:
                 rasterized = False
                 plot.add(inst_meas_data, subplot=j + k + 1, color=color)
@@ -123,7 +121,7 @@ def __get_plot_type(data, plot):
     return metadata
 
 
-def _save_individual_plots(data, inst_meas, display_plot=True):
+def _save_individual_plots(data, inst_meas, display_plot=True, auto_color_scale=None, cutoff_percentile=None):
 
     def _create_plot(i, name, data, counter_two, display_plot=True):
         # Step the color on all subplots no just on plots
@@ -149,7 +147,10 @@ def _save_individual_plots(data, inst_meas, display_plot=True):
         if 'z' in inst_meta_data:
             xlen, ylen = inst_meta_data['z'].shape
             rasterized = xlen * ylen > 5000
-            plot.add(inst_meas_data, rasterized=rasterized)
+            po = plot.add(inst_meas_data, rasterized=rasterized)
+
+            auto_color_scale_from_config(po.colorbar, auto_color_scale,
+                                         inst_meta_data['z'], cutoff_percentile)
         else:
             rasterized = False
             plot.add(inst_meas_data, color=color)
