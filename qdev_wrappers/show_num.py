@@ -54,11 +54,11 @@ def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
     """
     # default values
     if auto_color_scale is None:
-        auto_color_scale = qcodes.config.gui.auto_color_scale.enabled
+        auto_color_scale = qcodes.config.plotting.auto_color_scale.enabled
     if cutoff_percentile is None:
         cutoff_percentile = cast(
             Tuple[Number, Number],
-            tuple(qcodes.config.gui.auto_color_scale.cutoff_percentile))
+            tuple(qcodes.config.plotting.auto_color_scale.cutoff_percentile))
 
     if not isinstance(ids, collections.Iterable):
         ids = (ids,)
