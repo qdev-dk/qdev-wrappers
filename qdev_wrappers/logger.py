@@ -8,7 +8,7 @@ from qcodes import config
 log = logging.getLogger(__name__)
 
 logging_dir = "logs"
-logging_delimiter = '¦'
+logging_delimiter = ' ¦ '
 history_log_name = "history.log"
 python_log_name = 'pythonlog.log'
 
@@ -23,8 +23,7 @@ def start_python_logger() -> None:
     will be written to stderr.
     """
     format_string_items = ['%(asctime)s', '%(name)s', '%(levelname)s',
-                           '%(message)s', '%(filename)s', '%(funcName)s',
-                           '%(lineno)d','%(module)s']
+                           '%(funcName)s', '%(lineno)d', '%(message)s']
     format_string = logging_delimiter.join(format_string_items)
     formatter = logging.Formatter(format_string)
     try:
