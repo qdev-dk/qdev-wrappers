@@ -1,10 +1,9 @@
 
 from qcodes.instrument.base import Instrument
 from qcodes import Parameter
-from qcodes.utils import validators as vals
-from qcodes.instrument.channel import InstrumentChannel, ChannelList
 import yaml
-import os
+from functools import partial
+import copy
 # TODO: docstrings
 # TODO: write something for the instrument mapping?
 # TODO: how should saving and loading be done?
@@ -19,6 +18,9 @@ class ImmutableDotDict(dict):
 
     def lock(self):
         self.__locked = True
+        for k, v in self.items():
+            if isinstance(v, ImmutableDotDict):
+                v.lock()
 
     def __setitem__(self, key, value):
         if self.__locked:
@@ -42,14 +44,16 @@ class ImmutableDotDict(dict):
         return restOfKey in target
 
     def __deepcopy__(self, memo):
-        return DotDict(copy.deepcopy(dict(self)))
+        return copy.deepcopy(dict(self))
 
     def __setattr__(self, attr, value):
-        if self.__locked:
+        if attr in ['_ImmutableDotDict__locked', 'unlock', 'lock']:
+            print('attr allowed')
+            object.__setattr__(self, attr, value)
+        elif self.__locked:
             raise RuntimeError('Setting not allowed')
-        elif attr != '_ImmutableDotDict__locked':
-            raise RuntimeError('Setting not allowed')
-        object.__setattr__(self, attr, value)
+        else:
+            object.__setattr__(self, attr, value)
 
     __getattr__ = __getitem__
 
@@ -75,104 +79,43 @@ class SettingsParameter(Parameter):
         self._save_val(val)
         self._file_save_fn()
 
+    def __deepcopy__(self, memo):
+        return self._latest['value']
+
 
 class SettingsInstrument(Instrument):
     def __init__(self, name, file_to_load, qubit_num=None, file_to_save=None):
         with open(file_to_load) as f:
             initial_settings = yaml.safe_load(f)
-
         self._file_to_save = file_to_save or file_to_load
         super().__init__(name)
-        def traverse(self, dic, path=None):
-            for k, v in dic.items():
-                local_path = '_'.join(filter(None, [path, k]))
-                if isinstance(v, dict):
-                    for j in traverse(self, v, local_path):
-                        yield local_path, j
-                else:
-                    self.add_parameter(
-                        name=local_path,
-                        parameter_class=SettingsParameter,
-                        file_save_fn=partial(self._save_to_file, self._file_to_save),
-                        initial_value=v)
-                    dic[k] = self.parameters[local_path]
-                    yield local_path, v
-        for _ in traverse(self, initial_settings): pass
         self.settings = ImmutableDotDict(initial_settings)
+        for _ in self._dic_to_parameters_dic(self.settings):
+            pass
+        self.settings.lock()
+        self._save_to_file(file_to_save)
 
-    #     is_default=initial_settings.pop('is_default')
-    #     if is_default:
-    #         if file_to_save is None:
-    #             raise RuntimeError(
-    #                 'Must specify file_to_save if file_to_load is default')
-    #         if qubit_num is None:
-    #             raise RuntimeError(
-    #                 'Must specify qubit_num if file_to_load is default')
-    #         for i in range(qubit_num):
-    #             initial_settings['qubits'][f'Q{i}']=initial_settings['qubits']['Q0']
-    #     else:
-    #         if (qubit_num is not None and
-    #                 (len(initial_settings['qubit']) != qubit_num)):
-    #             raise RuntimeError(
-    #                 '{} qubits found in {} but qubit_num specified as {}'
-    #                 ''.format(len(initial_settings['qubit']),
-    #                           file_to_load, qubit_num))
-    #         if file_to_save is None:
-    #             file_to_save=file_to_load
-    #     self._file_to_save=file_to_save
-    #     super().__init__(name)
-    #     general_channels=ChannelList(self, "general", InstrumentChannel)
-    #     self.add_submodule('general', general_channels)
-    #     qubit_channels=ChannelList(
-    #         self, "qubits", InstrumentChannel)
-    #     self.add_submodule('qubits', qubit_channels)
+    def _generate_dict(self):
+        return copy.deepcopy(self.settings)
 
-    #     # load general settings parameters
-    #     for param, param_dict in initial_settings['general'].items():
-    #         self.general.add_parameter(
-    #             name=param,
-    #             parameter_class=SettingsParameter,
-    #             file_save_fn=self.save_to_file,
-    #             initial_value=param_dict.get('value', None),
-    #             label=param_dict.get('label', None),
-    #             unit=param_dict.get('unit', None))
+    def _dic_to_parameters_dic(self, dic, path=None):
+        for k, v in dic.items():
+            local_path = '_'.join(filter(None, [path, k]))
+            if isinstance(v, dict):
+                for j in self._dic_to_parameters_dic(v, local_path):
+                    yield local_path, j
+            else:
+                self.add_parameter(
+                    name=local_path,
+                    parameter_class=SettingsParameter,
+                    file_save_fn=partial(
+                        self._save_to_file, self._file_to_save),
+                    initial_value=v)
+                dic[k] = self.parameters[local_path]
 
-    #     # load qubit settings parameters
-    #     for i, qubit_dict in enumerate(initial_settings['qubits']):
-    #         qubit_channel=InstrumentChannel(self, f'qubit_{i}')
-    #         for param, param_dict in qubit_dict.items():
-    #             qubit_channel.add_parameter(
-    #                 name=param,
-    #                 parameter_class=SettingsParameter,
-    #                 file_save_fn=self.save_to_file,
-    #                 initial_value=param_dict.get('value', None),
-    #                 label=param_dict.get('label', None),
-    #                 unit=param_dict.get('unit', None))
-    #         qubit_channels.append(qubit_channel)
-    #     qubit_channels.lock()
-
-    def save_to_file(self, filename: str=None):
+    def _save_to_file(self, filename=None):
         if filename is not None:
             self._file_to_save = filename
-        params_dict = self.generate_dict()
+        settings_to_save = self._generate_dict()
         with open(self._file_to_save, 'w+') as f:
-            yaml.dump(params_dict, f, default_flow_style=False)
-
-    # def generate_dict(self):
-    #     params_dict={'is_default': False,
-    #                    'general': {},
-    #                    'qubits': []}
-    #     for param_name in self.general.parameters:
-    #         parm=getattr(self.general, param_name)
-    #         params_dict['sample'][param_name]={'label': parm.label,
-    #                                              'unit': parm.unit,
-    #                                              'value': parm.get()}
-    #     for qubit in self.qubits:
-    #         qubit_params_dict={}
-    #         for param_name in qubit.parameters:
-    #             parm=getattr(qubit, param_name)
-    #             qubit_params_dict[param_name]={'label': parm.label,
-    #                                              'unit': parm.unit,
-    #                                              'value': parm.get()}
-    #         params_dict['qubits'].append(qubit_params_dict)
-    #     return params_dict
+            yaml.dump(settings_to_save, f, default_flow_style=False)
