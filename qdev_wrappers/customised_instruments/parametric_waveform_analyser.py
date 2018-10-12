@@ -428,7 +428,7 @@ class ReadoutChannel(InstrumentChannel):
             chan1.data.label = f'Q{demod_ch_num} Imaginary'
         return chan1, chan2
 
-    def add_sidebanding_channel(self, frequency):
+    def _add_sidebanding_channel(self, frequency):
         """
         Creates a SidebandingChannel with a drive_frequency as
         specified and a pair of alazar channels which will readout
@@ -444,6 +444,7 @@ class ReadoutChannel(InstrumentChannel):
         self._create_and_add_alazar_channels(settings, demod_ch)
         self._sidebanding_channels.append(demod_ch)
         self.add_submodule(f'Q{demod_ch_num}', demod_ch)
+        return demod_ch
 
     @contextmanager
     def sideband_update(self):
@@ -532,7 +533,7 @@ class DriveChannel(InstrumentChannel):
         for demod_ch in self._sidebanding_channels:
             demod_ch.update()
 
-    def add_sidebanding_channel(self, frequency):
+    def _add_sidebanding_channel(self, frequency):
         """
         Creates a SidebandingChannel with a drive_frequency as
         specified.
@@ -541,6 +542,9 @@ class DriveChannel(InstrumentChannel):
         demod_ch = SidebandingChannel(
             self, 'Q{}_drive'.format(demod_ch_num), demod_ch_num,
             drive_frequency=frequency)
+        self._sidebanding_channels.append(demod_ch)
+        self.add_submodule(f'Q{demod_ch_num}', demod_ch)
+        return demod_ch
 
     @contextmanager
     def sideband_update(self):
@@ -593,6 +597,7 @@ class ParametricWaveformAnalyser(Instrument):
         self.add_submodule('readout', readout_channel)
         drive_channel = ReadoutChannel(self, 'drive')
         self.add_submodule('drive', drive_channel)
+        self.qubits = {}
 
         self.add_parameter(name='seq_mode',
                            set_cmd=self._set_seq_mode,
@@ -639,6 +644,18 @@ class ParametricWaveformAnalyser(Instrument):
         settings_list = []
         self._save_val(mode)
         self.readout._reinstate_alazar_channels()
+
+    def add_qubit(self, readout_frequency, drive_frequency):
+        q_num = len(self.qubits)
+        readout_ch = self.readout._add_sidebanding_channel(readout_frequency)
+        drive_ch = self.drive._add_sidebanding_channel(drive_frequency)
+        qubits['Q' + q_num] = {'readout': readout_ch, 'drive': drive_ch}
+
+    def clear_qubits(self):
+        qubits.clear()
+        self.alazar_controller.alazar_channels.clear()
+        self.readout._sidebanding_channels.clear()
+        self.drive._sidebanding_channels.clear()
 
     @contextmanager
     def single_sequence_update(self):
