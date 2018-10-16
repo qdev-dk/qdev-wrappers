@@ -1,10 +1,11 @@
 
-from qcodes.instrument.base import Instrument, Channel
+from qcodes.instrument.base import Instrument
+from qcodes.instrument.channel import InstrumentChannel
 from qcodes import Parameter
 import yaml
 
 
-class SettingsChannel(Channel):
+class SettingsChannel(InstrumentChannel):
     def _to_saveable_value(self):
         dict_to_save = {}
         for name, param in self.parameters.items():
@@ -44,7 +45,7 @@ class SettingsInstrument(Instrument):
     def __init__(self, name,
                  default_settings_file,
                  station,
-                 qubit_num=None, file_to_save=None):
+                 file_to_save=None):
         with open(default_settings_file) as f:
             initial_settings = yaml.safe_load(f)
         if file_to_save is not None:
@@ -55,18 +56,17 @@ class SettingsInstrument(Instrument):
             self._file_to_save = default_settings_file
         self._station = station
         super().__init__(name)
-        for _ in self._dic_to_parameters_dic(initial_settings):
-            pass
+        params_dict = self._get_station_parameters()
+        _dic_to_parameters_dic(initial_settings, params_dict)
 
-    def _dic_to_parameters_dic(self, settings_dic, param_mapping_dic,
-                               instr=None):
+    def _dic_to_parameters_dic(self, settings_dic, params_dict, instr=None):
         instr = instr or self
         for k, v in settings_dic.items():
-            if sort(list(v.keys())) == ['default_value', 'parameter']:
+            if sorted(list(v.keys())) == ['default_value', 'parameter']:
                 param_name = k
                 param_value = v['default_value']
                 delegate_parameter_name = v['parameter']
-                delegate_parameter = self._get_parameters_from_station[delegate_parameter_name]
+                delegate_parameter = self.station_parameters[delegate_parameter_name]
                 instr.add_parameter(name=param_name,
                                     settings_instr=self,
                                     instruent=instr,
@@ -75,25 +75,26 @@ class SettingsInstrument(Instrument):
                                     parameter_class=SettingsParameter)
             else:
                 ch = self._add_submodule_to_instr(k, instr)
-                for j in self._dic_to_parameters_dic(v, ch):
-                    yield j
+                self._dic_to_parameters_dic(v, ch)
 
     def _add_submodule_to_instr(self, name, instr_to_add_to):
-        ch = Channel(instr_to_add_to, name)
+        ch = SettingsChannel(instr_to_add_to, name)
         instr_to_add_to.add_submodule(name)
         return ch
 
-    def _get_parameters_from_station(self):
-        params = {}
+    def _get_instr_parameters(self, instr, params_dict):
+        params_dict.update(instr.parameters)
+        for submodule in instr.submodules.values():
+            self._get_instr_parameters(self, submodule, params_dict)
+
+    def _get_station_parameters(self):
+        params_dict = {}
         for instr in self._station.components:
             if isinstance(instr, Parameter):
-                params[instr.name] = instr
+                params_dict[instr.name] = instr
             else:
-                try:
-                    params.update(instr.parameters)
-                except AttributeError:
-                    pass
-        return params
+                self._get_instr_parameters(instr, params_dict)
+        return params_dict
 
     def _generate_dict(self):
         dict_to_save = {}
