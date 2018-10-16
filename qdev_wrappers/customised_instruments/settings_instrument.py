@@ -1,117 +1,107 @@
 
-from qcodes.instrument.base import Instrument
+from qcodes.instrument.base import Instrument, Channel
 from qcodes import Parameter
 import yaml
-from functools import partial
-import copy
-# TODO: docstrings
-# TODO: write something for the instrument mapping?
-# TODO: how should saving and loading be done?
 
 
-class ImmutableDotDict(dict):
-    __locked = False
-
-    def __init__(self, initial_dict):
-        for key in initial_dict:
-            self.__setitem__(key, initial_dict[key])
-
-    def lock(self):
-        self.__locked = True
-        for k, v in self.items():
-            if isinstance(v, ImmutableDotDict):
-                v.lock()
-
-    def __setitem__(self, key, value):
-        if self.__locked:
-            raise RuntimeError('Setting not allowed')
-        if isinstance(value, dict) and not isinstance(value, ImmutableDotDict):
-            value = ImmutableDotDict(value)
-        dict.__setitem__(self, key, value)
-
-    def __getitem__(self, key):
-        if '.' not in key:
-            return dict.__getitem__(self, key)
-        myKey, restOfKey = key.split('.', 1)
-        target = dict.__getitem__(self, myKey)
-        return target[restOfKey]
-
-    def __contains__(self, key):
-        if '.' not in key:
-            return dict.__contains__(self, key)
-        myKey, restOfKey = key.split('.', 1)
-        target = dict.__getitem__(self, myKey)
-        return restOfKey in target
-
-    def __deepcopy__(self, memo):
-        return copy.deepcopy(dict(self))
-
-    def __setattr__(self, attr, value):
-        if attr in ['_ImmutableDotDict__locked', 'unlock', 'lock']:
-            print('attr allowed')
-            object.__setattr__(self, attr, value)
-        elif self.__locked:
-            raise RuntimeError('Setting not allowed')
-        else:
-            object.__setattr__(self, attr, value)
-
-    __getattr__ = __getitem__
+class SettingsChannel(Channel):
+    def _to_saveable_value(self):
+        dict_to_save = {}
+        for name, param in self.parameters.items():
+            dict_to_save[name] = param._to_saveable_value()
+        for name, submodule in self.submodule.items():
+            dict_to_save[name] = submodule._to_saveable_value()
+        return dict_to_save
 
 
 class SettingsParameter(Parameter):
     def __init__(self, name,
-                 file_save_fn,
-                 initial_value=None,
-                 derived_from=None,
+                 settings_instr,
+                 delegate_parameter,
                  instrument=None,
-                 **kwargs):
-        self._file_save_fn = file_save_fn
-        self.derived_from = derived_from
+                 default_value=None):
+        self._delegate_parameter = delegate_parameter
+        self._settings_instr = settings_instr
         super().__init__(name=name,
                          instrument=instrument,
-                         initial_value=initial_value,
+                         initial_value=default_value,
                          get_cmd=None,
-                         set_cmd=self._set_and_save,
-                         **kwargs)
+                         set_cmd=self._set_and_save)
 
-    def _set_and_save(self, val, derived_from=None):
-        self.derived_from = derived_from
+    def _set_and_save(self, val):
         self._save_val(val)
-        self._file_save_fn()
+        self._settings_instr._save_to_file()
 
-    def __deepcopy__(self, memo):
-        return self._latest['value']
+    def set_delegate_parameter(self):
+        self.delegate_parameter(self._latest['value'])
+
+    def _to_saveable_value(self):
+        return {'default_value': self._latest['value'],
+                'parameter': self._delegate_parameter.name}
 
 
 class SettingsInstrument(Instrument):
-    def __init__(self, name, file_to_load, qubit_num=None, file_to_save=None):
-        with open(file_to_load) as f:
+    def __init__(self, name,
+                 default_settings_file,
+                 station,
+                 qubit_num=None, file_to_save=None):
+        with open(default_settings_file) as f:
             initial_settings = yaml.safe_load(f)
-        self._file_to_save = file_to_save or file_to_load
+        if file_to_save is not None:
+            with open(file_to_save, 'w+') as f:
+                yaml.dump(initial_settings, f, default_flow_style=False)
+            self._file_to_save = file_to_save
+        else:
+            self._file_to_save = default_settings_file
+        self._station = station
         super().__init__(name)
-        self.settings = ImmutableDotDict(initial_settings)
-        for _ in self._dic_to_parameters_dic(self.settings):
+        for _ in self._dic_to_parameters_dic(initial_settings):
             pass
-        self.settings.lock()
-        self._save_to_file(file_to_save)
+
+    def _dic_to_parameters_dic(self, settings_dic, param_mapping_dic,
+                               instr=None):
+        instr = instr or self
+        for k, v in settings_dic.items():
+            if sort(list(v.keys())) == ['default_value', 'parameter']:
+                param_name = k
+                param_value = v['default_value']
+                delegate_parameter_name = v['parameter']
+                delegate_parameter = self._get_parameters_from_station[delegate_parameter_name]
+                instr.add_parameter(name=param_name,
+                                    settings_instr=self,
+                                    instruent=instr,
+                                    initial_value=param_value,
+                                    delegate_parameter=delegate_parameter,
+                                    parameter_class=SettingsParameter)
+            else:
+                ch = self._add_submodule_to_instr(k, instr)
+                for j in self._dic_to_parameters_dic(v, ch):
+                    yield j
+
+    def _add_submodule_to_instr(self, name, instr_to_add_to):
+        ch = Channel(instr_to_add_to, name)
+        instr_to_add_to.add_submodule(name)
+        return ch
+
+    def _get_parameters_from_station(self):
+        params = {}
+        for instr in self._station.components:
+            if isinstance(instr, Parameter):
+                params[instr.name] = instr
+            else:
+                try:
+                    params.update(instr.parameters)
+                except AttributeError:
+                    pass
+        return params
 
     def _generate_dict(self):
-        return copy.deepcopy(self.settings)
-
-    def _dic_to_parameters_dic(self, dic, path=None):
-        for k, v in dic.items():
-            local_path = '_'.join(filter(None, [path, k]))
-            if isinstance(v, dict):
-                for j in self._dic_to_parameters_dic(v, local_path):
-                    yield local_path, j
-            else:
-                self.add_parameter(
-                    name=local_path,
-                    parameter_class=SettingsParameter,
-                    file_save_fn=partial(
-                        self._save_to_file, self._file_to_save),
-                    initial_value=v)
-                dic[k] = self.parameters[local_path]
+        dict_to_save = {}
+        for name, param in self.parameters.items():
+            dict_to_save[name] = param._to_saveable_value()
+        for name, submodule in self.submodules.items():
+            dict_to_save[name] = submodule._to_saveable_value()
+        return dict_to_save
 
     def _save_to_file(self, filename=None):
         if filename is not None:
