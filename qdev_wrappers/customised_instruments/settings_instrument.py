@@ -6,6 +6,11 @@ import yaml
 
 
 class SettingsChannel(InstrumentChannel):
+    """
+    An InstrumentChannel intended to belong to a SettingsInstrument
+    which has a function for saving values of it's parameters to a dictionary
+    and attempting to call the same function on submodules.
+    """
     def _to_saveable_value(self):
         dict_to_save = {}
         for name, param in self.parameters.items():
@@ -16,6 +21,13 @@ class SettingsChannel(InstrumentChannel):
 
 
 class SettingsParameter(Parameter):
+    """
+    A Parameter which has the bells and whistles of:
+    - can be saved in a dictionary via '_to_saveable_value'
+    - can set another 'delegate' parameter to mirror it's value
+    - when set calls the _save_to_file function on the
+        associated settings_instrument
+    """
     def __init__(self, name,
                  settings_instr,
                  delegate_parameter,
@@ -42,6 +54,14 @@ class SettingsParameter(Parameter):
 
 
 class SettingsInstrument(Instrument):
+    """
+    An Instrument which is meant to store the 'ideal' settings of various
+    Parameters and save them in a human readable way (.yaml file). It
+    required a file to load from and a station full of real instruments which
+    match those specified in the file to load from to be paired with settings
+    parameters. A file to save to is option otherwise the file to load
+    will be overwritten every time a SettingsParameter is set.
+    """
     def __init__(self, name,
                  default_settings_file,
                  station,
@@ -57,9 +77,15 @@ class SettingsInstrument(Instrument):
         self._station = station
         super().__init__(name)
         params_dict = self._get_station_parameters()
-        _dic_to_parameters_dic(initial_settings, params_dict)
+        self._dic_to_parameters_dic(initial_settings, params_dict)
 
     def _dic_to_parameters_dic(self, settings_dic, params_dict, instr=None):
+        """
+        Based on the dictionary provided builds the sumbodule tree structure
+        necessary and populates the leaves with Qcodes Parameters with initial
+        values matching those specified and delegate parameters found in the
+        station.
+        """
         instr = instr or self
         for k, v in settings_dic.items():
             if sorted(list(v.keys())) == ['default_value', 'parameter']:
@@ -74,20 +100,24 @@ class SettingsInstrument(Instrument):
                                     delegate_parameter=delegate_parameter,
                                     parameter_class=SettingsParameter)
             else:
-                ch = self._add_submodule_to_instr(k, instr)
+                ch = SettingsChannel(instr, k)
+                instr.add_submodule(k, ch)
                 self._dic_to_parameters_dic(v, ch)
 
-    def _add_submodule_to_instr(self, name, instr_to_add_to):
-        ch = SettingsChannel(instr_to_add_to, name)
-        instr_to_add_to.add_submodule(name)
-        return ch
-
     def _get_instr_parameters(self, instr, params_dict):
+        """
+        Gets the Parameters of an instrument and puts them in a dictionary,
+        does the same with any submodules.
+        """
         params_dict.update(instr.parameters)
         for submodule in instr.submodules.values():
             self._get_instr_parameters(self, submodule, params_dict)
 
     def _get_station_parameters(self):
+        """
+        Gets the Parameters of all the instruments registered in the station as
+        a dictionary.
+        """
         params_dict = {}
         for instr in self._station.components:
             if isinstance(instr, Parameter):
@@ -97,6 +127,11 @@ class SettingsInstrument(Instrument):
         return params_dict
 
     def _generate_dict(self):
+        """
+        Gathers the SettingsParameters and all those in
+        the sumbodules (and their submodules etc) into a dictionary to save
+        from which the instrument could be reloaded.
+        """
         dict_to_save = {}
         for name, param in self.parameters.items():
             dict_to_save[name] = param._to_saveable_value()
@@ -105,6 +140,10 @@ class SettingsInstrument(Instrument):
         return dict_to_save
 
     def _save_to_file(self, filename=None):
+        """
+        Generates dictionary representing the instrument in its current state
+        and saves it to a yaml file.
+        """
         if filename is not None:
             self._file_to_save = filename
         settings_to_save = self._generate_dict()
