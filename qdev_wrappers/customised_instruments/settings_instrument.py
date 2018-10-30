@@ -37,16 +37,20 @@ class SettingsParameter(Parameter):
         self._settings_instr = settings_instr
         super().__init__(name=name,
                          instrument=instrument,
-                         initial_value=default_value,
                          get_cmd=None,
                          set_cmd=self._set_and_save)
+        self._save_val(default_value)
 
     def _set_and_save(self, val):
+        self._set_delegate_parameter(val)
         self._save_val(val)
         self._settings_instr._save_to_file()
 
-    def set_delegate_parameter(self):
-        self.delegate_parameter(self._latest['value'])
+    def _set_delegate_parameter(self, val=None):
+        val = self._latest['value'] if val is None else val
+        if self.delegate_parameter._latest['value'] != val:
+            self.delegate_parameter(val)
+
 
     def _to_saveable_value(self):
         return {'default_value': self._latest['value'],
@@ -149,3 +153,9 @@ class SettingsInstrument(Instrument):
         settings_to_save = self._generate_dict()
         with open(self._file_to_save, 'w+') as f:
             yaml.dump(settings_to_save, f, default_flow_style=False)
+
+    # @property
+    # def all_parameters(self):
+    #     params_dict = {}
+    #     self._get_instr_parameters(self, params_dict)
+    #     return params_dict
