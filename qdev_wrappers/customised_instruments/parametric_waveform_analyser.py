@@ -36,6 +36,9 @@ class PulseBuildingParameter(Parameter):
                  vals=None):
         if set_cmd is None:
             set_cmd = self._set_and_update_sequence
+        elif set_cmd is not False:
+            set_cmd = partial(
+                self._set_and_update_sequence(action=set_cmd))
         super().__init__(
             name, instrument=instrument, label=label, unit=unit,
             get_cmd=None, set_cmd=set_cmd,
@@ -43,8 +46,10 @@ class PulseBuildingParameter(Parameter):
         pulse_building_name = pulse_building_name or name
         self.pulse_building_name = pulse_building_name
 
-    def _set_and_update_sequence(self, val):
+    def _set_and_update_sequence(self, val, action=None):
         self._save_val()
+        if action is not None:
+            before_action()
         if isinstance(self.instrument, SidebandingChannel):
             pwa_instr = self.instrument._parent._parent
         elif isinstance(self.instrument, (ReadoutChannel, DriveChannel)):
@@ -53,7 +58,7 @@ class PulseBuildingParameter(Parameter):
             logger.warning(f'could not establish how to update sequence '
                            'while setting {self.name} PulseBuildingParameter')
         if not pwa_instr.suppress_sequence_upload:
-            pwa._update_sequence()
+            pwa.sequence._update_sequence()
 
 
 class AlazarChannel_ext(AlazarChannel):
@@ -140,9 +145,9 @@ class SidebandingChannel(InstrumentChannel):
         self.add_parameter(name='sideband_frequency',
                            pulse_building_name=pre_str + 'sideband_frequency',
                            set_cmd=False,
-                           parameter_class=PulseBuildingParameter,
                            docstring='set via frequency or'
-                           'readout.carrier_frequency')
+                           'readout.carrier_frequency',
+                           parameter_class=PulseBuildingParameter)
         self.add_parameter(name='pulse_amplitude',
                            pulse_building_name=pre_str + 'pulse_amplitude',
                            label='Pulse Amplitude',
@@ -172,7 +177,7 @@ class SidebandingChannel(InstrumentChannel):
 
         # composite parameters
         self.add_parameter(name='frequency',
-                           set_cmd=self._set_drive_freq,
+                           set_cmd=self.update,
                            docstring='Sets sideband frequency '
                            'in order to get the required '
                            'drive and updates the demodulation '
@@ -203,16 +208,6 @@ class SidebandingChannel(InstrumentChannel):
         if frequency is not None:
             self.frequency(frequency)
 
-    def _set_drive_freq(self, frequency):
-        sideband = self._parent.carrier_frequency() - frequency
-        self.sideband_frequency._set_and_update_sequence(sideband)
-
-        if self._type == 'readout':
-            demod = self._parent.base_demodulation_frequency() + sideband
-            self.demodulation_frequency._save_val(demod)
-            for ch in self.alazar_channels:
-                ch.demod_freq(demod)
-
     def update(self, frequency=None):
         """
         Based on the carrier frequency the sideband and drive
@@ -222,27 +217,55 @@ class SidebandingChannel(InstrumentChannel):
         the existing sideband value is used and the frequency
         is updated.
         """
-        carrier = self._parent.carrier_frequency()
+
+        # get old sideband and drive and new carrier and drive
         old_sideband = self.sideband_frequency()
+        old_drive = self.frequency()
+        carrier = self._parent.carrier_frequency()
         drive = frequency
 
+        # if drive is specified sets sidebend from drive, if not sets
+        # drive from sideband.
         if drive is not None:
             sideband = carrier - drive
         else:
             sideband = old_sideband
             drive = carrier - sideband
 
-        self.sideband_frequency._set_and_update_sequence(sideband)
-        self.frequency._save_val(drive)
+        # if sideband has changed updates the parameter, uploads a new
+        # sequence and updates the alazar channels
+        alazar_updated = False
+        if sideband != old_sideband:
+            self.sideband_frequency._set_and_update_sequence(sideband)
+            alazar_updated = True
 
-        if self._type == 'readout':
-            old_demod = self.demodulation_frequency()
-            base_demod = self._parent.base_demodulation_frequency()
-            demod = base_demod + sideband
-            if demod != old_demod:
-                self.demodulation_frequency._save_val(demod)
-                for ch in self.alazar_channels:
-                    ch.demod_freq(demod)
+        # if the drive has changed updates the parameter. If
+        # the SidbandingChannel is readout updates the demod_frequencies.
+        # Updates the alazar channels if the setpoints are affected.
+        if drive != old_drive:
+            self.frequency._save_val(drive)
+            if self._type == 'readout':
+                self._update_alazar_demod_freq(new_sideband)
+                if (any('readout_frequency' in name for name in
+                        self.alazar_channels[0].data.setpoint_names) and
+                        not alazar_updated):
+                    # TODO: change alazar channels to use another parameter for setpoints to render this uneccesary
+                    self._parent._update_alazar_channels()
+            else:
+                readout_ch = self._parent._parent.readout
+                if (any('drive_frequency' in name for name in
+                        readout_ch.all_readout_channels[0].data.setpoint_names) and
+                    not alazar_updated)
+                readout_ch._update_alazar_channels()
+
+    def _update_alazar_demod_freq(self, new_sideband):
+        old_demod = self.demodulation_frequency()
+        base_demod = self._parent.base_demodulation_frequency()
+        demod = base_demod + new_sideband
+        if demod != old_demod:
+            self.demodulation_frequency._save_val(demod)
+            for ch in self.alazar_channels:
+                ch.demod_freq(demod)
 
 
 class ReadoutChannel(InstrumentChannel):
@@ -262,13 +285,14 @@ class ReadoutChannel(InstrumentChannel):
         # heterodyne source parameters
         self.add_parameter(name='carrier_frequency',
                            set_cmd=self._set_carrier_frequency,
-                           initial_value=parent._heterodyne_source.frequency(),
+                           pulse_building_name='readout_carrier_frequency',
                            label='Readout Carrier Frequency',
                            unit='Hz',
                            docstring='Sets the frequency on the '
                            'heterodyne_source and updates the demodulation '
                            'channels so that their frequencies are still'
-                           ' carrier + sideband.')
+                           ' carrier + sideband.',
+                           parameter_class=PulseBuildingParameter)
         self.add_parameter(name='carrier_power',
                            label='Readout Power',
                            unit='dBm',
@@ -429,7 +453,7 @@ class ReadoutChannel(InstrumentChannel):
         self._parent._alazar_controller.channels.clear()
         for demod_ch in self._sidebanding_channels:
             demod_ch.alazar_channels.clear()
-            self._create_and__create_alazar_channel_pair(settings, demod_ch)
+            self._create_alazar_channel_pair(settings, demod_ch)
 
     def _create_alazar_channel_pair(self, settings, demod_ch):
         """
@@ -609,7 +633,8 @@ class SequenceChannel(InstrumentChannel):
     # TODO: template element to be a parameter
     # TODO: break into inner_setpoints and outer_setpoints channels?
 
-    def __init__(self, parent, name):
+    def __init__(self, parent, name, routes):
+        self._routes = routes
         self._inner_setpoints = None
         self._outer_setpoints = None
         self._template_element_dict = None
@@ -626,7 +651,7 @@ class SequenceChannel(InstrumentChannel):
                            'and the seq_mode on the alazar, reinstates all the'
                            'alazar channels and updates the sequence to '
                            'include or exclude the first element.')
-        self.add_parameter(name='template_element', # TODO: serialise template element
+        self.add_parameter(name='template_element',  # TODO: serialise template element
                            label='Template Element',
                            set_cmd=self._set_template_element,
                            get_cmd=self._get_template_element,
@@ -755,19 +780,46 @@ class SequenceChannel(InstrumentChannel):
     def inner_setpoints(self):
         if self._inner_setpoints is not None:
             return self._inner_setpoints
+        elif:
+            self.inner_setpoints_symbol() is not None:
+                try:
+                    symbol = self.inner_setpoints_symbol()
+                    setpoints = np.linspace(self.inner_setpoints_start(),
+                                            self.inner_setpoints_stop(),
+                                            num=self.inner_setpoints_npts())
+                    return (symbol, setpoints)
+                except TypeError:
+                    raise TypeError('Must set all from symbol, start, stop and'
+                                    ' npts to generate inner setpoints. '
+                                    'Current values: {}, {}, {}, {}'.format(
+                                        self.inner_setpoints_symbol(),
+                                        self.inner_setpoints_start(),
+                                        self.inner_setpoints_stop(),
+                                        self.inner_setpoints_npts()))
         else:
-            return np.linspace(self.inner_setpoints_start(),
-                               self.inner_setpoints_stop(),
-                               num=self.inner_setpoints_npts())
+            return ('dummy_inner_setpoint', [0])
 
     @property
     def outer_setpoints(self):
         if self._outer_setpoints is not None:
             return self._outer_setpoints
+        elif self.outer_setpoints_symbol() is None:
+            return None
         else:
-            return np.linspace(self.outer_setpoints_start(),
-                               self.outer_setpoints_stop(),
-                               num=self.outer_setpoints_npts())
+            try:
+                symbol = self.outer_setpoints_symbol()
+                setpoints = np.linspace(self.outer_setpoints_start(),
+                                        self.outer_setpoints_stop(),
+                                        num=self.outer_setpoints_npts())
+                return (symbol, setpoints)
+            except TypeError:
+                raise TypeError('Must set all from symbol, start, stop and '
+                                'npts to generate outer setpoints. '
+                                'Current values: {}, {}, {}, {}'.format(
+                                    self.outer_setpoints_symbol(),
+                                    self.outer_setpoints_start(),
+                                    self.outer_setpoints_stop(),
+                                    self.outer_setpoints_npts()))
 
     def _generate_context(self):
         """
@@ -791,9 +843,6 @@ class SequenceChannel(InstrumentChannel):
         and updates the alazar_channels.
         """
         context, labels, units = self._generate_context()
-        context.update(self.additional_context)
-        labels.update(self.additional_context_labels)
-        units.update(self.additional_context_units)
         self._parent._sequencer.set_template(
             self.template_element(),
             first_sequence_element=self._first_element,
@@ -801,7 +850,8 @@ class SequenceChannel(InstrumentChannel):
             outer_setpoints=self.outer_setpoints,
             context=context,
             labels=labels,
-            unit=units)
+            unit=units,
+            routes=self._routes)
         self._parent.readout._update_alazar_channels()
 
     def set_setpoints(self, inner_setpoints, outer_setpoints=None):
@@ -851,7 +901,8 @@ class SequenceChannel(InstrumentChannel):
         for file in os.listdir(self._parent._pulse_building_folder):
             element_name = os.path.splitext(file)[0]
             if file.endswith(".yaml"):
-                yf = yaml.load(file)
+                with open(file) as f:
+                    yf = yaml.safe_load(f)
                 element = read_element(yf)
             elif file.endswith(".py"):
                 create_element_fn = importlib.import_module(
@@ -893,7 +944,8 @@ class ParametricWaveformAnalyser(Instrument):
                  alazar,
                  heterodyne_source,
                  qubit_source,
-                 pulse_building_folder) -> None:
+                 pulse_building_folder,
+                 instr_mapping_file) -> None:
         super().__init__(name)
         self._sequencer = sequencer
         self._alazar = alazar
@@ -905,15 +957,17 @@ class ParametricWaveformAnalyser(Instrument):
                 'Pulse building folder {} cannot be found'
                 ''.format(self._pulse_building_folder))
         sys.path.append(self._pulse_building_folder)
+        with open(instr_mapping_file) as f:
+            yf = yaml.safe_load(f)
+        routes = yf['awg_channel_map']
         self._alazar_controller = ATSChannelController(
             'alazar_controller', alazar.name)
         readout_channel = ReadoutChannel(self, 'readout')
         self.add_submodule('readout', readout_channel)
         drive_channel = DriveChannel(self, 'drive')
         self.add_submodule('drive', drive_channel)
-        sequence_channel = SequenceChannel(self, 'sequence')
+        sequence_channel = SequenceChannel(self, 'sequence', routes)
         self.add_submodule('sequence', sequence_channel)
-        self.qubits = {}
         self.sequence.reload_template_element_dict()
 
     @property
@@ -930,17 +984,15 @@ class ParametricWaveformAnalyser(Instrument):
         ReadoutChannel and DriveChannel respectively and also stores
         these sidebanding channels in the qubits dictionary.
         """
-        q_num = len(self.qubits)
         readout_ch = self.readout._add_sidebanding_channel(readout_frequency)
         drive_ch = self.drive._add_sidebanding_channel(drive_frequency)
-        qubits['Q' + q_num] = {'readout': readout_ch, 'drive': drive_ch}
 
     def clear_qubits(self):
         """
         Clears the qubit dictionary, the alazar channels and all
         SidebandingChannels (both from the ReadoutChannel and the DriveChannel)
         """
-        qubits.clear()
+        self.qubits.clear()
         self._alazar_controller.alazar_channels.clear()
         self.readout._sidebanding_channels.clear()
         self.drive._sidebanding_channels.clear()
@@ -1050,4 +1102,19 @@ def get_alazar_ch_settings(pwa):
             settings['buffer_setpoints'] = np.arange(buffers)
             settings['buffer_setpoint_name'] = 'buffer_repetitions'
             settings['buffer_setpoint_label'] = 'Buffer Repetitions'
+            drive_setpoints_from_sideband_setpoints(pwa, settings)
     return settings
+
+
+def drive_setpoints_from_sideband_setpoints(pwa, settings):
+    pre_ks = ['record_setpoint', 'buffer_setpoint']
+    for k in pre_ks:
+        name = settings[k + '_name']
+        if 'sideband' in name:
+            if 'drive' in name:
+                carrier_freq = pwa.drive.carrier_frequency()
+            else:
+                carrier_freq = pwa.readout.carrier_frequency()
+            settings[k + '_name'] = name[:8] + 'frequency'
+            settings[k + '_label'] = settings[k + '_label'][:8] + 'Frequency'
+            setpoints_dict[k + 's'] += carrier_freq
