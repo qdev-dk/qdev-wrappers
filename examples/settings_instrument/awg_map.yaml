@@ -1,0 +1,28 @@
+
+awg_channel_map:
+  Q0_drive_I: 1
+  Q0_drive_Q: 2
+  Q0_readout_I: 3
+  Q0_readout_Q: 4
+  Q0_modulation_marker: 1M1
+  readout_marker: 4M1
+  sequence_marker: 4M2
+
+switch_config:
+  alazar:
+    a: 2
+    b: 2
+    c: 2
+    d: 2
+  vna:
+    a: 1
+    b: 1
+    c: 2
+    d: 2
+  spectrum_analyser:
+    a: 2
+    b: 1
+    c: 2
+    d: 1
+
+# TODO: put decadac channel mapping here

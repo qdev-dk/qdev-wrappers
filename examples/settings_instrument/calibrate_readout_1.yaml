@@ -1,0 +1,10 @@
+sequence:
+  mode: 0
+  template_element: readout
+
+readout:
+  meas_duration: 5.0e-6
+  meas_delay: 0
+  integrate_time: false
+  Q0:
+    frequency: 7.0e+9

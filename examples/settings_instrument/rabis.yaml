@@ -1,0 +1,32 @@
+switch: alazar
+
+sequence:
+  mode: 1
+  template_element: rabi
+  inner_setpoints:
+    symbol: pulse_duration
+    start: 0
+    stop: 0.4e+6
+    step: 1.0e-9
+  outer_setpoints:
+    symbol: None
+
+drive:
+  status: 1
+readout:
+  status: 1
+
+
+measurement:
+  sweep:
+    drive.carrier_frequency:
+      start: 5.1e+9
+      stop: 5.11e+9
+      npts: 21
+  measure:
+    - readout.Q0.drive
+    - readout.Q0.data
+
+
+
+
