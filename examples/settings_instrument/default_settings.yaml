@@ -1,102 +1,163 @@
-is_default: true
+switch: 
+  value: alazar
+  parameter: switch.configuration
 
-sample:
-    cycle_duration: 
-        label: Cycle Duration
-        unit: s
-        value: 0.00002
-    drive_stage_duration: 
-        label: Drive Stage Duration
-        unit: s
-        value: 0.00001
-    readout_duration: 
-        label: Readout Pulse Duration
-        unit: s
-        value: 0.000004
-    marker_duration:
-        label: Marker Duration
-        unit: s
-        value: 0.00000005
-    marker_readout_delay:
-        label: Marker Readout Delay
-        unit: s
-        value: 0.000000005
-    modulation_marker_duration: 
-        label: Modulation Marker Duration
-        unit: s
-        value: 0.000002
-    drive_readout_delay:
-        label: Drive Readout Delay
-        unit: s
-        value: 0.00000001
-    spectroscopy_drive_duration:
-        label: Spectroscopy Drive Pulse Duration
-        unit: s
-        value: 0.000001
-    gate_drive_duration:
-        label: Gate Drive Pulse Duration
-        unit: s
-        value: 0.00000005
-    sigma_cutoff:
-        label: Sigma Cutoff
-        value: 4.0
-    pulse_separation:
-        label: Pulse Separation
-        unit: s
-        value: 0.0000001
-    operation_index:
-        label: Operation Index
-    readout_carrier_frequency:
-        label: Readout Carrier Frequency
-        unit: Hz
-        value: 7000000000
-    readout_demodulation_frequency:
-        label: Readout Base Demodulation Frequency
-        unit: Hz
-        value: 15000000
-    readout_carrier_power:
-        label: Readout Carrier Power
-        unit: dBm
-        value: -30
-    qubit_carrier_frequency:
-        label: Qubit Carrier Frequency
-        unit: Hz
-        value: 5000000000
-    qubit_carrier_gate_power:
-        label: Qubit Carrier Gate Power
-        unit: dBm
-        value: -10
-    qubit_carrier_spectroscopy_power:
-        label: Qubit Carrier Spectroscopy Power
-        unit: dBm
-        value: -30
-    int_time:
-        label: Integration Time
-        unit: s
-        value: 0.000001
-    int_delay:
-        label: Integration Delay
-        unit: s
-        value: 0.0000004
+sequence:
+  mode:
+    value: 0
+    parameter: pwa.sequence.mode
+  cycle_time:
+    value: 20.0e-6
+    parameter: pwa.readout.total_time
+  template_element:
+    value: readout
+    parameter: pwa.sequence.template_element
+  inner_setpoints:
+    symbol:
+      value: None
+      parameter: pwa.sequence.inner_setpoint_symbol
+    start:
+      value: None
+      parameter: pwa.sequence.inner_setpoint_start
+    stop:
+      value: None
+      parameter: pwa.sequence.inner_setpoint_stop
+    step:
+      value: None
+      parameter: pwa.sequence.inner_setpoint_step
+  outer_setpoints:
+    symbol:
+      value: None
+      parameter: pwa.sequence.outer_setpoint_symbol
+    start:
+      value: None
+      parameter: pwa.sequence.outer_setpoint_start
+    stop:
+      value: None
+      parameter: pwa.sequence.outer_setpoint_stop
+    step:
+      value: None
+      parameter: pwa.sequence.outer_setpoint_step
 
-qubits:
-    pi_pulse_amplitude: 
-        label: Pi Pulse Amplitude
-        value: 1.0
-    pi_half_pulse_amplitude: 
-        label: Pi Pulse Amplitude
-        value: 0.5
-    DRAG_amplitude: 
-        label: DRAG Amplitude
-        value: 0.2
-    qubit_sideband:
-        label: Qubit Sideband
-        unit: Hz
-        value: 0
-    readout_amplitude:
-        label: Readout Amplitude
-        value: 1.0
-    readout_sideband:
-        label: Readout Sideband
-        unit: Hz
-        value: 1000000
+readout:
+  status:
+    value: 1
+    parameter: pwa.readout.status
+  carrier_frequency:
+    value: 7.0e+9
+    parameter: pwa.readout.carrier_frequency
+  carrier_power:
+    value: -20
+    parameter: pwa.readout.carrier_power
+  base_demodulation_frequency:
+    value: 15.0e+6
+    parameter: pwa.readout.base_demodulation_frequency
+  meas_duration:
+    value: 1.0e-6
+    parameter: pwa.readout.meas_duration
+  meas_delay:
+    value: 0.1e-6
+    parameter: pwa.readout.meas_delay
+  demodulation_type:
+    value: magphase
+    parameter: pwa.readout.demodulation_type
+  single_shot:
+    value: false
+    parameter: pwa.readout.single_shot
+  num:
+    value: 1000
+    parameter: pwa.readout.num
+  integrate_time:
+    value: true
+    parameter: pwa.readout.integrate_time
+  marker_readout_delay:
+    value: 50.0e-9
+    parameter: pwa.readout.marker_readout_delay
+  pulse_duration:
+    value: 1.0e-6
+    parameter: pwa.readout.pulse_duration
+  marker_duration:
+    value: 50.0e-9
+    parameter: pwa.readout.marker_duration
+  pump_frequency:
+    value: 8.0e+9
+    parameter: pump_rs.frequency
+  pump_power: 
+    value: 0
+    parameter: pump_rs.power
+  Q{}:
+    I_offset:
+      value: 0
+      parameter: pwa.readout.Q{}.I_offset
+    Q_offset:
+      value: 0
+      parameter: pwa.readout.Q{}.Q_offset
+    amplitude:
+      value: 0.5
+      parameter: pwa.readout.Q{}.pulse_amplitude
+    gain_offset:
+      value: 0
+      parameter: pwa.readout.Q{}.gain_offset
+    phase_offset:
+      value: 0
+      parameter: pwa.readout.Q{}.phase_offset
+    frequency:
+      value: 7.0e+9
+      parameter: pwa.readout.Q{}.frequency
+
+drive:
+  status:
+    value: 0
+    parameter: pwa.drive.status
+  carrier_frequency:
+    value: 5.0e+9
+    parameter: pwa.drive.carrier_frequency
+  carrier_power:
+    value: -5
+    parameter: pwa.drive.carrier_power
+  drive_stage_duration:
+    value: 10.0e-9
+    parameter: pwa.drive.drive_stage_duration
+  gate_pulse_duration:
+    value: 50.0e-9
+    parameter: pwa.drive.gate_pulse_duration
+  spectroscopy_pulse_duration:
+    value: 1.0e-6
+    parameter: pwa.drive.spectroscopy_pulse_duration
+  sigma_cutoff:
+    value: 4
+    parameter: pwa.drive.sigma_cutoff
+  drive_readout_delay:
+    value: 30.0e-9
+    parameter: pwa.drive.drive_readout_delay
+  modulation_marker_duration:
+    value: 2.0e-6
+    parameter: pwa.drive.modulation_marker_duration
+  pulse_separation:
+    value: 2.0e-9
+    parameter: pwa.drive.pulse_separation
+  Q{}:
+    I_offset:
+      value: 0
+      parameter: pwa.drive.Q{}.I_offset
+    Q_offset:
+      value: 0
+      parameter: pwa.drive.Q{}.Q_offset
+    gate_pulse_amplitude:
+      value: 0.5
+      parameter: pwa.drive.Q{}.gate_pulse_amplitude
+    spectroscopy_pulse_amplitude:
+      value: 0.2
+      parameter: pwa.drive.Q{}.spectroscopy_pulse_amplitude
+    gain_offset:
+      value: 0
+      parameter: pwa.drive.Q{}.gain_offset
+    phase_offset:
+      value: 0
+      parameter: pwa.drive.Q{}.phase_offset
+    DRAG_amplitude:
+      value: 0
+      parameter: pwa.drive.Q{}.DRAG_offset
+    frequency:
+      value: 5.0e9
+      parameter: pwa.drive.Q{}.frequency
