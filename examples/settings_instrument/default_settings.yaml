@@ -1,163 +1,163 @@
 switch: 
   value: alazar
-  parameter: switch.configuration
+  parameter: switch_configuration
 
 sequence:
   mode:
     value: 0
-    parameter: pwa.sequence.mode
+    parameter: pwa_sequence_mode
   cycle_time:
     value: 20.0e-6
-    parameter: pwa.readout.total_time
+    parameter: pwa_readout_total_time
   template_element:
     value: readout
-    parameter: pwa.sequence.template_element
+    parameter: pwa_sequence_template_element
   inner_setpoints:
     symbol:
       value: None
-      parameter: pwa.sequence.inner_setpoint_symbol
+      parameter: pwa_sequence_inner_setpoint_symbol
     start:
       value: None
-      parameter: pwa.sequence.inner_setpoint_start
+      parameter: pwa_sequence_inner_setpoint_start
     stop:
       value: None
-      parameter: pwa.sequence.inner_setpoint_stop
+      parameter: pwa_sequence_inner_setpoint_stop
     step:
       value: None
-      parameter: pwa.sequence.inner_setpoint_step
+      parameter: pwa_sequence_inner_setpoint_step
   outer_setpoints:
     symbol:
       value: None
-      parameter: pwa.sequence.outer_setpoint_symbol
+      parameter: pwa_sequence_outer_setpoint_symbol
     start:
       value: None
-      parameter: pwa.sequence.outer_setpoint_start
+      parameter: pwa_sequence_outer_setpoint_start
     stop:
       value: None
-      parameter: pwa.sequence.outer_setpoint_stop
+      parameter: pwa_sequence_outer_setpoint_stop
     step:
       value: None
-      parameter: pwa.sequence.outer_setpoint_step
+      parameter: pwa_sequence_outer_setpoint_step
 
 readout:
   status:
     value: 1
-    parameter: pwa.readout.status
+    parameter: pwa_readout_status
   carrier_frequency:
     value: 7.0e+9
-    parameter: pwa.readout.carrier_frequency
+    parameter: pwa_readout_carrier_frequency
   carrier_power:
     value: -20
-    parameter: pwa.readout.carrier_power
+    parameter: pwa_readout_carrier_power
   base_demodulation_frequency:
     value: 15.0e+6
-    parameter: pwa.readout.base_demodulation_frequency
+    parameter: pwa_readout_base_demodulation_frequency
   meas_duration:
     value: 1.0e-6
-    parameter: pwa.readout.meas_duration
+    parameter: pwa_readout_meas_duration
   meas_delay:
     value: 0.1e-6
-    parameter: pwa.readout.meas_delay
+    parameter: pwa_readout_meas_delay
   demodulation_type:
     value: magphase
-    parameter: pwa.readout.demodulation_type
+    parameter: pwa_readout_demodulation_type
   single_shot:
     value: false
-    parameter: pwa.readout.single_shot
+    parameter: pwa_readout_single_shot
   num:
     value: 1000
-    parameter: pwa.readout.num
+    parameter: pwa_readout_num
   integrate_time:
     value: true
-    parameter: pwa.readout.integrate_time
+    parameter: pwa_readout_integrate_time
   marker_readout_delay:
     value: 50.0e-9
-    parameter: pwa.readout.marker_readout_delay
+    parameter: pwa_readout_marker_readout_delay
   pulse_duration:
     value: 1.0e-6
-    parameter: pwa.readout.pulse_duration
+    parameter: pwa_readout_pulse_duration
   marker_duration:
     value: 50.0e-9
-    parameter: pwa.readout.marker_duration
+    parameter: pwa_readout_marker_duration
   pump_frequency:
     value: 8.0e+9
-    parameter: pump_rs.frequency
+    parameter: pump_rs_frequency
   pump_power: 
     value: 0
-    parameter: pump_rs.power
-  Q{}:
+    parameter: pump_rs_power
+  Q0:
     I_offset:
       value: 0
-      parameter: pwa.readout.Q{}.I_offset
+      parameter: pwa_readout_Q0_I_offset
     Q_offset:
       value: 0
-      parameter: pwa.readout.Q{}.Q_offset
+      parameter: pwa_readout_Q0_Q_offset
     amplitude:
       value: 0.5
-      parameter: pwa.readout.Q{}.pulse_amplitude
+      parameter: pwa_readout_Q0_pulse_amplitude
     gain_offset:
       value: 0
-      parameter: pwa.readout.Q{}.gain_offset
+      parameter: pwa_readout_Q0_gain_offset
     phase_offset:
       value: 0
-      parameter: pwa.readout.Q{}.phase_offset
+      parameter: pwa_readout_Q0_phase_offset
     frequency:
       value: 7.0e+9
-      parameter: pwa.readout.Q{}.frequency
+      parameter: pwa_readout_Q0_frequency
 
 drive:
   status:
     value: 0
-    parameter: pwa.drive.status
+    parameter: pwa_drive_status
   carrier_frequency:
     value: 5.0e+9
-    parameter: pwa.drive.carrier_frequency
+    parameter: pwa_drive_carrier_frequency
   carrier_power:
     value: -5
-    parameter: pwa.drive.carrier_power
+    parameter: pwa_drive_carrier_power
   drive_stage_duration:
     value: 10.0e-9
-    parameter: pwa.drive.drive_stage_duration
+    parameter: pwa_drive_drive_stage_duration
   gate_pulse_duration:
     value: 50.0e-9
-    parameter: pwa.drive.gate_pulse_duration
+    parameter: pwa_drive_gate_pulse_duration
   spectroscopy_pulse_duration:
     value: 1.0e-6
-    parameter: pwa.drive.spectroscopy_pulse_duration
+    parameter: pwa_drive_spectroscopy_pulse_duration
   sigma_cutoff:
     value: 4
-    parameter: pwa.drive.sigma_cutoff
+    parameter: pwa_drive_sigma_cutoff
   drive_readout_delay:
     value: 30.0e-9
-    parameter: pwa.drive.drive_readout_delay
+    parameter: pwa_drive_drive_readout_delay
   modulation_marker_duration:
     value: 2.0e-6
-    parameter: pwa.drive.modulation_marker_duration
+    parameter: pwa_drive_modulation_marker_duration
   pulse_separation:
     value: 2.0e-9
-    parameter: pwa.drive.pulse_separation
-  Q{}:
+    parameter: pwa_drive_pulse_separation
+  Q0:
     I_offset:
       value: 0
-      parameter: pwa.drive.Q{}.I_offset
+      parameter: pwa_drive_Q0_I_offset
     Q_offset:
       value: 0
-      parameter: pwa.drive.Q{}.Q_offset
+      parameter: pwa_drive_Q0_Q_offset
     gate_pulse_amplitude:
       value: 0.5
-      parameter: pwa.drive.Q{}.gate_pulse_amplitude
+      parameter: pwa_drive_Q0_gate_pulse_amplitude
     spectroscopy_pulse_amplitude:
       value: 0.2
-      parameter: pwa.drive.Q{}.spectroscopy_pulse_amplitude
+      parameter: pwa_drive_Q0_spectroscopy_pulse_amplitude
     gain_offset:
       value: 0
-      parameter: pwa.drive.Q{}.gain_offset
+      parameter: pwa_drive_Q0_gain_offset
     phase_offset:
       value: 0
-      parameter: pwa.drive.Q{}.phase_offset
+      parameter: pwa_drive_Q0_phase_offset
     DRAG_amplitude:
       value: 0
-      parameter: pwa.drive.Q{}.DRAG_offset
+      parameter: pwa_drive_Q0_DRAG_offset
     frequency:
-      value: 5.0e9
-      parameter: pwa.drive.Q{}.frequency
+      value: 5.0e+9
+      parameter: pwa_drive_Q0_frequency
