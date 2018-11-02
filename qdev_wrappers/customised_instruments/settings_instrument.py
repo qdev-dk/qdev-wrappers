@@ -1,4 +1,3 @@
-
 from qcodes.instrument.base import Instrument
 from qcodes.instrument.channel import InstrumentChannel
 from qcodes import Parameter
@@ -25,8 +24,6 @@ class SettingsParameter(Parameter):
     A Parameter which has the bells and whistles of:
     - can be saved in a dictionary via '_to_saveable_value'
     - can set another 'delegate' parameter to mirror it's value
-    - when set calls the _save_to_file function on the
-        associated settings_instrument
     """
     def __init__(self, name,
                  settings_instr,
@@ -50,7 +47,6 @@ class SettingsParameter(Parameter):
         val = self._latest['value'] if val is None else val
         if self.delegate_parameter._latest['value'] != val:
             self.delegate_parameter(val)
-
 
     def _to_saveable_value(self):
         return {'default_value': self._latest['value'],
@@ -154,8 +150,3 @@ class SettingsInstrument(Instrument):
         with open(self._file_to_save, 'w+') as f:
             yaml.dump(settings_to_save, f, default_flow_style=False)
 
-    # @property
-    # def all_parameters(self):
-    #     params_dict = {}
-    #     self._get_instr_parameters(self, params_dict)
-    #     return params_dict
