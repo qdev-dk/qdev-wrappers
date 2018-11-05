@@ -10,6 +10,7 @@ class SettingsChannel(InstrumentChannel):
     which has a function for saving values of it's parameters to a dictionary
     and attempting to call the same function on submodules.
     """
+
     def _to_saveable_value(self):
         dict_to_save = {}
         for name, param in self.parameters.items():
@@ -25,6 +26,7 @@ class SettingsParameter(Parameter):
     - can be saved in a dictionary via '_to_saveable_value'
     - can set another 'delegate' parameter to mirror it's value
     """
+
     def __init__(self, name,
                  settings_instr,
                  delegate_parameter,
@@ -62,6 +64,7 @@ class SettingsInstrument(Instrument):
     parameters. A file to save to is option otherwise the file to load
     will be overwritten every time a SettingsParameter is set.
     """
+
     def __init__(self, name,
                  default_settings_file,
                  station,
@@ -149,4 +152,3 @@ class SettingsInstrument(Instrument):
         settings_to_save = self._generate_dict()
         with open(self._file_to_save, 'w+') as f:
             yaml.dump(settings_to_save, f, default_flow_style=False)
-

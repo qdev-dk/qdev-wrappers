@@ -1,8 +1,9 @@
-# from qcodes.utils.helpers import DelegateAttributes
 import yaml
 import logging
 from qcodes.instrument.parameter import _BaseParameter
 from qcodes.dataset.measurements import Measurement
+from qdev_wrappers.customised_instruments.parametric_waveform_analyser import ParametricWaveformAnalyser
+from qdev_wrappers.fitting.fitter import Fitter
 from collections import namedtuple
 import time
 import os
@@ -14,7 +15,8 @@ Task = namedtuple('Task', 'type callable')
 
 
 class ExperimentHelper:
-    def __init__(self, settings_instrument, settings_file=None, pwa=None):
+    def __init__(self, settings_instrument,
+                 settings_file=None, fitclass=None):
         self._settings_instr = settings_instrument
         if settings_file is not None:
             if not settings_file.endswith(".yaml"):
@@ -24,12 +26,12 @@ class ExperimentHelper:
                 raise ValueError(
                     'Settings file {} cannot be found'.format(settings_file))
         self._settings_file = settings_file
-        self._pwa = pwa
+        self._fitclass = fitclass
         self._latest_run_id = None
         self._latest_set_params = []
         self._latest_set_param_initial_values = []
 
-    def set_up(self):
+    def _set_up(self):
         """
         Using the settings_file and the settings_instr to set settings on
         all the instruments.
@@ -39,8 +41,12 @@ class ExperimentHelper:
                 settings = yaml.load(settings)
         except TypeError:
             settings = {}
-        if self._pwa is not None:
-            with self._pwa.sequence.single_sequence_update():
+        if any(isinstance(instr, ParametricWaveformAnalyser) for
+               instr in self._settings_instr.station.components.values()):
+            pwa = next(
+                v for v in self._settings_instr.station.components.values() if
+                isinstance(v, ParametricWaveformAnalyser))
+            with self._pwa._sequence.single_sequence_update():
                 self._traverse_and_set(self._settings_instr, settings)
         else:
             self._traverse_and_set(self._settings_instr, settings)
@@ -59,10 +65,10 @@ class ExperimentHelper:
                 parameter = instr.parameters[key]
                 parameter(val)
 
-    def tear_down(self):
+    def _tear_down(self):
         for i, param_val in enumerate(self._latest_set_param_initial_values):
             if param_val is not None:
-                self._set_params[i].set(param_val)
+                self._latest_set_params[i].set(param_val)
 
     def _chunks(l, n):
         """
@@ -113,8 +119,8 @@ class ExperimentHelper:
 
         self._latest_set_params = set_params
         self._latest_set_param_initial_values = initial_set_param_values
-        meas.add_before_run(self.set_up)
-        meas.add_after_run(self.tear_down)
+        meas.add_before_run(self._set_up)
+        meas.add_after_run(self._tear_down)
 
         with meas.run() as datasaver:
             self._latest_run_id = datasaver.run_id
@@ -146,19 +152,16 @@ class ExperimentHelper:
                 current_time).strftime('%Y-%m-%d %H:%M:%S')
             print('Measurement finished at ', printable_time)
 
-    def analyse(self):
-        raise NotImplementedError
-
-
-
-rabi_measurement = ExperimentHelper(settings_instrument, 'rabi')
-
-rabi_measurement.measure(exp.drive.carrier_frequency,
-                         exp.drive.carrier_frequency() - 10e6,
-                         exp.drive.carrier_frequency() + 10e6,
-                         21, 0,
-                         exp.readout.Q0.data)
-
-rabi_measurement.analyse()
-
-exp.drive.Q0.frequency(5.2e9)
+    def fit(self, fitclass=None, run_id=None):
+        fitclass = fitclass or self._fitclass
+        run_id = run_id or self._latest_run_id
+        if run_id is not None and fitclass is not None:
+            fit = Fitter(run_id, self._fitclass)
+            save_fit_result(fit)
+            plot = fit.plot()
+        else:
+            raise RuntimeError(
+                'Must specify fitclass and have run_id to perform fit')
+        if len(fit.fit_results) == 1:
+            print(fit.fit_results[0]['param_values'])
+        return fit.fit_results
