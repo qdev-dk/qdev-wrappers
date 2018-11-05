@@ -3,8 +3,9 @@ from qcodes.utils import validators as vals
 from qcodes.instrument.parameter import InstrumentRefParameter
 from qdev_wrappers.parameters import DelegateParameter
 
-# TODO: name help pleaaase!
-# TODO: should the cavity and local os actually be parameters?
+# TODO: cavity and localos are currently InstrumentRefParameters
+#   which means they can be set but none of the other parameters
+#   will reflect this change
 
 
 class HeterodyneSource(Instrument):
@@ -119,7 +120,6 @@ class HeterodyneSource(Instrument):
     def _set_demod_frequency(self, frequency):
         self._localos.frequency(self._cavity.frequency() + frequency)
 
-    # TODO: pulsemod source
     def reset(self):
         self._cavity.reset()
         self._localos.reset()
