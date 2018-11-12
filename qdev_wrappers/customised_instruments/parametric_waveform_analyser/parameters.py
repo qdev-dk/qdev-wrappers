@@ -61,5 +61,9 @@ class PulseBuildingParameter(Parameter):
         else:
             logger.warning(f'could not establish how to update sequence '
                            'while setting {self.name} PulseBuildingParameter')
-        if not pwa_instr.sequence.suppress_sequence_upload:
-            pwa_instr.sequence._update_sequence()
+        try:
+            sequencer_param = pwa_instr._sequencer.repeat.parameters[self.pulse_building_name]
+            sequencer_param.set(val)
+        except KeyError:
+            if not pwa_instr.sequence.suppress_sequence_upload:
+                pwa_instr.sequence._update_sequence()
