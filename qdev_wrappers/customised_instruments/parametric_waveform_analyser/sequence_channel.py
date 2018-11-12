@@ -14,6 +14,10 @@ pulsebuildingfoldername = qc.config["user"]["pulsebuildingfolder"]
 
 
 class SetpointsChannel(InstrumentChannel):
+    """
+    InstrumentChannel which generates and array of setpoitns based on the
+    values of it's parameters. 
+    """
     # TODO: add flexibility for custom setpoints
     def __init__(self, parent, name: str, inner: bool=True):
         type_title = 'Inner' if inner else 'Outer'
