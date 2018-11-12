@@ -8,6 +8,7 @@ import os
 scriptfolder = qc.config["user"]["scriptfolder"]
 default_settingsfile = qc.config["user"]["settingsfile"]
 
+
 class SettingsChannel(InstrumentChannel):
     """
     An InstrumentChannel intended to belong to a SettingsInstrument
@@ -44,28 +45,30 @@ class SettingsParameter(Parameter):
         if initial_value is None:
             def to_saveable_value():
                 return {'parameter': self._delegate_parameter.full_name}
+
             def set_delegate_param(*args):
                 raise RuntimeError(f'Trying to set unsettable parameter {self.name}')
         else:
             self._save_val(initial_value)
+
             def to_saveable_value():
                 return {'value': self._latest['value'],
                         'parameter': self._delegate_parameter.full_name}
+
             def set_delegate_param(val):
                 val = self._latest['value'] if val is None else val
                 if self._delegate_parameter._latest['value'] != val:
                     self._delegate_parameter(val)
         self._to_saveable_value = to_saveable_value
         self._set_delegate_parameter = set_delegate_param
-            
+
     def set_raw(self, val):
         self._set_delegate_parameter(val)
         self._save_val(val)
         self._settings_instr._save_to_file()
-    
+
     def get_raw(self):
         self._delegate_parameter.get()
-
 
 
 class SettingsInstrument(Instrument):
@@ -120,7 +123,8 @@ class SettingsInstrument(Instrument):
         does the same with any submodules.
         """
         try:
-            params_dict.update({param.full_name: param for param in instr.parameters.values()})
+            params_dict.update(
+                {param.full_name: param for param in instr.parameters.values()})
             for submodule in instr.submodules.values():
                 if isinstance(submodule, ChannelList):
                     for ch in submodule:

@@ -74,7 +74,6 @@ class ExperimentHelper:
             if param_val is not None:
                 self._latest_set_params[i].set(param_val)
 
-
     def measure(self, *args):
         set_params = []
         initial_set_param_values = []
