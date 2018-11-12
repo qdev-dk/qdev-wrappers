@@ -1,28 +1,22 @@
-from qcodes import Instrument
+from qcodes.instrument_drivers.USB_SA124B import SignalHound_USB_SA124B
 from functools import partial
 
-class SpectrumAnalyserSidebandingHelper(Instrument):
-    def __init__(self, spectrum_analyser, carrier_frequency, sideband_frequency):
-        self.spectrum_analyser = spectrum_analyser
-        super().__init__('spectrum_analyser_helper')
+class SpectrumAnalyser_ext(SignalHound_USB_SA124B):
+    def __init__(self, name, dll_path=None):
+        super().__init__(name, dll_path=dll_path)
         self.add_parameter('carrier_frequency',
                             set_cmd=None,
                             unit='Hz',
-                            label='Carrier Frequency',
-                            initial_value=carrier_frequency)
+                            label='Carrier Frequency')
         self.add_parameter('sideband_frequency',
-                            set_cmd=None,
-                            unit='Hz',
-                            label='Sideband Frequency',
-                            initial_value=sideband_frequency)
+                            set_cmd=self._set_sideband_frequency,
+                            label='Sideband Frequency')
         self.add_parameter('upper_sideband_frequency',
                             unit='Hz',
-                            label='Upper Sideband Frequency',
-                            get_cmd=partial(self._get_sideband_frequency, 'upper'))
+                            label='Upper Sideband Frequency')
         self.add_parameter('lower_sideband_frequency',
                             unit='Hz',
-                            label='Lower Sideband Frequency',
-                            get_cmd=partial(self._get_sideband_frequency, 'lower'))
+                            label='Lower Sideband Frequency')
         self.add_parameter('upper_sideband_power',
                             unit='dBm',
                             label='Upper Sideband Power',
@@ -48,15 +42,13 @@ class SpectrumAnalyserSidebandingHelper(Instrument):
                             label='Lower Sideband Carrier Difference',
                             get_cmd=partial(self._get_power_difference, self.lower_sideband_frequency, self.carrier_frequency))            
 
-    def _get_sideband_frequency(self, sideband):
-        if sideband == 'upper':
-            return self.carrier_frequency() + self.sideband_frequency()
-        elif sideband == 'lower':
-            return self.carrier_frequency() - self.sideband_frequency()
+    def _set_sideband_frequency(self, sideband):
+        self.upper_sideband_frequency._save_val(self.carrier_frequency() + sideband)
+        self.lower_sideband_frequency._save_val(self.carrier_frequency() - sideband)
 
     def _get_power_at_frequency(self, frequency_param):
-        self.spectrum_analyser.frequency(frequency_param())
-        return self.spectrum_analyser.power()
+        self.frequency(frequency_param())
+        return self.power()
 
     def _get_power_difference(self, frequency_param1, frequency_param2):
         power1 = self._get_power_at_frequency(frequency_param1)
