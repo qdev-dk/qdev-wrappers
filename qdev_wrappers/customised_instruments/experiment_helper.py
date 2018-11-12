@@ -4,9 +4,13 @@ from qcodes.instrument.parameter import _BaseParameter
 from qcodes.dataset.measurements import Measurement
 from qdev_wrappers.customised_instruments.parametric_waveform_analyser import ParametricWaveformAnalyser
 from qdev_wrappers.fitting.fitter import Fitter
+from qdev_wrappers.fitting.fit_saving import save_fit_result
 from collections import namedtuple
 import time
 import os
+import numpy as np
+from itertools import product
+import progressbar
 from datetime import datetime
 
 log = logging.getLogger(__name__)
@@ -46,7 +50,7 @@ class ExperimentHelper:
             pwa = next(
                 v for v in self._settings_instr.station.components.values() if
                 isinstance(v, ParametricWaveformAnalyser))
-            with self._pwa._sequence.single_sequence_update():
+            with pwa._sequence.single_sequence_update():
                 self._traverse_and_set(self._settings_instr, settings)
         else:
             self._traverse_and_set(self._settings_instr, settings)
@@ -70,14 +74,8 @@ class ExperimentHelper:
             if param_val is not None:
                 self._latest_set_params[i].set(param_val)
 
-    def _chunks(l, n):
-        """
-        Yield successive n-sized chunks from l.
-        """
-        for i in range(0, len(l), n):
-            yield l[i:i + n]
 
-    def measure(*args):
+    def measure(self, *args):
         set_params = []
         initial_set_param_values = []
         set_param_values = []
@@ -86,7 +84,7 @@ class ExperimentHelper:
         refresh_time = 1.
         meas.write_period = refresh_time
         for chunk in _chunks(args, 4):
-            if (all(isinstance(val, (float, int) for val in chunk[1:])) and
+            if (all(isinstance(val, (float, int)) for val in chunk[1:]) and
                     isinstance(chunk[0], _BaseParameter)):
                 set_param, start, stop, num = chunk
                 set_params.append(set_param)
@@ -99,7 +97,7 @@ class ExperimentHelper:
             elif all(callable(val) for val in chunk):
                 for task in chunk:
                     if isinstance(task, _BaseParameter):
-                        meas.register_parameter(task, setpoints=(param_set,))
+                        meas.register_parameter(task, setpoints=(set_param,))
                         task_tuples.append(Task('parameter', task))
                     else:
                         task_tuples.append(Task('function', task))
@@ -158,10 +156,18 @@ class ExperimentHelper:
         if run_id is not None and fitclass is not None:
             fit = Fitter(run_id, self._fitclass)
             save_fit_result(fit)
-            plot = fit.plot()
+            fit.plot()
         else:
             raise RuntimeError(
                 'Must specify fitclass and have run_id to perform fit')
         if len(fit.fit_results) == 1:
             print(fit.fit_results[0]['param_values'])
         return fit.fit_results
+
+
+def _chunks(l, n):
+    """
+    Yield successive n-sized chunks from l.
+    """
+    for i in range(0, len(l), n):
+        yield l[i:i + n]

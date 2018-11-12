@@ -1,8 +1,12 @@
 from qcodes.instrument.base import Instrument
-from qcodes.instrument.channel import InstrumentChannel
-from qcodes import Parameter
+from qcodes.instrument.channel import InstrumentChannel, ChannelList
+from qcodes.instrument.parameter import Parameter, MultiParameter
 import yaml
+import qcodes as qc
+import os
 
+scriptfolder = qc.config["user"]["scriptfolder"]
+default_settingsfile = qc.config["user"]["settingsfile"]
 
 class SettingsChannel(InstrumentChannel):
     """
@@ -15,7 +19,7 @@ class SettingsChannel(InstrumentChannel):
         dict_to_save = {}
         for name, param in self.parameters.items():
             dict_to_save[name] = param._to_saveable_value()
-        for name, submodule in self.submodule.items():
+        for name, submodule in self.submodules.items():
             dict_to_save[name] = submodule._to_saveable_value()
         return dict_to_save
 
@@ -31,28 +35,37 @@ class SettingsParameter(Parameter):
                  settings_instr,
                  delegate_parameter,
                  instrument=None,
-                 default_value=None):
+                 initial_value=None):
         self._delegate_parameter = delegate_parameter
         self._settings_instr = settings_instr
         super().__init__(name=name,
                          instrument=instrument,
-                         get_cmd=None,
-                         set_cmd=self._set_and_save)
-        self._save_val(default_value)
-
-    def _set_and_save(self, val):
+                         get_cmd=None)
+        if initial_value is None:
+            def to_saveable_value():
+                return {'parameter': self._delegate_parameter.full_name}
+            def set_delegate_param(*args):
+                raise RuntimeError(f'Trying to set unsettable parameter {self.name}')
+        else:
+            self._save_val(initial_value)
+            def to_saveable_value():
+                return {'value': self._latest['value'],
+                        'parameter': self._delegate_parameter.full_name}
+            def set_delegate_param(val):
+                val = self._latest['value'] if val is None else val
+                if self._delegate_parameter._latest['value'] != val:
+                    self._delegate_parameter(val)
+        self._to_saveable_value = to_saveable_value
+        self._set_delegate_parameter = set_delegate_param
+            
+    def set_raw(self, val):
         self._set_delegate_parameter(val)
         self._save_val(val)
         self._settings_instr._save_to_file()
+    
+    def get_raw(self):
+        self._delegate_parameter.get()
 
-    def _set_delegate_parameter(self, val=None):
-        val = self._latest['value'] if val is None else val
-        if self.delegate_parameter._latest['value'] != val:
-            self.delegate_parameter(val)
-
-    def _to_saveable_value(self):
-        return {'default_value': self._latest['value'],
-                'parameter': self._delegate_parameter.name}
 
 
 class SettingsInstrument(Instrument):
@@ -66,17 +79,12 @@ class SettingsInstrument(Instrument):
     """
 
     def __init__(self, name,
-                 default_settings_file,
                  station,
-                 file_to_save=None):
-        with open(default_settings_file) as f:
+                 filename=None):
+        self._file_to_save = filename or default_settingsfile
+        filepath = os.path.join(scriptfolder, self._file_to_save)
+        with open(filepath) as f:
             initial_settings = yaml.safe_load(f)
-        if file_to_save is not None:
-            with open(file_to_save, 'w+') as f:
-                yaml.dump(initial_settings, f, default_flow_style=False)
-            self._file_to_save = file_to_save
-        else:
-            self._file_to_save = default_settings_file
         self._station = station
         super().__init__(name)
         params_dict = self._get_station_parameters()
@@ -91,30 +99,36 @@ class SettingsInstrument(Instrument):
         """
         instr = instr or self
         for k, v in settings_dic.items():
-            if sorted(list(v.keys())) == ['default_value', 'parameter']:
+            if 'parameter' in v.keys():
                 param_name = k
-                param_value = v['default_value']
+                param_value = v.get('value', None)
                 delegate_parameter_name = v['parameter']
-                delegate_parameter = self.station_parameters[delegate_parameter_name]
+                delegate_parameter = params_dict[delegate_parameter_name]
                 instr.add_parameter(name=param_name,
                                     settings_instr=self,
-                                    instruent=instr,
                                     initial_value=param_value,
                                     delegate_parameter=delegate_parameter,
                                     parameter_class=SettingsParameter)
             else:
                 ch = SettingsChannel(instr, k)
                 instr.add_submodule(k, ch)
-                self._dic_to_parameters_dic(v, ch)
+                self._dic_to_parameters_dic(v, params_dict, instr=ch)
 
     def _get_instr_parameters(self, instr, params_dict):
         """
         Gets the Parameters of an instrument and puts them in a dictionary,
         does the same with any submodules.
         """
-        params_dict.update(instr.parameters)
-        for submodule in instr.submodules.values():
-            self._get_instr_parameters(self, submodule, params_dict)
+        try:
+            params_dict.update({param.full_name: param for param in instr.parameters.values()})
+            for submodule in instr.submodules.values():
+                if isinstance(submodule, ChannelList):
+                    for ch in submodule:
+                        self._get_instr_parameters(ch, params_dict)
+                else:
+                    self._get_instr_parameters(submodule, params_dict)
+        except AttributeError:
+            pass
 
     def _get_station_parameters(self):
         """
@@ -122,9 +136,9 @@ class SettingsInstrument(Instrument):
         a dictionary.
         """
         params_dict = {}
-        for instr in self._station.components:
-            if isinstance(instr, Parameter):
-                params_dict[instr.name] = instr
+        for name, instr in self._station.components.items():
+            if isinstance(instr, (Parameter, MultiParameter)):
+                params_dict[instr.full_name] = instr
             else:
                 self._get_instr_parameters(instr, params_dict)
         return params_dict
@@ -137,7 +151,8 @@ class SettingsInstrument(Instrument):
         """
         dict_to_save = {}
         for name, param in self.parameters.items():
-            dict_to_save[name] = param._to_saveable_value()
+            if name != 'IDN':
+                dict_to_save[name] = param._to_saveable_value()
         for name, submodule in self.submodules.items():
             dict_to_save[name] = submodule._to_saveable_value()
         return dict_to_save
@@ -150,5 +165,6 @@ class SettingsInstrument(Instrument):
         if filename is not None:
             self._file_to_save = filename
         settings_to_save = self._generate_dict()
-        with open(self._file_to_save, 'w+') as f:
+        filepath = os.path.join(scriptfolder, self._file_to_save)
+        with open(filepath, 'w+') as f:
             yaml.dump(settings_to_save, f, default_flow_style=False)
