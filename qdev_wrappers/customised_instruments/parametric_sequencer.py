@@ -1,7 +1,7 @@
 import logging
 
 from typing import Dict, Union, Tuple, Sequence, NamedTuple
-from broadbean.types import ContextDict, ForgedSequenceType, Symbol
+from lomentum.types import ContextDict, ForgedSequenceType, Symbol
 
 from copy import copy
 from functools import partial
@@ -14,12 +14,10 @@ from qcodes.instrument.base import Instrument
 from qcodes.instrument.channel import InstrumentChannel
 from qcodes.utils import validators
 
-import broadbean as bb
-from broadbean.element import Element
-from broadbean.segment import in_context
-from broadbean.plotting import plotter
+from lomentum import Sequence, Element, in_context
+from lomentum.plotting import plotter
 
-from qdev_wrappers.customised_instruments.AWGinterface import AWGInterface
+from qdev_wrappers.customised_instruments.awg_interface import AWGInterface
 
 log = logging.getLogger(__name__)
 
@@ -164,7 +162,7 @@ class ParametricSequencer(Instrument):
         self._outer_setpoints = outer
 
         # setting this state to False is needed to avoid syncing when the
-        # initial value of the parameters is set. 
+        # initial value of the parameters is set.
         self._do_sync_repetion_state = False
 
         self.repeat.parameters = {}
@@ -330,7 +328,7 @@ class ParametricSequencer(Instrument):
         if self.initial_element is not None:
             elements.insert(0, self.initial_element)
 
-        self._sequence_object = bb.Sequence(elements)
+        self._sequence_object = Sequence(elements)
 
         condition = lambda k: k != self._inner_setpoints.symbol
         if self._outer_setpoints:

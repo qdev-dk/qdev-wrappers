@@ -1,5 +1,5 @@
-from broadbean.types import ForgedSequenceType
-from broadbean.plotting import plotter
+from lomentum.types import ForgedSequenceType
+from lomentum.plotting import plotter
 
 
 class AWGInterface:
