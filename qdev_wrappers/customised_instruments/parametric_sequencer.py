@@ -1,12 +1,12 @@
 import logging
 
-from typing import Dict, Union, Tuple, Sequence, NamedTuple
-from lomentum.types import ContextDict, ForgedSequenceType, Symbol
+from typing import Dict, Union, Tuple, NamedTuple, Optional
+import typing
+from lomentum.types import (
+    ContextDict, Symbol, RoutesDictType)
 
-from copy import copy
 from functools import partial
 from contextlib import contextmanager
-from collections import namedtuple
 
 import numpy as np
 
@@ -15,7 +15,6 @@ from qcodes.instrument.channel import InstrumentChannel
 from qcodes.utils import validators
 
 from lomentum import Sequence, Element, in_context
-from lomentum.plotting import plotter
 
 from qdev_wrappers.customised_instruments.awg_interface import AWGInterface
 
@@ -24,7 +23,10 @@ log = logging.getLogger(__name__)
 
 # namedtuple for the setpoints of a sequence. Symbol refers to a broadbean
 # symbol and values is a
-Setpoints = NamedTuple('Setpoints', (('symbol', Symbol), ('values', Sequence)))
+Setpoints = NamedTuple('Setpoints',
+                       (('symbol', Symbol),
+                        ('values', typing.Sequence)))
+SetpointsType = Tuple[Symbol, typing.Sequence]
 
 
 def make_setpoints_tuple(tuple) -> Union[None, Setpoints]:
@@ -64,8 +66,9 @@ class ParametricSequencer(Instrument):
     def __init__(self, name: str,
                  awg: AWGInterface,
                  template_element: Element,
-                 inner_setpoints: Tuple[Symbol, Sequence],
-                 outer_setpoints: Tuple[Symbol, Sequence]=None,
+                 inner_setpoints: SetpointsType,
+                 outer_setpoints: Optional[SetpointsType]=None,
+                 routes: Optional[RoutesDictType] = None,
                  context: ContextDict=None,
                  units: Dict[Symbol, str]=None,
                  labels: Dict[Symbol, str]=None,
@@ -143,8 +146,8 @@ class ParametricSequencer(Instrument):
                                    outer=outer_setpoints)
 
     def set_setpoints(self,
-                      inner: Union[Tuple[Symbol, Sequence], None],
-                      outer: Union[Tuple[Symbol, Sequence], None]=None):
+                      inner: Optional[Tuple[Symbol, Sequence]]=None,
+                      outer: Optional[Tuple[Symbol, Sequence]]=None):
         inner = make_setpoints_tuple(inner)
         outer = make_setpoints_tuple(outer)
         self._sequence_up_to_date = False
@@ -250,8 +253,10 @@ class ParametricSequencer(Instrument):
             if self._outer_setpoints is None:
                 index = self._inner_index
             else:
-                index = (self._outer_index * len(self._outer_setpoints.values) +
+                index = (self._outer_index *
+                         len(self._outer_setpoints.values) +
                          self._inner_index)
+
             index += 1
             if self.initial_element is not None:
                 index += 1
