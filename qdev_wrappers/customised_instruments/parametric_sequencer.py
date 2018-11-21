@@ -76,6 +76,7 @@ class ParametricSequencer(Instrument):
                  initial_element: Element=None) -> None:
         super().__init__(name)
         self.awg = awg
+        self._routes = routes
 
         # inital values of states
         self._do_upload = True
@@ -294,6 +295,7 @@ class ParametricSequencer(Instrument):
         self._update_sequence()
         self.awg.upload(
             self._sequence_object.forge(SR=self.awg.get_SR(),
+                                        routes=self._routes,
                                         context=self._sequence_context))
         # uploading a sequence will clear the state of the current element
         # so we need to sync the repetition state or revert the value of
