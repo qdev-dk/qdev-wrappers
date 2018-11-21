@@ -206,8 +206,10 @@ class ParametricSequencer(Instrument):
         # this context
         original_state = self._do_upload
         self._do_upload = False
-        yield
-        self._do_upload = original_state
+        try:
+            yield
+        finally:
+            self._do_upload = original_state
 
     @contextmanager
     def single_upload(self):
