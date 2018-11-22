@@ -63,21 +63,35 @@ class ParametricSequencer(Instrument):
     contra: units are not included here
     start out with 1D tests
     """
-    def __init__(self, name: str,
+
+    def __init__(self,
+                 name: str,
                  awg: AWGInterface,
-                 template_element: Element,
-                 inner_setpoints: SetpointsType,
+                 routes: Optional[RoutesDictType]=None,
+                 units: Optional[Dict[Symbol, str]]=None,
+                 labels: Optional[Dict[Symbol, str]]=None,
+                 template_element: Optional[Element]=None,
+                 inner_setpoints: Optional[SetpointsType]=None,
                  outer_setpoints: Optional[SetpointsType]=None,
-                 routes: Optional[RoutesDictType] = None,
-                 context: ContextDict=None,
-                 units: Dict[Symbol, str]=None,
-                 labels: Dict[Symbol, str]=None,
-                 first_sequence_element: Element=None,
-                 initial_element: Element=None) -> None:
+                 context: Optional[ContextDict]=None,
+                 first_sequence_element: Optional[Element]=None,
+                 initial_element: Optional[Element]=None):
         super().__init__(name)
         self.awg = awg
-        self._routes = routes
-
+        self.routes = routes
+        
+        self.units: Dict[Symbol, str] = units or {}
+        self.labels: Dict[Symbol, str] = labels or {}
+        
+        # we need to initialise these attributes with `None`. The actual value
+        # gets set via the `change_sequence` call
+        self._template_element: Optional[Element] = None
+        self._inner_setpoints: Optional[SetpointsType] = None
+        self._outer_setpoints: Optional[SetpointsType] = None
+        self._context: Optional[ContextDict] = None
+        self._first_sequence_element: Optional[Element] = None
+        self._initial_element: Optional[Element] = None
+        
         # inital values of states
         self._do_upload = True
         self._do_sync_repetion_state = True
@@ -91,108 +105,123 @@ class ParametricSequencer(Instrument):
 
         # this parameter has to be added at the end because setting it
         # to its initial value is only is defined when a sequence is uploaded
-        self.add_parameter('repeat_mode',
-                           vals=validators.Enum('element', 'inner', 'sequence'),
-                           set_cmd=self._set_repeat_mode)
+        self.add_parameter(
+            'repeat_mode',
+            vals=validators.Enum('element', 'inner', 'sequence'),
+            set_cmd=self._set_repeat_mode)
 
         # populate the sequence channel with the provided symbols
-        self.set_template(template_element=template_element,
-                          inner_setpoints=inner_setpoints,
-                          outer_setpoints=outer_setpoints,
-                          context=context,
-                          units=units,
-                          labels=labels,
-                          initial_element=initial_element,
-                          first_sequence_element=first_sequence_element)
+        # suppress upload if sequence passed in by the constructor is
+        # incomplete
+        self._do_upload = self._is_sequence_complete()
+        self.change_sequence(
+            template_element=template_element,
+            inner_setpoints=inner_setpoints,
+            outer_setpoints=outer_setpoints,
+            context=context,
+            initial_element=initial_element,
+            first_sequence_element=first_sequence_element)
+        self._do_upload = True
 
-    def set_template(self,
-                     template_element: Element,
-                     inner_setpoints: Tuple[Symbol, Sequence],
-                     outer_setpoints: Tuple[Symbol, Sequence]=None,
-                     context: ContextDict=None,
-                     units: Dict[Symbol, str]=None,
-                     labels: Dict[Symbol, str]=None,
-                     first_sequence_element: Element=None,
-                     initial_element: Element=None) -> None:
-        self.template_element = template_element
-        self.first_sequence_element = first_sequence_element
-        self.initial_element = initial_element
-        self._context = context or {}
-        self._units = units or {}
-        self._labels = labels or {}
-
-        self._sequence_up_to_date = False
+    def change_sequence(self,
+                        template_element: Optional[Element] = None,
+                        inner_setpoints: Optional[SetpointsType] = None,
+                        outer_setpoints: Optional[SetpointsType] = None,
+                        context: Optional[ContextDict] = None,
+                        first_sequence_element: Optional[Element] = None,
+                        initial_element: Optional[Element] = None) -> None:
+        self._template_element = template_element or self._template_element
+        self._first_sequence_element = (
+            first_sequence_element or self._first_sequence_element)
+        self._initial_element = initial_element or self._initial_element
+        self._context = context or self._context
+        if inner_setpoints:
+            self._inner_setpoints = make_setpoints_tuple(inner_setpoints)
+        if outer_setpoints:
+            self._outer_setpoints = make_setpoints_tuple(outer_setpoints)
 
         # add metadata, that gets added to the snapshot automatically
         # add it before the upload so that if there is a crash, the
         # state that is causing the crash is captured in the metadata
-        # TODO: add serialization of the elements
-        # self.metadata['template_element'] = template_element
-        # self.metadata['initial_element'] = initial_element
+        self._update_metadata()
+        self._validate_sequence()
+
+        self._sequence_up_to_date = False
 
         # add sequence symbols as qcodes parameters
         self.sequence.parameters = {}
         with self.single_upload():
             for name, value in self._context.items():
-                self.sequence.add_parameter(name=name,
-                                            unit=self._units.get(name, ''),
-                                            label=self._labels.get(name, ''),
-                                            get_cmd=None,
-                                            set_cmd=partial(
-                                                self._set_context_parameter,
-                                                name),
-                                            initial_value=value)
+                self.sequence.add_parameter(
+                    name=name,
+                    unit=self.units.get(name, ''),
+                    label=self.labels.get(name, ''),
+                    get_cmd=None,
+                    set_cmd=partial(self._set_context_parameter, name),
+                    initial_value=value)
             if inner_setpoints is not None or outer_setpoints is not None:
-                self.set_setpoints(inner=inner_setpoints,
-                                   outer=outer_setpoints)
+                self._update_setpoints()
 
-    def set_setpoints(self,
-                      inner: Optional[Tuple[Symbol, Sequence]]=None,
-                      outer: Optional[Tuple[Symbol, Sequence]]=None):
-        inner = make_setpoints_tuple(inner)
-        outer = make_setpoints_tuple(outer)
+    def _validate_sequence(self):
+        # TODO: implement error
+        assert self._is_sequence_complete()
+
+    def _is_sequence_complete(self) -> bool:
+        # TODO: implement validation properly with possible empty setpoints
+        return (
+            self._template_element is not None and
+            self._context is not None and
+            self._inner_setpoints is not None
+        )
+
+    def _update_setpoints(self):
         self._sequence_up_to_date = False
-
-        # add metadata, that gets added to the snapshot automatically
-        self.metadata['inner_setpoints'] = inner
-        self.metadata['outer_setpoints'] = outer
 
         self.last_inner_index = 0
         self.last_outer_index = 0
         self._inner_index = 0
         self._outer_index = 0
 
-        self._inner_setpoints = inner
-        self._outer_setpoints = outer
-
         # setting this state to False is needed to avoid syncing when the
         # initial value of the parameters is set.
         self._do_sync_repetion_state = False
 
         self.repeat.parameters = {}
-        for setpoints in (inner, outer):
+        for setpoints in (self._inner_setpoints, self._outer_setpoints):
             if setpoints is None:
                 continue
             symbol = setpoints.symbol
+            set_inner = setpoints is self._inner_setpoints
             self.repeat.add_parameter(name=symbol,
                                       get_cmd=None,
                                       set_cmd=partial(
                                           self._set_repeated_element,
-                                          set_inner=setpoints == inner),
-                                      unit=self._units.get(symbol, ''),
-                                      label=self._labels.get(symbol, ''),
+                                          set_inner=set_inner),
+                                      unit=self.units.get(symbol, ''),
+                                      label=self.labels.get(symbol, ''),
                                       initial_value=setpoints.values[0])
         self._do_sync_repetion_state = True
-        # define shortcuts (with long names, I know)
+
+        # define shortcuts
         self._inner_setpoint_parameter = None
         self._outer_setpoint_parameter = None
-        if inner:
-            self._inner_setpoint_parameter = self.repeat.parameters[inner.symbol]
-        if outer:
-            self._outer_setpoint_parameter = self.repeat.parameters[outer.symbol]
+        if self._inner_setpoints:
+            self._inner_setpoint_parameter = (
+                self.repeat.parameters[self._inner_setpoints.symbol])
+        if self._outer_setpoints:
+            self._outer_setpoint_parameter = (
+                self.repeat.parameters[self._outer_setpoints.symbol])
 
         if self._do_upload:
             self._upload_sequence()
+
+    def _update_metadata(self):
+        # add metadata, that gets added to the snapshot automatically
+        self.metadata['inner_setpoints'] = self._inner_setpoints
+        self.metadata['outer_setpoints'] = self._outer_setpoints
+        # TODO: add serialization of the elements
+        # self.metadata['template_element'] = template_element
+        # self.metadata['initial_element'] = initial_element
 
     def get_inner_setpoints(self):
         return self._inner_setpoints
@@ -261,7 +290,7 @@ class ParametricSequencer(Instrument):
                          self._inner_index)
 
             index += 1
-            if self.initial_element is not None:
+            if self._initial_element is not None:
                 index += 1
             self.awg.set_repeated_element(int(index))
             # # assert correct mode
@@ -278,9 +307,11 @@ class ParametricSequencer(Instrument):
             #     index += 1
             # self.awg.set_repeated_element(index)
         elif repeat_mode == 'inner':
-            if not set_inner:
-                raise RuntimeWarning('Cannot set repeated outer setpoint '
-                                     'when repeat mode is "inner"')
+            raise NotImplementedError('The "inner" repeat_mode is not yet'
+                                      ' implemented')
+            # if not set_inner:
+            #     raise RuntimeWarning('Cannot set repeated outer setpoint '
+            #                          'when repeat mode is "inner"')
 
     @staticmethod
     def _value_to_index(value, setpoints):
@@ -295,7 +326,7 @@ class ParametricSequencer(Instrument):
         self._update_sequence()
         self.awg.upload(
             self._sequence_object.forge(SR=self.awg.get_SR(),
-                                        routes=self._routes,
+                                        routes=self.routes,
                                         context=self._sequence_context))
         # uploading a sequence will clear the state of the current element
         # so we need to sync the repetition state or revert the value of
@@ -311,22 +342,22 @@ class ParametricSequencer(Instrument):
             for i, outer_value in enumerate(self._outer_setpoints.values):
                 kwarg = {self._outer_setpoints.symbol: outer_value}
                 for j, inner_value in enumerate(self._inner_setpoints.values):
-                    if (self.first_sequence_element is not None and
+                    if (self._first_sequence_element is not None and
                         j == 0 and i == 0):
-                        template = self.first_sequence_element
+                        template = self._first_sequence_element
                     else:
-                        template = self.template_element
+                        template = self._template_element
                     kwarg[self._inner_setpoints.symbol] = inner_value
                     new_element = in_context(template, **kwarg)
                     elements.append(new_element)
         else:
             kwarg = {}
             for j, inner_value in enumerate(self._inner_setpoints.values):
-                if (self.first_sequence_element is not None and
+                if (self._first_sequence_element is not None and
                     j == 0):
-                    template = self.first_sequence_element
+                    template = self._first_sequence_element
                 else:
-                    template = self.template_element
+                    template = self._template_element
                 kwarg[self._inner_setpoints.symbol] = inner_value
                 new_element = in_context(template, **kwarg)
                 elements.append(new_element)
@@ -334,8 +365,8 @@ class ParametricSequencer(Instrument):
         # make sequence repeat indefinitely
         elements[-1].sequencing['goto_state'] = 1
 
-        if self.initial_element is not None:
-            elements.insert(0, self.initial_element)
+        if self._initial_element is not None:
+            elements.insert(0, self._initial_element)
 
         self._sequence_object = Sequence(elements)
 
