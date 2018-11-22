@@ -1,6 +1,8 @@
 import logging
 
-from typing import Dict, Union, Tuple, NamedTuple, Optional
+from typing import Dict, Union, Tuple, NamedTuple, Optional, TypeVar
+from typing_extensions import final, Final
+
 import typing
 from lomentum.types import (
     ContextDict, Symbol, RoutesDictType)
@@ -20,13 +22,17 @@ from qdev_wrappers.customised_instruments.awg_interface import AWGInterface
 
 log = logging.getLogger(__name__)
 
+#
+NOT_GIVEN: Final = 'This is a placeholder for arguments that have not been supplied.'
+T = TypeVar('T')
+_Optional = Union[T, str]
 
 # namedtuple for the setpoints of a sequence. Symbol refers to a broadbean
 # symbol and values is a
 Setpoints = NamedTuple('Setpoints',
                        (('symbol', Symbol),
                         ('values', typing.Sequence)))
-SetpointsType = Tuple[Symbol, typing.Sequence]
+SetpointsType = Optional[Tuple[Symbol, typing.Sequence]]
 
 
 def make_setpoints_tuple(tuple) -> Union[None, Setpoints]:
@@ -70,12 +76,12 @@ class ParametricSequencer(Instrument):
                  routes: Optional[RoutesDictType]=None,
                  units: Optional[Dict[Symbol, str]]=None,
                  labels: Optional[Dict[Symbol, str]]=None,
-                 template_element: Optional[Element]=None,
-                 inner_setpoints: Optional[SetpointsType]=None,
-                 outer_setpoints: Optional[SetpointsType]=None,
-                 context: Optional[ContextDict]=None,
-                 first_sequence_element: Optional[Element]=None,
-                 initial_element: Optional[Element]=None):
+                 template_element: _Optional[Element]=NOT_GIVEN,
+                 inner_setpoints: _Optional[Union[SetpointsType,str]]=NOT_GIVEN,
+                 outer_setpoints: _Optional[SetpointsType]=NOT_GIVEN,
+                 context: _Optional[ContextDict]=NOT_GIVEN,
+                 first_sequence_element: _Optional[Element]=NOT_GIVEN,
+                 initial_element: _Optional[Element]=NOT_GIVEN):
         super().__init__(name)
         self.awg = awg
         self.routes = routes
@@ -86,9 +92,9 @@ class ParametricSequencer(Instrument):
         # we need to initialise these attributes with `None`. The actual value
         # gets set via the `change_sequence` call
         self._template_element: Optional[Element] = None
-        self._inner_setpoints: Optional[SetpointsType] = None
-        self._outer_setpoints: Optional[SetpointsType] = None
-        self._context: Optional[ContextDict] = None
+        self._inner_setpoints: SetpointsType = None
+        self._outer_setpoints: SetpointsType = None
+        self._context: ContextDict = {}
         self._first_sequence_element: Optional[Element] = None
         self._initial_element: Optional[Element] = None
         
@@ -124,54 +130,61 @@ class ParametricSequencer(Instrument):
         self._do_upload = True
 
     def change_sequence(self,
-                        template_element: Optional[Element] = None,
-                        inner_setpoints: Optional[SetpointsType] = None,
-                        outer_setpoints: Optional[SetpointsType] = None,
-                        context: Optional[ContextDict] = None,
-                        first_sequence_element: Optional[Element] = None,
-                        initial_element: Optional[Element] = None) -> None:
-        self._template_element = template_element or self._template_element
-        self._first_sequence_element = (
-            first_sequence_element or self._first_sequence_element)
-        self._initial_element = initial_element or self._initial_element
-        self._context = context or self._context
-        if inner_setpoints:
+                        template_element: _Optional[Element]=NOT_GIVEN,
+                        inner_setpoints: _Optional[SetpointsType]=NOT_GIVEN,
+                        outer_setpoints: _Optional[SetpointsType]=NOT_GIVEN,
+                        context: _Optional[ContextDict]=NOT_GIVEN,
+                        first_sequence_element: _Optional[Element]=NOT_GIVEN,
+                        initial_element: _Optional[Element]=NOT_GIVEN) -> None:
+        if template_element is not NOT_GIVEN:
+            self._template_element = template_element
+        if first_sequence_element is not NOT_GIVEN:
+            self._first_sequence_element = first_sequence_element
+        if initial_element is not NOT_GIVEN:
+            self._initial_element = initial_element
+        if context is not NOT_GIVEN:
+            self._context = context
+        if inner_setpoints is not NOT_GIVEN:
             self._inner_setpoints = make_setpoints_tuple(inner_setpoints)
-        if outer_setpoints:
+        if outer_setpoints is not NOT_GIVEN:
             self._outer_setpoints = make_setpoints_tuple(outer_setpoints)
 
         # add metadata, that gets added to the snapshot automatically
         # add it before the upload so that if there is a crash, the
         # state that is causing the crash is captured in the metadata
         self._update_metadata()
-        self._validate_sequence()
+        # self._validate_sequence()
 
-        self._sequence_up_to_date = False
-
-        # add sequence symbols as qcodes parameters
-        self.sequence.parameters = {}
+        # no matter what is changed, the sequence is no longer up to date.
+        self._sequence_up_to_date = False     
         with self.single_upload():
-            for name, value in self._context.items():
-                self.sequence.add_parameter(
-                    name=name,
-                    unit=self.units.get(name, ''),
-                    label=self.labels.get(name, ''),
-                    get_cmd=None,
-                    set_cmd=partial(self._set_context_parameter, name),
-                    initial_value=value)
-            if inner_setpoints is not None or outer_setpoints is not None:
+            # only update parameters if context changed
+            if context is not NOT_GIVEN:
+                # add sequence symbols as qcodes parameters
+                self.sequence.parameters = {}
+                for name, value in self._context.items():
+                    self.sequence.add_parameter(
+                        name=name,
+                        unit=self.units.get(name, ''),
+                        label=self.labels.get(name, ''),
+                        get_cmd=None,
+                        set_cmd=partial(self._set_context_parameter, name),
+                        initial_value=value)
+            if (inner_setpoints is not NOT_GIVEN or
+               outer_setpoints is not NOT_GIVEN):
                 self._update_setpoints()
+
 
     def _validate_sequence(self):
         # TODO: implement error
         assert self._is_sequence_complete()
 
     def _is_sequence_complete(self) -> bool:
-        # TODO: implement validation properly with possible empty setpoints
+        # TODO: implement validation that checks if all symbols are provided
+        # this might be best done in the lomentum layer
         return (
             self._template_element is not None and
-            self._context is not None and
-            self._inner_setpoints is not None
+            self._context is not None
         )
 
     def _update_setpoints(self):
@@ -338,7 +351,8 @@ class ParametricSequencer(Instrument):
             return
         elements = []
         # this duplication of code could be done nicer, with some more time...
-        if self._outer_setpoints:
+        # 2D
+        if self._outer_setpoints is not None:
             for i, outer_value in enumerate(self._outer_setpoints.values):
                 kwarg = {self._outer_setpoints.symbol: outer_value}
                 for j, inner_value in enumerate(self._inner_setpoints.values):
@@ -350,7 +364,8 @@ class ParametricSequencer(Instrument):
                     kwarg[self._inner_setpoints.symbol] = inner_value
                     new_element = in_context(template, **kwarg)
                     elements.append(new_element)
-        else:
+        # 1D
+        elif self._inner_setpoints is not None:
             kwarg = {}
             for j, inner_value in enumerate(self._inner_setpoints.values):
                 if (self._first_sequence_element is not None and
@@ -361,7 +376,12 @@ class ParametricSequencer(Instrument):
                 kwarg[self._inner_setpoints.symbol] = inner_value
                 new_element = in_context(template, **kwarg)
                 elements.append(new_element)
-
+        # 0D
+        else:
+            if self._first_sequence_element is not None:
+                elements.append(self._first_sequence_element)
+            elements.append(self._template_element)
+    
         # make sequence repeat indefinitely
         elements[-1].sequencing['goto_state'] = 1
 
@@ -370,10 +390,13 @@ class ParametricSequencer(Instrument):
 
         self._sequence_object = Sequence(elements)
 
-        condition = lambda k: k != self._inner_setpoints.symbol
-        if self._outer_setpoints:
+        if self._outer_setpoints is not None:
             condition = lambda k: (k != self._inner_setpoints.symbol and
                                    k != self._outer_setpoints.symbol)
+        elif self._inner_setpoints is not None:
+            condition = lambda k: k != self._inner_setpoints.symbol
+        else:
+            condition = lambda k: True
 
         self._sequence_context = {k: v for k, v in self._context.items()
                                   if condition(k)}
