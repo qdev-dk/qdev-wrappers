@@ -1,4 +1,5 @@
 import logging
+from warnings import warn
 
 from typing import Dict, Union, Tuple, NamedTuple, Optional, TypeVar
 from typing_extensions import final, Final
@@ -174,7 +175,6 @@ class ParametricSequencer(Instrument):
                outer_setpoints is not NOT_GIVEN):
                 self._update_setpoints()
 
-
     def _validate_sequence(self):
         # TODO: implement error
         assert self._is_sequence_complete()
@@ -274,6 +274,9 @@ class ParametricSequencer(Instrument):
             self._upload_sequence()
 
     def _set_repeated_element(self, value, set_inner):
+        if self.repeat_mode() == 'sequence':
+            warn(f"Warning: setting the {['outer', 'inner'][set_inner]} "
+                 f"setpoints to while being in sequence mode")
         if set_inner:
             self._inner_index = self._value_to_index(value,
                                                      self._inner_setpoints)
