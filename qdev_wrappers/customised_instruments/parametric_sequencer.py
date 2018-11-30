@@ -3,6 +3,7 @@ from warnings import warn
 
 from typing import Dict, Union, Tuple, NamedTuple, Optional, TypeVar
 from typing_extensions import final, Final
+from numbers import Number
 
 import typing
 from lomentum.types import (
@@ -28,7 +29,7 @@ NOT_GIVEN: Final = 'This is a placeholder for arguments that have not been suppl
 T = TypeVar('T')
 _Optional = Union[T, str]
 
-# namedtuple for the setpoints of a sequence. Symbol refers to a broadbean
+# namedtuple for the setpoints of a sequence. Symbol refers to a broavsdbean
 # symbol and values is a
 Setpoints = NamedTuple('Setpoints',
                        (('symbol', Symbol),
@@ -36,11 +37,23 @@ Setpoints = NamedTuple('Setpoints',
 SetpointsType = Optional[Tuple[Symbol, typing.Sequence]]
 
 
-def make_setpoints_tuple(tuple) -> Union[None, Setpoints]:
-    if tuple is None:
+def make_setpoints_tuple(from_tuple) -> Union[None, Setpoints]:
+    if from_tuple is None:
         return None
-    return Setpoints(*tuple)
+    return Setpoints(*from_tuple)
 
+
+class OutOfRangeException(Exception):
+    def __init__(self, message, value, erange):
+        self.message = message
+        self.value = value
+        self.erange = erange
+
+class RoundingWarning(Warning):
+    def __init__(self, message, original, rounded):
+        self.message = message
+        self.original = original
+        self.rounded = rounded
 
 class SequenceChannel(InstrumentChannel):
     """
@@ -102,6 +115,7 @@ class ParametricSequencer(Instrument):
         # inital values of states
         self._do_upload = True
         self._do_sync_repetion_state = True
+        self.deviation_margin = None
 
         # all symbols are mapped to parameters that live on the SequenceChannel
         # and RepeatChannel respectively
@@ -157,7 +171,7 @@ class ParametricSequencer(Instrument):
         # self._validate_sequence()
 
         # no matter what is changed, the sequence is no longer up to date.
-        self._sequence_up_to_date = False     
+        self._sequence_up_to_date = False
         with self.single_upload():
             # only update parameters if context changed
             if context is not NOT_GIVEN:
@@ -277,14 +291,24 @@ class ParametricSequencer(Instrument):
         if self.repeat_mode() == 'sequence':
             warn(f"Warning: setting the {['outer', 'inner'][set_inner]} "
                  f"setpoints to while being in sequence mode")
-        if set_inner:
-            self._inner_index = self._value_to_index(value,
-                                                     self._inner_setpoints)
-            self.last_inner_index = self._inner_index
-        else:
-            self._outer_index = self._value_to_index(value,
-                                                     self._outer_setpoints)
-            self.last_outer_index = self._outer_index
+        try:
+            if set_inner:
+                self._inner_index = self._value_to_index(value,
+                                                        self._inner_setpoints)
+                self.last_inner_index = self._inner_index
+            else:
+                self._outer_index = self._value_to_index(value,
+                                                        self._outer_setpoints)
+                self.last_outer_index = self._outer_index
+        except OutOfRangeException as e:
+            setpoints_name = [self._outer_setpoints,
+                              self._inner_setpoints][set_inner].symbol
+            raise RuntimeWarning(
+                'Error setting repeated element corressponding to ' +
+                f'the {["outer", "inner"][set_inner]} setpoints ' +
+                f'{setpoints_name}: \n' +
+                e.message)
+
         if self._do_sync_repetion_state:
             self._sync_repetion_state()
 
@@ -329,13 +353,42 @@ class ParametricSequencer(Instrument):
             #     raise RuntimeWarning('Cannot set repeated outer setpoint '
             #                          'when repeat mode is "inner"')
 
-    @staticmethod
-    def _value_to_index(value, setpoints):
-        if type(value) is str:
-            return setpoints.values.index(value)
-        else:
+    def _value_to_index(self, value, setpoints):
+        # setpoints may have any type. For numbers apply interpolation
+        if isinstance(value, Number):
             values = np.asarray(setpoints.values)
-            return (np.abs(values - value)).argmin()
+            delta = 0.5 * np.min(np.absolute(np.diff(values)))
+            rmin = np.nanmin(values) - delta
+            rmax = np.nanmax(values) + delta
+            if value > rmax or value < rmin:
+                raise OutOfRangeException(
+                    f'Value {value} is outside of range ({rmin}, {rmax})',
+                    value, (rmin, rmax))
+            index = (np.abs(values - value)).argmin()
+            deviation = abs(values[index] - value)
+            relative_deviation = deviation / (
+                (rmax-rmin) / len(values))
+            close_to_zero_deviation = np.isclose(relative_deviation, 0)
+
+            # if None: warn if not close
+            # if 0: fail if not equal
+            # if number: fail
+            if self.deviation_margin is None:
+                if not close_to_zero_deviation:
+                    warn(f'Rounding setpoint value from {value} to '
+                         f'{values[index]}.')
+            # `=` is important for the 0 case
+            elif deviation >= self.deviation_margin:
+                raise RuntimeWarning(
+                    f'Error: Trying to set repeat element to `{value}`. '
+                    f'The closest available segment corresponds to '
+                    f'`{values[index]}` which deviates more than the '
+                    f'configured deviation margin `{self.deviation_margin}` '
+                    f'Refusing to continue!')
+
+            return index
+        else:
+            return setpoints.values.index(value)
 
     # Private methods
     def _upload_sequence(self):
