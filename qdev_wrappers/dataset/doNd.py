@@ -274,8 +274,10 @@ def _save_image(datasaver) -> AxesTupleList:
     os.makedirs(png_dir, exist_ok=True)
     os.makedirs(pdf_dif, exist_ok=True)
 
-    save_pdf = True
-    save_png = True
+    save_settings = config.user.get(
+        'plot_save', {'pdf': True, 'png': True})
+    save_pdf = save_settings['pdf']
+    save_png = save_settings['png']
 
     for i, ax in enumerate(axes):
         if save_pdf:
