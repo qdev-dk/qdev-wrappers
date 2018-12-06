@@ -99,6 +99,8 @@ instruments:
     init:
       # to pass an array as a parameter use {}
       gates: {"ch1", "ch2"}
+  add_parameters:
+      Bx: {source: ch1, label: Bx, unit: T, scale: 28, limits: "-1,1", monitor: true}
   mock_dac2:
     driver: qcodes.tests.instrument_mocks
     type: DummyInstrument

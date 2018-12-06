@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from os.path import sep
-from typing import Optional, Tuple, Sequence
+from typing import Optional, Tuple, Sequence, Union
+Number = Union[float, int]
 from collections import Iterable
 from contextlib import suppress
 from pyqtgraph.multiprocess.remoteproxy import ClosedError
@@ -95,7 +96,9 @@ def _do_measurement_single(measurement: Measure, meas_params: tuple,
 
 def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
                     do_plots: Optional[bool]=True,
-                    use_threads: bool=True) -> Tuple[QtPlot, DataSet]:
+                    use_threads: bool=True,
+                    auto_color_scale: Optional[bool]=None,
+                    cutoff_percentile: Optional[Union[Tuple[Number, Number], Number]]=None) -> Tuple[QtPlot, DataSet]:
     """
     The function to handle all the auxiliary magic of the T10 users, e.g.
     their plotting specifications, the device image annotation etc.
@@ -110,6 +113,12 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
         use_threads: Whether to use threads to parallelise simultaneous
             measurements. If only one thing is being measured at the time
             in loop, this does nothing.
+        auto_color_scale: if True, the colorscale of heatmap plots will be
+            automatically adjusted to disregard outliers.
+        cutoff_percentile: percentile of data that may maximally be clipped
+            on both sides of the distribution.
+            If given a tuple (a,b) the percentile limits will be a and 100-b.
+            See also the plotting tuorial notebook.
     Returns:
         (plot, data)
     """
@@ -133,7 +142,9 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
 
         if do_plots:
             try:
-                plot, _ = _plot_setup(data, meas_params, startranges=startranges)
+                plot, _ = _plot_setup(data, meas_params, startranges=startranges,
+                                      auto_color_scale=auto_color_scale,
+                                      cutoff_percentile=cutoff_percentile)
             except (ClosedError, ConnectionError):
                 log.warning('Remote process crashed png will not be saved')
                 # if remote process crashed continue without plots
@@ -159,7 +170,9 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
                 do_plots = False
 
             if 'pdf_subfolder' in CURRENT_EXPERIMENT or 'png_subfolder' in CURRENT_EXPERIMENT:
-                _do_MatPlot(data,meas_params)
+                _do_MatPlot(data,meas_params,
+                            auto_color_scale=auto_color_scale,
+                            cutoff_percentile=cutoff_percentile)
 
         if CURRENT_EXPERIMENT.get('device_image'):
             log.debug('Saving device image')
@@ -174,9 +187,13 @@ def _do_measurement(loop: Loop, set_params: tuple, meas_params: tuple,
     return plot, data
 
 
-def _do_MatPlot(data,meas_params):
+def _do_MatPlot(data,meas_params,
+                auto_color_scale: Optional[bool]=None,
+                cutoff_percentile: Optional[Union[Tuple[Number, Number], Number]]=None):
     plt.ioff()
-    plot, num_subplots = _plot_setup(data, meas_params, useQT=False)
+    plot, num_subplots = _plot_setup(data, meas_params, useQT=False,
+                                     auto_color_scale=auto_color_scale,
+                                     cutoff_percentile=cutoff_percentile)
     # pad a bit more to prevent overlap between
     # suptitle and title
     plot.rescale_axis()
@@ -202,12 +219,16 @@ def _do_MatPlot(data,meas_params):
         plt.close(plot.fig)
     if num_subplots > 1:
         _save_individual_plots(data, meas_params,
-                               pdfdisplay['individual'])
+                               pdfdisplay['individual'],
+                               auto_color_scale=auto_color_scale,
+                               cutoff_percentile=cutoff_percentile)
     plt.ion()
 
 
 def do1d(inst_set, start, stop, num_points, delay, *inst_meas, do_plots=True,
-         use_threads=False):
+         use_threads=False,
+         auto_color_scale: Optional[bool]=None,
+         cutoff_percentile: Optional[Union[Tuple[Number, Number], Number]]=None):
     """
 
     Args:
@@ -223,6 +244,12 @@ def do1d(inst_set, start, stop, num_points, delay, *inst_meas, do_plots=True,
              and can be displayed with show_num.
         use_threads: If True and if multiple things are being measured,
             multiple threads will be used to parallelise the waiting.
+        auto_color_scale: if True, the colorscale of heatmap plots will be
+            automatically adjusted to disregard outliers.
+        cutoff_percentile: percentile of data that may maximally be clipped
+            on both sides of the distribution.
+            If given a tuple (a,b) the percentile limits will be a and 100-b.
+            See also the plotting tuorial notebook.
 
     Returns:
         plot, data : returns the plot and the dataset
@@ -237,14 +264,18 @@ def do1d(inst_set, start, stop, num_points, delay, *inst_meas, do_plots=True,
     meas_params = _select_plottables(inst_meas)
 
     plot, data = _do_measurement(loop, set_params, meas_params,
-                                 do_plots=do_plots, use_threads=use_threads)
+                                 do_plots=do_plots, use_threads=use_threads,
+                                 auto_color_scale=auto_color_scale,
+                                 cutoff_percentile=cutoff_percentile)
 
     return plot, data
 
 
 def do1dDiagonal(inst_set, inst2_set, start, stop, num_points,
                  delay, start2, slope, *inst_meas, do_plots=True,
-                 use_threads=False):
+                 use_threads=False,
+                 auto_color_scale: Optional[bool]=None,
+                 cutoff_percentile: Optional[Union[Tuple[Number, Number], Number]]=None):
     """
     Perform diagonal sweep in 1 dimension, given two instruments
 
@@ -262,6 +293,12 @@ def do1dDiagonal(inst_set, inst2_set, start, stop, num_points,
             Data is still saved and can be displayed with show_num.
         use_threads: If True and if multiple things are being measured,
             multiple threads will be used to parallelise the waiting.
+        auto_color_scale: if True, the colorscale of heatmap plots will be
+            automatically adjusted to disregard outliers.
+        cutoff_percentile: percentile of data that may maximally be clipped
+            on both sides of the distribution.
+            If given a tuple (a,b) the percentile limits will be a and 100-b.
+            See also the plotting tuorial notebook.
 
     Returns:
         plot, data : returns the plot and the dataset
@@ -280,7 +317,9 @@ def do1dDiagonal(inst_set, inst2_set, start, stop, num_points,
                    delay).each(slope_task, *inst_meas, inst2_set)
 
     plot, data = _do_measurement(loop, set_params, meas_params,
-                                 do_plots=do_plots, use_threads=use_threads)
+                                 do_plots=do_plots, use_threads=use_threads,
+                                 auto_color_scale=auto_color_scale,
+                                 cutoff_percentile=cutoff_percentile)
 
     return plot, data
 
@@ -291,7 +330,9 @@ def do2d(inst_set, start, stop, num_points, delay,
          set_before_sweep: Optional[bool]=False,
          innerloop_repetitions: Optional[int]=1,
          innerloop_pre_tasks: Optional[Sequence]=None,
-         innerloop_post_tasks: Optional[Sequence]=None):
+         innerloop_post_tasks: Optional[Sequence]=None,
+         auto_color_scale: Optional[bool]=None,
+         cutoff_percentile: Optional[Union[Tuple[Number, Number], Number]]=None):
     """
 
     Args:
@@ -316,6 +357,12 @@ def do2d(inst_set, start, stop, num_points, delay,
             outer loop
         innerloop_post_tasks: Tasks to execute after each iteration of the
             outer loop
+        auto_color_scale: if True, the colorscale of heatmap plots will be
+            automatically adjusted to disregard outliers.
+        cutoff_percentile: percentile of data that may maximally be clipped
+            on both sides of the distribution.
+            If given a tuple (a,b) the percentile limits will be a and 100-b.
+            See also the plotting tuorial notebook.
 
     Returns:
         plot, data : returns the plot and the dataset
@@ -358,7 +405,9 @@ def do2d(inst_set, start, stop, num_points, delay,
     meas_params = _select_plottables(inst_meas)
 
     plot, data = _do_measurement(outerloop, set_params, meas_params,
-                                 do_plots=do_plots, use_threads=use_threads)
+                                 do_plots=do_plots, use_threads=use_threads,
+                                 auto_color_scale=auto_color_scale,
+                                 cutoff_percentile=cutoff_percentile)
 
     return plot, data
 
