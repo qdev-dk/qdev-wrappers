@@ -4,6 +4,7 @@ from qcodes.instrument.base import Instrument
 from qcodes.instrument.channel import InstrumentChannel, ChannelList
 from qdev_wrappers.interfaces.interface_parameter import InterfaceParameter
 
+# TODO SR to be a parameter and propagate that upwards (parametric sequencer)
 
 class AWGChannelInterface(InstrumentChannel):
     def __init__(self, parent, name):
@@ -25,6 +26,10 @@ class AWGInterface(Instrument):
             channel = AWGChannelInterface(self, f'ch{ch}')
             self.channels.append(channel)
             self.add_submodule(f'ch{ch}', channel)
+        self.add_parameter(name='sample_rate',
+                           label='Sample Rate',
+                           unit='Hz',
+                           parameter_class=InterfaceParameter)
 
     def upload(self, forged_sequence: ForgedSequenceType):
         raise NotImplementedError()
@@ -42,15 +47,13 @@ class AWGInterface(Instrument):
     def repeat_full_sequence(self):
         raise NotImplementedError()
 
-    def get_SR(self):
-        raise NotImplementedError()
-
 
 class SimulatedAWGInterface(AWGInterface):
     def __init__(self, name, chan_num=4):
         self.CHAN_NUM = chan_num
         self.forged_sequence = None
         super().__init__(name)
+        self.sample_rate._save_val(1e9)
 
     def upload(self, forged_sequence: ForgedSequenceType):
         print(f'uploading')
@@ -82,10 +85,6 @@ class SimulatedAWGInterface(AWGInterface):
         print(f'repeating full series')
         plotter(self.forged_sequence, SR=self.get_SR())
 
-    def get_SR(self):
-        # fake this for now
-        return 1e9
-
 
 class AWG5014Interface(AWGInterface):
     CHAN_NUM = 4
@@ -96,6 +95,7 @@ class AWG5014Interface(AWGInterface):
         self.forged_sequence = None
         self.last_repeated_element_series = (None, None)
         super().__init__(name)
+        self.sample_rate._source = awg.clock_freq
         for ch in np.range(self.CHAN_NUM):
             self.submodules[f'ch{ch}'].Vpp._source = awg.parmaeters['ch{ch}_amp']
 
@@ -128,9 +128,6 @@ class AWG5014Interface(AWGInterface):
     def repeat_full_sequence(self):
         self._restore_sequence_state()
         self.awg.sequence_pos(1)
-
-    def get_SR(self):
-        return self.awg.clock_freq()
 
     def _restore_sequence_state(self):
         if self.last_repeated_element is not None:
