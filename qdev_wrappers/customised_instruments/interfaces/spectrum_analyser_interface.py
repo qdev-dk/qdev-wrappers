@@ -7,26 +7,17 @@ from qdev_wrappers.customised_instruments.interfaces.parameters import Interface
 from qcodes.instrument.parameter import ArrayParameter
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter, DelegateArrayParameter
 
-# TODO: docstrings
-
 
 class DelegateTraceParameter(DelegateArrayParameter):
     def get_raw(self):
         self.instrument._update_for_trace()
-        self.shape = self.source.shape
-        self.label = self.source.label
-        self.unit = self.source.unit
-        self.setpoints = self.source.setpoints
-        self.setpoint_names = self.source.setpoint_names
-        self.setpoint_labels = self.source.setpoint_labels
-        self.setpoint_units = self.source.setpoint_units
-        return self.source.get()
+        return self.parent.get_raw()
 
 
 class DelegatePowerParameter(DelegateParameter):
     def get_raw(self):
         self.instrument._update_for_trace(name=self.name)
-        return self.source.get()
+        return self.parent.get_raw()
 
 
 class SimulatedTraceParameter(ArrayParameter):
