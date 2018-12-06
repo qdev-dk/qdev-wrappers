@@ -95,9 +95,9 @@ class AWG5014Interface(AWGInterface):
         self.forged_sequence = None
         self.last_repeated_element_series = (None, None)
         super().__init__(name)
-        self.sample_rate._source = awg.clock_freq
+        self.sample_rate.source = awg.clock_freq
         for ch in np.range(self.CHAN_NUM):
-            self.submodules[f'ch{ch}'].Vpp._source = awg.parmaeters['ch{ch}_amp']
+            self.submodules[f'ch{ch}'].Vpp.source = awg.parmaeters['ch{ch}_amp']
 
     def upload(self, forged_sequence: ForgedSequenceType):
         self.awg.make_send_and_load_awg_file_from_forged_sequence(
