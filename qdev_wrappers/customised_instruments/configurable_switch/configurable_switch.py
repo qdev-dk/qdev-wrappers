@@ -4,6 +4,11 @@ from qcodes.utils import validators as vals
 
 
 class _ConfigurableSwitchBase(Instrument):
+    """
+    Instrument which given stores a configuration dictionary and has a
+    parameter called 'configuration' which will run _set_configuration
+    when called.
+    """
     def __init__(self, name, switch_configuration):
         self._switch_configuration = switch_configuration
         super().__init__(name)
@@ -19,6 +24,10 @@ class _ConfigurableSwitchBase(Instrument):
 
 
 class ConfigurableSwitch(_ConfigurableSwitchBase):
+    """
+    'Real' instrument implementation which sets the configuration on the
+    switch instrument provided
+    """
     def __init__(self, name, switch_configuration, switch):
         self._switch = switch
         super().__init__(name, switch_configuration)
@@ -33,5 +42,9 @@ class ConfigurableSwitch(_ConfigurableSwitchBase):
 
 
 class SimulatedConfigurableSwitch(Instrument):
+    """
+    Simulated instrument implementation which just chills and
+    doesnt complain.
+    """
     def _set_configuration(self, val):
         pass
