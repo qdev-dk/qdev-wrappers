@@ -164,19 +164,19 @@ class ExperimentHelper:
                 current_time).strftime('%Y-%m-%d %H:%M:%S')
             print('Measurement finished at ', printable_time)
 
-    def fit(self, fitclass=None, run_id=None):
-        fitclass = fitclass or self._fitclass
-        run_id = run_id or self._latest_run_id
-        if run_id is not None and fitclass is not None:
-            fit = Fitter(run_id, self._fitclass)
-            save_fit_result(fit)
-            fit.plot()
-        else:
-            raise RuntimeError(
-                'Must specify fitclass and have run_id to perform fit')
-        if len(fit.fit_results) == 1:
-            print(fit.fit_results[0]['param_values'])
-        return fit.fit_results
+    # def fit(self, fitclass=None, run_id=None):
+    #     fitclass = fitclass or self._fitclass
+    #     run_id = run_id or self._latest_run_id
+    #     if run_id is not None and fitclass is not None:
+    #         fit = Fitter(run_id, self._fitclass)
+    #         save_fit_result(fit)
+    #         fit.plot()
+    #     else:
+    #         raise RuntimeError(
+    #             'Must specify fitclass and have run_id to perform fit')
+    #     if len(fit.fit_results) == 1:
+    #         print(fit.fit_results[0]['param_values'])
+    #     return fit.fit_results
 
 
 def _chunks(l, n):
