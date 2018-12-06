@@ -34,7 +34,7 @@ class HeterodyneSource(Instrument):
                            parameter_class=InterfaceParameter)
 
 
-class OneSGS100AHeterodyneSource(HeterodyneSource):
+class OneSourceHeterodyneSource(HeterodyneSource):
     def __init__(self, name, microwave_source_interface):
         self._microwave_source_interface = microwave_source_interface
         super().__init__(name)
@@ -66,7 +66,7 @@ class OneSGS100AHeterodyneSource(HeterodyneSource):
             self._microwave_source_interface.pulsemod_state(1)
 
 
-class TwoSGS100AHeterodyneSource(HeterodyneSource):
+class TwoSourceHeterodyneSource(HeterodyneSource):
     def __init__(self, name, carrier_source_interface, localos_source_interface):
         self._carrier_source_interface = carrier_source_interface
         self._localos_source_interface = localos_source_interface
