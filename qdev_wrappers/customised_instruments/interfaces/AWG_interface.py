@@ -4,7 +4,6 @@ from qcodes.instrument.base import Instrument
 from qcodes.instrument.channel import InstrumentChannel, ChannelList
 from qdev_wrappers.interfaces.interface_parameter import InterfaceParameter
 
-# TODO SR to be a parameter and propagate that upwards (parametric sequencer)
 
 class AWGChannelInterface(InstrumentChannel):
     def __init__(self, parent, name):
