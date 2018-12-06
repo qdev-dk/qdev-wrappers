@@ -33,6 +33,10 @@ class SimulatedTraceParameter(ArrayParameter):
 
 
 class SpectrumAnalyserInterface(Instrument):
+    """
+    Interface base class for the spectrum analyser which by default
+    has only manual parameters and no parameter for measurment.
+    """
     def _init__(self, name):
         super().__init__(name)
         self.add_parameter('frequency',
@@ -60,10 +64,24 @@ class SpectrumAnalyserInterface(Instrument):
         self.mode._save_val('trace')
 
     def _update_for_trace(self, **kwargs):
+        """
+        To be implemented in base class. Called when measurement
+        parameters are gotten.
+        """
         raise NotImplementedError
 
 
 class USB_SA124BSpectrumAnalyserInterface(SpectrumAnalyserInterface):
+    """
+    'Real' instrument implementation of the spectrum analyser interface.
+    Main advantage over the instrument itself is that it updates the trace
+    and configures when the measurement parameters 'trace' or 'single'
+    are called so it doesn't need to be done by hand. Also switches the mode
+    so that the span and bandwidth parameters are only implemented when
+    the mode is 'trace' or if the 'trace' parameters are called. Otherwise
+    these are both set to the minimum as required to get the 'single'
+    parameter.
+    """
     def __init__(self, name, spectrum_analyser):
         self._spectrum_analyser = spectrum_analyser
         super().__init__(name)
@@ -134,6 +152,10 @@ class USB_SA124BSpectrumAnalyserInterface(SpectrumAnalyserInterface):
 
 
 class SimulatedSpectrumAnalyserInterface(SpectrumAnalyserInterface):
+    """
+    Simulated instrument implementation of the spectrum analyser interface.
+    The 'trace' and 'single' parameters return a random trace or point.
+    """
     def __init__(self, name):
         super().__init__(name)
         self.npts._set_fn = self._set_npts
