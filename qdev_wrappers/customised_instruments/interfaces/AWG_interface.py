@@ -1,9 +1,9 @@
 from broadbean.types import ForgedSequenceType
 from broadbean.plotting import plotter
+from time import sleep
 from qcodes.instrument.base import Instrument
 from qcodes.instrument.channel import InstrumentChannel, ChannelList
 from qdev_wrappers.interfaces.interface_parameter import InterfaceParameter
-
 
 class AWGChannelInterface(InstrumentChannel):
     def __init__(self, parent, name):
@@ -96,7 +96,16 @@ class AWG5014Interface(AWGInterface):
         super().__init__(name)
         self.sample_rate.source = awg.clock_freq
         for ch in np.range(self.CHAN_NUM):
-            self.submodules[f'ch{ch}'].Vpp.source = awg.parmaeters['ch{ch}_amp']
+            self.submodules[f'ch{ch}'].Vpp.source = awg.parameters['ch{ch}_amp']
+        self.add_parameter('sleep_time',
+                           label='Sleep time',
+                           unit='s',
+                           initial_value=5,
+                           get_cmd=None,
+                           set_cmd=None,
+                           docstring="Time to sleep before and after "
+                                     "setting repeated_element",
+                           vals=vals.Numbers(0))
 
     def upload(self, forged_sequence: ForgedSequenceType):
         self.awg.make_send_and_load_awg_file_from_forged_sequence(
@@ -110,7 +119,6 @@ class AWG5014Interface(AWGInterface):
         self.awg.run()
 
     def set_repeated_element(self, index):
-        print(f'stop repeating {self.last_repeated_element} start {index}')
         self.awg.set_sqel_loopcnt_to_inf(index, state=1)
         self.awg.sequence_pos(index)
         if (self.last_repeated_element is not None and
@@ -118,6 +126,8 @@ class AWG5014Interface(AWGInterface):
             self.awg.set_sqel_loopcnt_to_inf(self.last_repeated_element,
                                              state=0)
         self.last_repeated_element = index
+        sleep_time = self.sleep_time.get()
+        sleep(sleep_time)
 
     def set_repeated_element_series(self, start_index, stop_index):
         self._restore_sequence_state()
