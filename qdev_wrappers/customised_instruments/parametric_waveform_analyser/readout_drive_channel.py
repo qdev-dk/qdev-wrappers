@@ -1,7 +1,19 @@
 from qcodes.instrument.channel import InstrumentChannel
 from qcodes.utils import validators as vals
-from qdev_wrappers.parameters import DelegateParameter
+from qcodes.instrument.parameter import Parameter
 from contextlib import contextmanager
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
+from qdev_wrappers.customised_instruments.parametric_waveform_analyser.pulse_building_parameter import PWAPulseBuildingParameter
+from qdev_wrappers.customised_instruments.settings_instrument.settings_parameters import SettingsMultiChannelParameter
+from qdev_wrappers.customised_instruments.parametric_waveform_analyser.sidebanding_channel import ReadoutSidebandingChannel, DriveSidebandingChannel
+
+
+class CarrierFreqParam(Parameter):
+    def set_raw(self, val):
+        self.instrument._microwave_source.frequency(val)
+        self._save_val(val)
+        for demod_ch in self.instrument._sidebanding_channels:
+            demod_ch.update()
 
 
 class MixingChannel(InstrumentChannel):
@@ -17,44 +29,39 @@ class MixingChannel(InstrumentChannel):
         super().__init__(parent, name)
         if isinstance(self, ReadoutChannel):
             self._str_type = 'readout'
+            self._microwave_source = self._parent._heterodyne_source
         elif isinstance(self, DriveChannel):
             self._str_type = 'drive'
+            self._microwave_source = self._parent._qubit_source
         self._sidebanding_channels = []
         type_title = self._str_type.title()
         self.add_parameter(
             name='carrier_frequency',
-            set_fn=self._set_carrier_frequency,
-            pulse_building_name=f'{self._str_type}_carrier_frequency',
-            label='{type_title} Carrier Frequency',
+            label=f'{type_title} Carrier Frequency',
             unit='Hz',
-            initial_value=parent._heterodyne_source.frequency(),
+            initial_value=self._microwave_source.frequency(),
             docstring='Sets the frequency on the '
             'heterodyne_source and updates the sidebanding '
             'channels so that their frequencies are still'
             ' carrier + sideband.',
-            parameter_class=PulseBuildingParameter)
+            parameter_class=CarrierFreqParam)
         self.add_parameter(
             name='carrier_power',
-            label='{type_title} Power',
+            label=f'{type_title} Power',
             unit='dBm',
             parameter_class=DelegateParameter,
-            source=parent._heterodyne_source.power)
+            source=self._microwave_source.power)
         self.add_parameter(
             name='status',
-            label='{type_title} Status',
+            label=f'{type_title} Status',
             parameter_class=DelegateParameter,
-            source=parent._heterodyne_source.status)
-
-    def _set_carrier_frequency(self, carrier_freq):
-        self._parent._heterodyne_source.frequency(carrier_freq)
-        for demod_ch in self._sidebanding_channels:
-            demod_ch.update()
+            source=self._microwave_source.status)
 
     @property
     def _pulse_building_parameters(self):
         pulse_building_parameters = {}
         for n, p in self.parameters.items():
-            if isinstance(p, PulseBuildingParameter):
+            if isinstance(p, PWAPulseBuildingParameter):
                 pulse_building_parameters[p.pulse_building_name] = p
         for demod_ch in self._sidebanding_channels:
             pulse_building_parameters.update(
@@ -68,15 +75,14 @@ class MixingChannel(InstrumentChannel):
         """
         ch_num = len(self._sidebanding_channels)
         if isinstance(self, ReadoutChannel):
-            sidebanding_chan_class = ReadoutSidnebandingChannel
+            sidebanding_chan_class = ReadoutSidebandingChannel
         elif isinstance(self, DriveChannel):
             sidebanding_chan_class = DriveSidebandingChannel
         else:
             raise RuntimeError('Could not identify parent class when '
                                ' trying to make sidebanding channel')
         sidebanding_channel = sidebanding_chan_class(
-            self, f'Q{ch_num}_{self._str_type}', ch_num)
-        sidebanding_channel.frequency(frequency)
+            self, f'Q{ch_num}_{self._str_type}', ch_num, frequency)
         self._sidebanding_channels.append(sidebanding_channel)
         self.add_submodule(f'Q{ch_num}', sidebanding_channel)
 
@@ -106,59 +112,61 @@ class DriveChannel(MixingChannel):
         self.add_parameter(name='drive_stage_duration',
                            label='Drive Stage Duration',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
         self.add_parameter(name='sigma_cutoff',
                            label='Sigma Cutoff',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
         self.add_parameter(name='drive_readout_delay',
                            label='Drive Readout Delay',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
         self.add_parameter(name='modulation_marker_duration',
                            label='Drive Modulation Duration',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
         self.add_parameter(name='pulse_separation',
                            label='Drive Pulse Separation',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
         self.add_parameter(name='spectroscopy_pulse_duration',
-                           pulse_building_name='drive_pulse_duration',
+                           pulse_building_name='spectroscopy_pulse_duration',
                            label='Drive Pulse Duration',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
         self.add_parameter(name='gate_pulse_duration',
-                           pulse_building_name='drive_pulse_duration',
+                           pulse_building_name='gate_pulse_duration',
                            label='Drive Pulse Duration',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
 
 
 class ReadoutChannel(MixingChannel):
     """
-    A MixingChannel which models the qubit(s) readout and thus has the requisite
-    PulseBuildingParameters, a multichanal parmeter for aquiring data from all
-    alazar channels and the requisite alzar controller parameters.
+    A MixingChannel which models the qubit(s) readout and thus has the
+    requisite PulseBuildingParameters, a multichanal parmeter for aquiring
+    data from all alazar channels and the requisite alzar controller
+    parameters.
     """
 
     def __init__(self, parent, name: str):
         super().__init__(parent, name)
         self.all_readout_channels = parent._alazar_controller.channels
-        multichanalazarparam = AlazarMultiChannelParameterHack(
-            'data', self, parent._alazar_controller.channels)
+        multichanalazarparam = SettingsMultiChannelParameter(
+            'data', self, parent._alazar_controller.channels, 'data')
         self.parameters['data'] = multichanalazarparam
         # heterodyne source parameters
 
-        self.add_parameter(name='base_demodulation_frequency',
-                           set_cmd=self._set_base_demod_frequency,
-                           label='Base Demodulation Frequency',
-                           unit='Hz',
-                           initial_value=parent._heterodyne_source.demodulation_frequency(),
-                           docstring='Sets the frequency difference '
-                           'between the carrier source and the localos '
-                           'source on the heterodyne source and updates '
-                           'the alazar channels to demodulate at this '
-                           'frequency plus the frequency of any sidebands.')
+        self.add_parameter(
+            name='base_demodulation_frequency',
+            set_cmd=self._set_base_demod_frequency,
+            label='Base Demodulation Frequency',
+            unit='Hz',
+            initial_value=self._microwave_source.demodulation_frequency(),
+            docstring='Sets the frequency difference '
+            'between the carrier source and the localos '
+            'source on the heterodyne source and updates '
+            'the alazar channels to demodulate at this '
+            'frequency plus the frequency of any sidebands.')
 
         # alazar controller parameters
         self.add_parameter(name='measurement_duration',
@@ -193,26 +201,45 @@ class ReadoutChannel(MixingChannel):
                            'in the measurement')
 
         # pulse building parameters
+        pre_str = 'readout'
         self.add_parameter(name='total_duration',  # TODO should this live on sequence?
-                           label='Cycle Time',
+                           label='Cycle Duration',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
         self.add_parameter(name='marker_readout_delay',
                            label='Marker Readout Delay',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
         self.add_parameter(name='pulse_duration',
                            label='Readout Pulse Duration',
-                           pulse_building_name='readout_pulse_duration',
+                           pulse_building_name=f'{pre_str}_pulse_duration',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
         self.add_parameter(name='marker_duration',
                            label='Marker Duration',
+                           pulse_building_name=f'{pre_str}_marker_duration',
                            unit='s',
-                           parameter_class=PulseBuildingParameter)
+                           parameter_class=PWAPulseBuildingParameter)
+        self.add_parameter(name='I_offset',
+                           pulse_building_name=f'{pre_str}_I_offset',
+                           label='I Offset',
+                           parameter_class=PWAPulseBuildingParameter)
+        self.add_parameter(name='Q_offset',
+                           pulse_building_name=f'{pre_str}_Q_offset',
+                           label='Q Offset',
+                           parameter_class=PWAPulseBuildingParameter)
+        self.add_parameter(name='gain_offset',
+                           pulse_building_name=f'{pre_str}_gain_offset',
+                           label='Gain Offset',
+                           parameter_class=PWAPulseBuildingParameter)
+        self.add_parameter(name='phase_offset',
+                           pulse_building_name=f'{pre_str}_phase_offset',
+                           label='Phase Offset',
+                           unit='degrees',
+                           parameter_class=PWAPulseBuildingParameter)
 
     def _set_base_demod_frequency(self, demod_freq):
-        self._parent._heterodyne_source.demodulation_frequency(demod_freq)
+        self._microwave_source.demodulation_frequency(demod_freq)
         for ch in self._sidebanding_channels:
             ch.update()
 
@@ -231,11 +258,11 @@ class ReadoutChannel(MixingChannel):
 
     def _set_single_shot(self, val):
         self.single_shot._save_val(val)
-        self._update_alazar_channels()
+        self.update_alazar_channels()
 
     def _set_num(self, num):
         self.num._save_val(num)
-        self._update_alazar_channels()
+        self.update_alazar_channels()
 
     def _set_meas_dur(self, meas_dur):
         self.parent._alazar_controller.int_time(meas_dur)
@@ -251,19 +278,19 @@ class ReadoutChannel(MixingChannel):
 
     def _set_integrate_time(self, val):
         self.integrate_time._save_val(val)
-        self._update_alazar_channels()
+        self.update_alazar_channels()
 
-    def _update_alazar_channels(self):
+    def update_alazar_channels(self):
         """
         Updates all of the alazar channels based on the current settings
         of the ParametricWaveformAnalyser.
         """
-        settings = self._parent.alazar_ch_settings
+        settings = self._parent._get_alazar_ch_settings()
         try:
             for ch in self._parent._alazar_controller.channels:
                 ch.update(settings)
         except RuntimeError:
-            self._reinstate_alazar_channels()
+            self._reinstate_alazar_channels(settings)
 
     def _reinstate_alazar_channels(self, settings):
         """

@@ -1,9 +1,8 @@
 import logging
 import numpy as np
-import importlib
 from qcodes.instrument.base import Instrument
 import math
-from qdev_wrappers.customised_instruments.parametric_waveform_analyser.readout_drive_channels import ReadoutChannel, DriveChannel
+from qdev_wrappers.customised_instruments.parametric_waveform_analyser.readout_drive_channel import ReadoutChannel, DriveChannel
 from qdev_wrappers.customised_instruments.parametric_waveform_analyser.sequence_channel import SequenceChannel
 
 logger = logging.getLogger(__name__)
@@ -81,8 +80,7 @@ class ParametricWaveformAnalyser(Instrument):
         self.readout._sidebanding_channels.clear()
         self.drive._sidebanding_channels.clear()
 
-    @property
-    def alazar_ch_settings(self):
+    def _get_alazar_ch_settings(self):
         """
         Based on the current instrument settings calculates the settings
         configuration for an alazar channel as a dictionary with keys:
@@ -109,21 +107,19 @@ class ParametricWaveformAnalyser(Instrument):
         settings = {}
         if not single_shot:
             settings['average_buffers'] = True
-            if (seq_mode and
-                    len(self._sequencer.get_inner_setpoints().values) > 1):
-                if self._sequencer.get_outer_setpoints() is not None:
+            if (seq_mode and self.sequence.inner_setpoints.symbol() is not None):
+                if self.sequence.outer_setpoints.setpoints is not None:
                     logger.warn('Averaging channel will average over '
                                 'outer setpoints of sequencer sequence')
-                record_symbol = self._sequencer.get_inner_setpoints().symbol
-                record_setpoints = self._sequencer.get_inner_setpoints().values
-                record_param = getattr(self._sequencer.repeat, record_symbol)
+                record_symbol = self.sequence.inner_setpoints.setpoints[0]
+                record_setpoints = self.sequence.inner_setpoints.setpoints[1]
                 settings['records'] = len(record_setpoints)
                 settings['buffers'] = num
                 settings['average_records'] = False
                 settings['record_setpoints'] = record_setpoints
                 settings['record_setpoint_name'] = record_symbol
-                settings['record_setpoint_label'] = record_param.label
-                settings['record_setpoint_unit'] = record_param.unit
+                settings['record_setpoint_label'] = record_symbol  # TODO
+                settings['record_setpoint_unit'] =  '' # TODO
 
             else:
                 settings['average_records'] = True
@@ -142,35 +138,31 @@ class ParametricWaveformAnalyser(Instrument):
         else:
             settings['average_buffers'] = False
             settings['average_records'] = False
-            if (seq_mode and
-                    len(self._sequencer.get_inner_setpoints().values) > 1):
-                if (self._sequencer.get_outer_setpoints() is not None and
-                        num > 1):
+            if seq_mode and self.sequence.inner_setpoints.symbol() is not None:
+                if self.sequence.outer_setpoints is not None and num > 1:
                     raise RuntimeError(
                         'Cannot have outer setpoints and multiple nreps')
-                record_symbol = self._sequencer.get_inner_setpoints().symbol
-                record_setpoints = self._sequencer.get_inner_setpoints().values
-                records_param = getattr(self._sequencer.repeat, record_symbol)
+                record_symbol = self.sequence.inner_setpoints.setpoints[0]
+                record_setpoints = self.sequence.inner_setpoints.setpoints[1]
                 settings['records'] = len(record_setpoints)
                 settings['record_setpoints'] = record_setpoints
                 settings['record_setpoint_name'] = record_symbol
-                settings['record_setpoint_label'] = records_param.label
-                settings['record_setpoint_unit'] = records_param.unit
-                if self._sequencer.get_outer_setpoints() is not None:
-                    buffer_symbol = self._sequencer.get_outer_setpoints().symbol
-                    buffer_setpoints = self._sequencer.get_outer_setpoints().values
-                    buffer_param = getattr(
-                        self._sequencer.repeat, buffer_symbol)
+                settings['record_setpoint_label'] = record_symbol  # TODO
+                settings['record_setpoint_unit'] = '' # TODO
+                if self.sequence.outer_setpoints.symbol() is not None:
+                    buffer_symbol = self.sequence.outer_setpoints.setpoints[0]
+                    buffer_setpoints = self.sequence.outer_setpoints.setpoints[1]
+                    settings['buffers'] = len(buffer_setpoints)
                     settings['buffer_setpoints'] = buffer_setpoints
                     settings['buffer_setpoint_name'] = buffer_symbol
-                    settings['buffer_setpoint_label'] = buffer_param.label
-                    settings['buffer_setpoint_unit'] = buffer_param.unit
-                    settings['buffers'] = len(buffer_setpoints)
+                    settings['buffer_setpoint_label'] = buffer_symbol # TODO
+                    settings['buffer_setpoint_unit'] = '' # TODO
                 else:
                     settings['buffers'] = num
                     settings['buffer_setpoints'] = np.arange(num)
                     settings['buffer_setpoint_name'] = 'repetitions'
                     settings['buffer_setpoint_label'] = 'Repetitions'
+                    settings['buffer_setpoint_unit'] = None
             else:
                 max_samples = self._alazar_controller.board_info['max_samples']
                 samples_per_rec = self._alazar_controller.samples_per_record()

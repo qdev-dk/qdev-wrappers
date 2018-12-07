@@ -1,4 +1,5 @@
-from qdev_wrappers.alazar_controllers.alazar_channel import AlazarChannel
+from qdev_wrappers.customised_instruments.alazar_tech.alazar_channel import AlazarChannel
+from typing import Dict, Union
 
 
 class AlazarChannel_ext(AlazarChannel):
@@ -21,7 +22,7 @@ class AlazarChannel_ext(AlazarChannel):
                          integrate_samples=integrate_samples)
 
     def update(self,
-               settings: settings: Dict[str, Union[int, float, str, bool]]):
+               settings: Dict[str, Union[int, float, str, bool]]):
         """
         Updates the setpoints, setpoint names and setpoint labels and
         the num_averages/num_reps of the channel.

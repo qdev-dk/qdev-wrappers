@@ -108,7 +108,7 @@ class SequenceChannel(InstrumentChannel):
         """
         if not self._up_to_date:
             self._parent._sequencer.change_sequence(
-                template_element=self._template_element_dict[self.template_element()],
+                self._template_element_dict[self.template_element()],
                 initial_element=self._first_element,
                 inner_setpoints=self.inner_setpoints.setpoints,
                 outer_setpoints=self.outer_setpoints.setpoints,
