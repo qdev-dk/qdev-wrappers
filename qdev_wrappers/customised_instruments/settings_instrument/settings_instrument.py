@@ -1,15 +1,19 @@
 from qcodes.instrument.base import Instrument
-from qcodes.instrument.channel import InstrumentChannel, ChannelList
-from qcodes.instrument.parameter import Parameter, MultiParameter
+from qcodes.instrument.channel import InstrumentChannel, ChannelList, MultiChannelInstrumentParameter
+from qcodes.instrument.parameter import Parameter, MultiParameter, ArrayParameter
+from qdev_wrappers.customised_instruments.settings_instrument.settings_parameters import SettingsMultiChannelParameter, SettingsMultiParameter, SettingsArrayParameter, SettingsParameter
 import yaml
 import qcodes as qc
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 scriptfolder = qc.config["user"]["scriptfolder"]
 default_settingsfile = qc.config["user"]["settingsfile"]
 
 
-class SettingsChannel(InstrumentChannel):
+class SettingsInstrumentChannel(InstrumentChannel):
     """
     An InstrumentChannel intended to belong to a SettingsInstrument
     which has a function for saving values of it's parameters to a dictionary
@@ -25,52 +29,6 @@ class SettingsChannel(InstrumentChannel):
         return dict_to_save
 
 
-class SettingsParameter(Parameter):
-    """
-    A Parameter which has the bells and whistles of:
-    - can be saved in a dictionary via '_to_saveable_value'
-    - can set another 'delegate' parameter to mirror it's value
-    """
-
-    def __init__(self, name,
-                 settings_instr,
-                 delegate_parameter,
-                 instrument=None,
-                 initial_value=None):
-        self._delegate_parameter = delegate_parameter
-        self._settings_instr = settings_instr
-        super().__init__(name=name,
-                         instrument=instrument,
-                         get_cmd=None)
-        if initial_value is None:
-            def to_saveable_value():
-                return {'parameter': self._delegate_parameter.full_name}
-
-            def set_delegate_param(*args):
-                raise RuntimeError(f'Trying to set unsettable parameter {self.name}')
-        else:
-            self._save_val(initial_value)
-
-            def to_saveable_value():
-                return {'value': self._latest['value'],
-                        'parameter': self._delegate_parameter.full_name}
-
-            def set_delegate_param(val):
-                val = self._latest['value'] if val is None else val
-                if self._delegate_parameter._latest['value'] != val:
-                    self._delegate_parameter(val)
-        self._to_saveable_value = to_saveable_value
-        self._set_delegate_parameter = set_delegate_param
-
-    def set_raw(self, val):
-        self._set_delegate_parameter(val)
-        self._save_val(val)
-        self._settings_instr._save_to_file()
-
-    def get_raw(self):
-        self._delegate_parameter.get()
-
-
 class SettingsInstrument(Instrument):
     """
     An Instrument which is meant to store the 'ideal' settings of various
@@ -80,6 +38,7 @@ class SettingsInstrument(Instrument):
     parameters. A file to save to is option otherwise the file to load
     will be overwritten every time a SettingsParameter is set.
     """
+    # TODO make instances accessible from class so that we dont need to pass them in
 
     def __init__(self, name,
                  station,
@@ -92,6 +51,25 @@ class SettingsInstrument(Instrument):
         super().__init__(name)
         params_dict = self._get_station_parameters()
         self._dic_to_parameters_dic(initial_settings, params_dict)
+
+    def set_up_parameter(self, name, initial_value,
+                         delegate_parameter, instrument):
+        if isinstance(delegate_parameter,
+                      (SettingsMultiChannelParameter,
+                       MultiChannelInstrumentParameter)):
+            chan_list = delegate_parameter._channels
+            param_to_add = SettingsMultiChannelParameter(
+                name, instrument, chan_list, delegate_parameter.name)
+        elif isinstance(delegate_parameter, MultiParameter):
+            param_to_add = SettingsMultiParameter(
+                name, instrument, delegate_parameter)
+        elif isinstance(delegate_parameter, ArrayParameter):
+            param_to_add = SettingsArrayParameter(
+                name, instrument, delegate_parameter)
+        else:
+            param_to_add = SettingsParameter(
+                name, self, instrument, delegate_parameter, initial_value)
+        instrument.parameters[name] = param_to_add
 
     def _dic_to_parameters_dic(self, settings_dic, params_dict, instr=None):
         """
@@ -106,14 +84,19 @@ class SettingsInstrument(Instrument):
                 param_name = k
                 param_value = v.get('value', None)
                 delegate_parameter_name = v['parameter']
-                delegate_parameter = params_dict[delegate_parameter_name]
-                instr.add_parameter(name=param_name,
-                                    settings_instr=self,
-                                    initial_value=param_value,
-                                    delegate_parameter=delegate_parameter,
-                                    parameter_class=SettingsParameter)
+                try:
+                    delegate_parameter = params_dict[delegate_parameter_name]
+                    self.set_up_parameter(
+                        name=param_name,
+                        initial_value=param_value,
+                        delegate_parameter=delegate_parameter,
+                        instrument=instr)
+                except KeyError:
+                    logger.warning(
+                        f'Could not find {delegate_parameter_name}'
+                        ' in station parameters to set up SettingsInstrument')
             else:
-                ch = SettingsChannel(instr, k)
+                ch = SettingsInstrumentChannel(instr, k)
                 instr.add_submodule(k, ch)
                 self._dic_to_parameters_dic(v, params_dict, instr=ch)
 
@@ -124,15 +107,26 @@ class SettingsInstrument(Instrument):
         """
         try:
             params_dict.update(
-                {param.full_name: param for param in instr.parameters.values()})
+                {param.full_name: param for
+                 param in instr.parameters.values()})
             for submodule in instr.submodules.values():
                 if isinstance(submodule, ChannelList):
+                    params_dict.update(
+                        self._get_channel_list_parameters(submodule))
                     for ch in submodule:
                         self._get_instr_parameters(ch, params_dict)
                 else:
                     self._get_instr_parameters(submodule, params_dict)
         except AttributeError:
             pass
+
+    def _get_channel_list_parameters(self, channellist):
+        try:
+            first_chan = channellist[0]
+            return {param.full_name: param for
+                    param in first_chan.parameters.values()}
+        except IndexError:
+            return {}
 
     def _get_station_parameters(self):
         """
