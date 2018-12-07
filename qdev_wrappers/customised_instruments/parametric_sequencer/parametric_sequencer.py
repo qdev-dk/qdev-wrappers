@@ -20,7 +20,7 @@ from qcodes.utils import validators
 
 from lomentum import Sequence, Element, in_context
 
-from qdev_wrappers.customised_instruments.awg_interface import AWGInterface
+from qdev_wrappers.customised_instruments.interfaces.awg_interface import AWGInterface
 
 log = logging.getLogger(__name__)
 
@@ -394,7 +394,7 @@ class ParametricSequencer(Instrument):
     def _upload_sequence(self):
         self._update_sequence()
         self.awg.upload(
-            self._sequence_object.forge(SR=self.awg.get_SR(),
+            self._sequence_object.forge(SR=self.awg.SR(),
                                         routes=self.routes,
                                         context=self._sequence_context))
         # uploading a sequence will clear the state of the current element
