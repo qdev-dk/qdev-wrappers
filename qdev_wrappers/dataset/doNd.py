@@ -1,5 +1,4 @@
 from typing import Callable, Sequence, Union, Tuple, List, Optional
-import os
 import time
 
 import numpy as np
@@ -8,9 +7,7 @@ import matplotlib.pyplot as plt
 
 from qcodes.dataset.measurements import Measurement
 from qcodes.instrument.parameter import _BaseParameter, ArrayParameter, MultiParameter
-from qcodes.dataset.data_set import load_by_id
-from qcodes.dataset.plotting import plot_by_id
-from qcodes import config
+from qdev_wrappers.dataset.plotting import save_image
 
 AxesTuple = Tuple[matplotlib.axes.Axes, matplotlib.colorbar.Colorbar]
 AxesTupleList = Tuple[List[matplotlib.axes.Axes],
@@ -248,52 +245,3 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
         raise KeyboardInterrupt
 
     return dataid, ax, cbs
-
-
-def save_image(dataid,filename=None,**kwargs) -> AxesTupleList:
-    """
-    Save the plots from dataid as pdf and png
-
-    Args:
-        datasaver: a measurement datasaver that contains a dataset to be saved
-            as plot.
-        filename: String added to the filename of saved images
-        kwargs: Arguments passed to plot_by_id
-
-    """
-
-    start = time.time()
-    dataset = load_by_id(dataid)
-    axes, cbs = plot_by_id(dataid,**kwargs)
-    stop = time.time()
-    print(f"plot by id took {stop-start}")
-
-    mainfolder = config.user.mainfolder
-    experiment_name = dataset.exp_name
-    sample_name = dataset.sample_name
-
-    storage_dir = os.path.join(mainfolder, experiment_name, sample_name)
-    os.makedirs(storage_dir, exist_ok=True)
-
-    png_dir = os.path.join(storage_dir, 'png')
-    pdf_dif = os.path.join(storage_dir, 'pdf')
-
-    os.makedirs(png_dir, exist_ok=True)
-    os.makedirs(pdf_dif, exist_ok=True)
-
-    save_pdf = True
-    save_png = True
-
-    if filename is not None:
-        f_name = f'{dataid}_{filename}'
-    else:
-        f_name = f'{dataid}'
-
-    for i, ax in enumerate(axes):
-        if save_pdf:
-            full_path = os.path.join(pdf_dif, f'{f_name}_{i}.pdf')
-            ax.figure.savefig(full_path, dpi=500)
-        if save_png:
-            full_path = os.path.join(png_dir, f'{f_name}.png')
-            ax.figure.savefig(full_path, dpi=500)
-    return axes, cbs
