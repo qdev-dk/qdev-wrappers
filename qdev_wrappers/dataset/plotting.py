@@ -262,15 +262,6 @@ def plot_by_id(run_id: int,
 
             _set_data_axes_labels(ax, data, colorbar)
 
-            if sub_avg_column:
-                c_label_list = colorbar.get_label().split(' ')
-                c_label_list.insert(-1,'- column mean')
-                colorbar.set_label(' '.join(c_label_list))
-            if sub_avg_row:
-                c_label_list = colorbar.get_label().split(' ')
-                c_label_list.insert(-1,'- row mean')
-                colorbar.set_label(' '.join(c_label_list))
-
             if rescale_axes:
                 _rescale_ticks_and_units(ax, data, colorbar)
 
