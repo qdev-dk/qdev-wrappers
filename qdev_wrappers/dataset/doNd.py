@@ -35,7 +35,6 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
         The run_id of the DataSet created
     """
     meas = Measurement()
-    output = []
 
     for parameter in param_meas:
         if isinstance(parameter, ArrayParameter) or isinstance(parameter, MultiParameter):
