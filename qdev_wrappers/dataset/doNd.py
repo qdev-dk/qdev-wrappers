@@ -94,6 +94,7 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
         The run_id of the DataSet created
     """
     meas = Measurement()
+    meas.write_period = 1 # 1 second refresh time for liveplotting
     meas.register_parameter(
         param_set)  # register the first independent parameter
     param_set.post_delay = delay
@@ -190,6 +191,7 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     """
 
     meas = Measurement()
+    meas.write_period = 1 # 1 second refresh time for liveplotting
     meas.register_parameter(param_set1)
     param_set1.post_delay = delay1
     meas.register_parameter(param_set2)
