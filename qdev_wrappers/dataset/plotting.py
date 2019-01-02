@@ -328,7 +328,7 @@ def save_image(dataid,filename=None,**kwargs) -> AxesTupleList:
             full_path = os.path.join(pdf_dif, f'{f_name}_{i}.pdf')
             ax.figure.savefig(full_path, dpi=500)
         if save_png:
-            full_path = os.path.join(png_dir, f'{f_name}.png')
+            full_path = os.path.join(png_dir, f'{f_name}_{i}.png')
             ax.figure.savefig(full_path, dpi=500)
     return axes, cbs
 
