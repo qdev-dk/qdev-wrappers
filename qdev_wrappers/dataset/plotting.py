@@ -326,9 +326,11 @@ def save_image(dataid,filename=None,**kwargs) -> AxesTupleList:
     for i, ax in enumerate(axes):
         if save_pdf:
             full_path = os.path.join(pdf_dif, f'{f_name}_{i}.pdf')
+            ax.figure.tight_layout(pad=3)
             ax.figure.savefig(full_path, dpi=500)
         if save_png:
             full_path = os.path.join(png_dir, f'{f_name}_{i}.png')
+            ax.figure.tight_layout(pad=3)
             ax.figure.savefig(full_path, dpi=500)
     return axes, cbs
 
