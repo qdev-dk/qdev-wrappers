@@ -37,7 +37,7 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
     meas = Measurement()
 
     for parameter in param_meas:
-        if isinstance(parameter, ArrayParameter) or isinstance(parameter, MultiParameter):
+        if isinstance(parameter, (ArrayParameter, MultiParameter)):
             meas.register_parameter(parameter, paramtype='array')
         elif isinstance(parameter, _BaseParameter):
             meas.register_parameter(parameter)
@@ -112,7 +112,7 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
     # and set parameters. For anything more complicated this should be
     # reimplemented from scratch
     for parameter in param_meas:
-        if isinstance(parameter, ArrayParameter) or isinstance(parameter, MultiParameter):
+        if isinstance(parameter, (ArrayParameter, MultiParameter)):
             meas.register_parameter(parameter, setpoints=(param_set,),
                                     paramtype='array')
         elif isinstance(parameter, _BaseParameter):
@@ -207,7 +207,7 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
         meas.add_after_run(action, ())
 
     for parameter in param_meas:
-        if isinstance(parameter, ArrayParameter) or isinstance(parameter, MultiParameter):
+        if isinstance(parameter, (ArrayParameter, MultiParameter)):
             meas.register_parameter(parameter, setpoints=(param_set1, param_set2),
                                     paramtype='array')
         elif isinstance(parameter, _BaseParameter):
