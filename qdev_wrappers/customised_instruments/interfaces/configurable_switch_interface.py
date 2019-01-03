@@ -16,7 +16,7 @@ class _ConfigurableSwitchInterface(Instrument):
     which would result in the switch parameter 'configuration' having vals
     'frequency_domain' and 'time_domain' and setting one of these would
     set the 'a' and 'b' parameters of the switch to the corresponding values
-    as implemented in the subclasses _ConfigurableSwitchBase.
+    as implemented in the subclasses _ConfigurableSwitchInterface.
     """
     def __init__(self, name, switch_configuration):
         switch_params = set(next(iter(switch_configuration.values())).keys())
