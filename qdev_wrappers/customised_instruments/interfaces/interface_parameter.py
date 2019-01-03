@@ -31,5 +31,5 @@ class InterfaceParameter(Parameter):
             raise RuntimeError(f'Parmeter {self.name} not settable')
         elif self.set_fn is not None:
             self.set_fn(val)
-        elif self.source is not None:
+        if self.source is not None:
             self.source.set(val)
