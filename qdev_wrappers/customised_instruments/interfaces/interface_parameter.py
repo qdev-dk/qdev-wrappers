@@ -8,8 +8,9 @@ class InterfaceParameter(Parameter):
         Parameter which by default behaves like ManualParameter but can
         be easily configured to get/set a source parameter or run a
         function when get/set is called. The functions if specified
-        have priority over the source. If a function is False
-        it means the parameter cannot be get/set.
+        have priority over the source. For setting if function and source
+        are specified the function will be executed and then the source set.
+        If a function is False it means the parameter cannot be get/set.
         """
         self.source = source
         self.set_fn = set_fn
