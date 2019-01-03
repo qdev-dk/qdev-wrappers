@@ -4,7 +4,7 @@ from qcodes.utils import validators as vals
 from qdev_wrappers.customised_instruments.interfaces.interface_parameters import InterfaceParameter
 
 
-class ConfigurableSwitchInterface(Instrument):
+class _ConfigurableSwitchInterface(Instrument):
     """
     Instrument which given stores a configuration dictionary and has a
     parameter called 'configuration' which will run _set_configuration
@@ -45,7 +45,7 @@ class ConfigurableSwitchInterface(Instrument):
     def _set_switch_param(self, paramname, val):
         self.configuration._save_val(None)
 
-class ConfigurableSwitch(_ConfigurableSwitchBase):
+class RealConfigurableSwitchInterface(_ConfigurableSwitchInterface):
     """
     'Real' instrument implementation which sets the configuration on the
     switch instrument provided
@@ -64,4 +64,4 @@ Simulated instrument implementation which just chills and
 doesnt complain so that the value of the 'configuration' parameter
 is stored but setting it doesnt actually do anything.
 """
-SimulatedConfigurableSwitch = ConfigurableSwitchInterface
+SimulatedConfigurableSwitch = _ConfigurableSwitchInterface
