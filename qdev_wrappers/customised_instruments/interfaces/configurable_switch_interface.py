@@ -1,7 +1,7 @@
 from functools import partial
 from qcodes import Instrument
 from qcodes.utils import validators as vals
-from qdev_wrappers.customised_instruments.interfaces.interface_parameters import InterfaceParameter
+from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
 
 
 class _ConfigurableSwitchInterface(Instrument):
@@ -24,7 +24,7 @@ class _ConfigurableSwitchInterface(Instrument):
             if set(config.keys()) != switch_params:
                 raise RuntimeError(
                     'All configurations must have same keys: '
-                    '{} does not match {}',format(config.keys, switch_params))
+                    '{} does not match {}'.format(set(config.keys()), switch_params))
         super().__init__(name)
         self._switch_configuration = switch_configuration
         for param in switch_params:
@@ -40,7 +40,7 @@ class _ConfigurableSwitchInterface(Instrument):
     def _set_configuration(self, val):
         config = self._switch_configuration.get(val, {})
         for k, v in config.items():
-            self._set_switch_param(k, v)
+            self.parameters[k](v)
 
     def _set_switch_param(self, paramname, val):
         self.configuration._save_val(None)
