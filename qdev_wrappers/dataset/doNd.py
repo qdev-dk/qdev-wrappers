@@ -35,21 +35,26 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
         The run_id of the DataSet created
     """
     meas = Measurement()
+    output = []
 
     for parameter in param_meas:
         if isinstance(parameter, (ArrayParameter, MultiParameter)):
             meas.register_parameter(parameter, paramtype='array')
+            output.append([parameter, None])
         elif isinstance(parameter, _BaseParameter):
             meas.register_parameter(parameter)
-
+            output.append([parameter, None])
+        
     with meas.run() as datasaver:
 
-        for i, parameter in enumerate(param_meas):
+        i = 0
+        for parameter in param_meas:
             if isinstance(parameter, _BaseParameter):
-                output = [[parameter, parameter.get()]]
-                datasaver.add_result(*output)
+                output[i][1] = parameter.get()
+                i += 1 
             elif callable(parameter):
                 parameter()
+        datasaver.add_result(*output)
     dataid = datasaver.run_id
 
     if do_plot is True:
@@ -111,25 +116,30 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
     # do1D enforces a simple relationship between measured parameters
     # and set parameters. For anything more complicated this should be
     # reimplemented from scratch
+    output = []
     for parameter in param_meas:
         if isinstance(parameter, (ArrayParameter, MultiParameter)):
             meas.register_parameter(parameter, setpoints=(param_set,),
                                     paramtype='array')
+            output.append([parameter, None])
         elif isinstance(parameter, _BaseParameter):
             meas.register_parameter(parameter,setpoints=(param_set,))
+            output.append([parameter, None])
 
     try:
         with meas.run() as datasaver:
 
             for set_point in np.linspace(start, stop, num_points):
                 param_set.set(set_point)
+                i = 0
                 for parameter in param_meas:
                     if isinstance(parameter, _BaseParameter):
-                        output = [[parameter, parameter.get()]]
-                        datasaver.add_result((param_set, set_point),
-                                      *output)
+                        output[i][1] = parameter.get()
+                        i += 1
                     elif callable(parameter):
                         parameter()
+                datasaver.add_result((param_set, set_point),
+                                      *output)
     except KeyboardInterrupt:
         interrupted = True
 
@@ -206,12 +216,15 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     for action in exit_actions:
         meas.add_after_run(action, ())
 
+    output = []
     for parameter in param_meas:
         if isinstance(parameter, (ArrayParameter, MultiParameter)):
             meas.register_parameter(parameter, setpoints=(param_set1, param_set2),
                                     paramtype='array')
+            output.append([parameter, None])
         elif isinstance(parameter, _BaseParameter):
             meas.register_parameter(parameter,setpoints=(param_set1, param_set2))
+            output.append([parameter, None])
 
     try:
         with meas.run() as datasaver:
@@ -222,14 +235,16 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
                     action()
                 for set_point2 in np.linspace(start2, stop2, num_points2):
                     param_set2.set(set_point2)
+                    i = 0
                     for parameter in param_meas:
                         if isinstance(parameter, _BaseParameter):
-                            output = [[parameter, parameter.get()]]
-                            datasaver.add_result((param_set1, set_point1),
-                                                 (param_set2, set_point2),
-                                                 *output)
+                            output[i][1] = parameter.get()
+                            i += 1
                         elif callable(parameter):
                             parameter()
+                    datasaver.add_result((param_set1, set_point1),
+                                            (param_set2, set_point2),
+                                            *output)
                 for action in after_inner_actions:
                     action()
     except KeyboardInterrupt:
