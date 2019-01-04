@@ -4,10 +4,20 @@ import os
 from qdev_wrappers.customised_instruments.interfaces.parameters import InterfaceParameter
 
 
-# TODO: validators, docstrings
-
-
 class HeterodyneSource(Instrument):
+    """
+    Virtual instrument that represents a heterodyne source outputting at
+    two frequencies with one intended for mixing up and the other for mixing
+    down. These frequencies are separated by a 'demodulation_frequncy' which
+    can be tuned in some cases (fixed to 0 for single miscorwave source
+    implementation). The status of both tones and the powers and frequency of
+    the mixing up tone can be adjusted. It can be made up
+    either of a single microwave source with sidebanding and dual output or
+    by two microwave sources. Modes are for extended use where one source
+    might be sidebanded, modulated, switched off etc and options depend
+    on the implementation.
+    """
+
     def __init__(self, name):
         super().__init__(name)
         self.add_parameter(name='frequency',
@@ -35,6 +45,13 @@ class HeterodyneSource(Instrument):
 
 
 class OneSourceHeterodyneSource(HeterodyneSource):
+    """
+    Implementation using one microwave source which has two outputs
+    at the same frequency. As a result the localos_power cannot be set
+    and depends on the power and the demodulation is fixed at 0.
+    Available modes are 'basic', 'sidebanded', and 'sideband_modulated'.
+    """
+
     def __init__(self, name, microwave_source_interface):
         self._microwave_source_interface = microwave_source_interface
         super().__init__(name)
@@ -46,7 +63,7 @@ class OneSourceHeterodyneSource(HeterodyneSource):
         self.localos_power._get_fn = microwave_source_interface.power.get  # TODO
         self.status._source = microwave_source_interface.status
         self.mode._set_fn = self._set_mode
-        self.mode.vals = vals.Enum('basic', 'sideband', 'sideband_modulated')
+        self.mode.vals = vals.Enum('basic', 'sidebanded', 'sideband_modulated')
         mode_docstring = ("Sets the configuration of the carrier source: /n "
                           "basic - IQ off, pulsemod off /n sidebanded - "
                           "IQ on, pulsemod off /n sidebanded_modulated - "
@@ -67,6 +84,12 @@ class OneSourceHeterodyneSource(HeterodyneSource):
 
 
 class TwoSourceHeterodyneSource(HeterodyneSource):
+    """
+    Implementation using two microwave sources.
+    Available modes are 'basic', 'sidebanded_basic', 'sidebanded'
+    and 'sideband_modulated'.
+    """
+
     def __init__(self, name, carrier_source_interface, localos_source_interface):
         self._carrier_source_interface = carrier_source_interface
         self._localos_source_interface = localos_source_interface
@@ -81,7 +104,7 @@ class TwoSourceHeterodyneSource(HeterodyneSource):
         self.status._get_fn = carrier_source_interface.status.get
         self.mode._set_fn = self._set_mode
         self.mode.vals = vals.Enum(
-            'basic', 'sidebanded_basic', 'sideband', 'sideband_modulated')
+            'basic', 'sidebanded_basic', 'sidebanded', 'sideband_modulated')
         mode_docstring = ("Sets the configuration of the carrier and "
                           "localos sources: /n basic - localos off, IQ off,"
                           " pulsemod off /n sidebanded_basic - "
@@ -133,5 +156,8 @@ class TwoSourceHeterodyneSource(HeterodyneSource):
 
 
 class SimulatedHeterodyneSource(HeterodyneSource):
+    """
+    Simulated version.
+    """
     def __init__(name):
         super().__init__(name)
