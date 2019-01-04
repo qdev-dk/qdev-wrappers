@@ -1,10 +1,10 @@
 from qcodes.instrument.base import Instrument
 from qcodes.utils import validators as vals
 import os
-from qdev_wrappers.customised_instruments.interfaces.parameters import InterfaceParameter
+from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
 
 
-class HeterodyneSource(Instrument):
+class _HeterodyneSource(Instrument):
     """
     Virtual instrument that represents a heterodyne source outputting at
     two frequencies with one intended for mixing up and the other for mixing
@@ -41,10 +41,11 @@ class HeterodyneSource(Instrument):
                            parameter_class=InterfaceParameter)
         self.add_parameter(name='mode',
                            label='Mode',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=InterfaceParameter,
+                           vals=vals.Strings())
 
 
-class OneSourceHeterodyneSource(HeterodyneSource):
+class OneSourceHeterodyneSource(_HeterodyneSource):
     """
     Implementation using one microwave source which has two outputs
     at the same frequency. As a result the localos_power cannot be set
@@ -83,7 +84,7 @@ class OneSourceHeterodyneSource(HeterodyneSource):
             self._microwave_source_interface.pulsemod_state(1)
 
 
-class TwoSourceHeterodyneSource(HeterodyneSource):
+class TwoSourceHeterodyneSource(_HeterodyneSource):
     """
     Implementation using two microwave sources.
     Available modes are 'basic', 'sidebanded_basic', 'sidebanded'
@@ -155,9 +156,7 @@ class TwoSourceHeterodyneSource(HeterodyneSource):
             self._carrier_source_interface.pulsemod_state(1)
 
 
-class SimulatedHeterodyneSource(HeterodyneSource):
-    """
-    Simulated version.
-    """
-    def __init__(name):
-        super().__init__(name)
+"""
+Simulated version.
+"""
+SimulatedHeterodyneSource = _HeterodyneSource
