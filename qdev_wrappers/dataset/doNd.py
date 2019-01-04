@@ -4,6 +4,7 @@ import time
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import progressbar
 
 from qcodes.dataset.measurements import Measurement
 from qcodes.instrument.parameter import _BaseParameter, ArrayParameter, MultiParameter
@@ -99,16 +100,18 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
         The run_id of the DataSet created
     """
     meas = Measurement()
-    meas.write_period = 1 # 1 second refresh time for liveplotting
+    refresh_time = 1 # 1 second refresh time for liveplotting and progressbar
+    meas.write_period = refresh_time
     meas.register_parameter(
         param_set)  # register the first independent parameter
     param_set.post_delay = delay
     interrupted = False
 
+    progress_bar = progressbar.ProgressBar(max_value=num_points)
+    points_taken = 0
+    time.sleep(0.1)
+
     for action in enter_actions:
-        # this omits the posibility of passing
-        # argument to enter and exit actions.
-        # Do we want that?
         meas.add_before_run(action, ())
     for action in exit_actions:
         meas.add_after_run(action, ())
@@ -128,7 +131,7 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
 
     try:
         with meas.run() as datasaver:
-
+            last_time = time.time()
             for set_point in np.linspace(start, stop, num_points):
                 param_set.set(set_point)
                 i = 0
@@ -140,6 +143,13 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
                         parameter()
                 datasaver.add_result((param_set, set_point),
                                       *output)
+
+                points_taken += 1
+                current_time = time.time()
+                if current_time - last_time >= refresh_time:
+                    last_time = current_time
+                    progress_bar.update(points_taken)
+            progress_bar.update(points_taken)
     except KeyboardInterrupt:
         interrupted = True
 
@@ -201,18 +211,20 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     """
 
     meas = Measurement()
-    meas.write_period = 1 # 1 second refresh time for liveplotting
+    refresh_time = 1 # 1 second refresh time for liveplotting and progressbar
+    meas.write_period = refresh_time
     meas.register_parameter(param_set1)
     param_set1.post_delay = delay1
     meas.register_parameter(param_set2)
     param_set1.post_delay = delay2
     interrupted = False
-    for action in enter_actions:
-        # this omits the possibility of passing
-        # argument to enter and exit actions.
-        # Do we want that?
-        meas.add_before_run(action, ())
 
+    progress_bar = progressbar.ProgressBar(max_value=num_points1 * num_points2)
+    points_taken = 0
+    time.sleep(0.1)
+
+    for action in enter_actions:
+        meas.add_before_run(action, ())
     for action in exit_actions:
         meas.add_after_run(action, ())
 
@@ -228,7 +240,7 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
 
     try:
         with meas.run() as datasaver:
-
+            last_time = time.time()
             for set_point1 in np.linspace(start1, stop1, num_points1):
                 param_set1.set(set_point1)
                 for action in before_inner_actions:
@@ -245,8 +257,16 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
                     datasaver.add_result((param_set1, set_point1),
                                             (param_set2, set_point2),
                                             *output)
+
+                    points_taken += 1
+                    current_time = time.time()
+                    if current_time - last_time >= refresh_time:
+                        last_time = current_time
+                        progress_bar.update(points_taken)
+
                 for action in after_inner_actions:
                     action()
+            progress_bar.update(points_taken)
     except KeyboardInterrupt:
         interrupted = True
 
