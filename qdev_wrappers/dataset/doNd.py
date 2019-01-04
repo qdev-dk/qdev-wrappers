@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from qcodes.dataset.measurements import Measurement
 from qcodes.instrument.parameter import _BaseParameter, ArrayParameter, MultiParameter
-from qdev_wrappers.dataset.plotting import save_image
+from qdev_wrappers.dataset.plotting_tools import save_image
 
 AxesTuple = Tuple[matplotlib.axes.Axes, matplotlib.colorbar.Colorbar]
 AxesTupleList = Tuple[List[matplotlib.axes.Axes],
