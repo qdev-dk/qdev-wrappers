@@ -1,5 +1,5 @@
 from qcodes.instrument.base import Instrument
-from qdev_wrappers.customised_instruments.interfaces.interface_parameters import InterfaceParameter
+from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
 
 
 class MicrowaveSourceInterface(Instrument):
