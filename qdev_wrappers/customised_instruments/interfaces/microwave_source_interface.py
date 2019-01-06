@@ -1,8 +1,10 @@
 from qcodes.instrument.base import Instrument
 from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
 
+# TODO: docstrings
 
-class MicrowaveSourceInterface(Instrument):
+
+class _MicrowaveSourceInterface(Instrument):
     """
     Interface for a microwave source with basic set of parameters. This
     is probably too tied to the SGS100A and could be stripped down a bit,
@@ -30,7 +32,9 @@ class MicrowaveSourceInterface(Instrument):
                            parameter_class=InterfaceParameter)
 
 
-class SGS100AMicrowaveSourceInterface(MicrowaveSourceInterface):
+class SGS100AMicrowaveSourceInterface(_MicrowaveSourceInterface):
+    """
+    """
     def __init__(self, name, microwave_source):
         super().__init__(name)
         self.frequency.source = self.microwave_source.frequency
@@ -39,7 +43,7 @@ class SGS100AMicrowaveSourceInterface(MicrowaveSourceInterface):
         self.IQ_state.source = self.microwave_source.IQ_state
         self.pulsemod_state.source = self.microwave_source.pulsemod_state
 
-
-class SimulatedMicrowaveSourceInterface(MicrowaveSourceInterface):
-    def __init__(self, name):
-        super().__init__(name)
+"""
+Simulated version
+"""
+SimulatedMicrowaveSourceInterface = _MicrowaveSourceInterface
