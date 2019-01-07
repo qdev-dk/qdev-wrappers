@@ -1,7 +1,7 @@
 from qcodes.instrument.base import Instrument
 from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
-
-# TODO: docstrings
+from qcodes.utils.helpers import create_on_off_val_mapping
+import qcodes.utils.validators as vals
 
 
 class _MicrowaveSourceInterface(Instrument):
@@ -34,6 +34,7 @@ class _MicrowaveSourceInterface(Instrument):
 
 class SGS100AMicrowaveSourceInterface(_MicrowaveSourceInterface):
     """
+    Interface with real SGS100A microwave source.
     """
     def __init__(self, name, microwave_source):
         super().__init__(name)
@@ -43,7 +44,21 @@ class SGS100AMicrowaveSourceInterface(_MicrowaveSourceInterface):
         self.IQ_state.source = self.microwave_source.IQ_state
         self.pulsemod_state.source = self.microwave_source.pulsemod_state
 
-"""
-Simulated version
-"""
-SimulatedMicrowaveSourceInterface = _MicrowaveSourceInterface
+
+class SimulatedMicrowaveSourceInterface(_MicrowaveSourceInterface):
+    """
+    Simulated interface version of the microwave source.
+    """
+    def __init__(self, name):
+        super().__init__(name)
+        valmappingdict = create_on_off_val_mapping(on_val=1, off_val=0)
+        self.status.vals = vals.Enum(*valmappingdict.keys())
+        self.IQ_state.vals = vals.Enum(*valmappingdict.keys())
+        self.pulsemod_state.vals = vals.Enum(*valmappingdict.keys())
+        self.status.val_mapping = valmappingdict
+        self.IQ_state.val_mapping = valmappingdict
+        self.pulsemod_state.val_mapping = valmappingdict
+        inversevalmappingdict = {v: k for k, v in valmappingdict.items()}
+        self.status.inverse_val_mapping = inversevalmappingdict
+        self.IQ_state.inverse_val_mapping = inversevalmappingdict
+        self.pulsemod_state.inverse_val_mapping = inversevalmappingdict
