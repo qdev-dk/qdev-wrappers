@@ -3,7 +3,7 @@ from qcodes.utils import validators as vals
 from qcodes.instrument.base import Instrument
 from functools import partial
 import os
-from qdev_wrappers.customised_instruments.interfaces.parameters import InterfaceParameter
+from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
 from qcodes.instrument.parameter import ArrayParameter
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter, DelegateArrayParameter
 
@@ -32,7 +32,7 @@ class SimulatedTraceParameter(ArrayParameter):
         return np.random.random(npts)
 
 
-class SpectrumAnalyserInterface(Instrument):
+class _SpectrumAnalyserInterface(Instrument):
     """
     Interface base class for the spectrum analyser which by default
     has only manual parameters and no parameter for measurment.
@@ -71,7 +71,7 @@ class SpectrumAnalyserInterface(Instrument):
         raise NotImplementedError
 
 
-class USB_SA124BSpectrumAnalyserInterface(SpectrumAnalyserInterface):
+class USB_SA124BSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
     """
     'Real' instrument implementation of the spectrum analyser interface.
     Main advantage over the instrument itself is that it updates the trace
@@ -151,7 +151,7 @@ class USB_SA124BSpectrumAnalyserInterface(SpectrumAnalyserInterface):
             self._spectrum_analyser.configure()
 
 
-class SimulatedSpectrumAnalyserInterface(SpectrumAnalyserInterface):
+class SimulatedSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
     """
     Simulated instrument implementation of the spectrum analyser interface.
     The 'trace' and 'single' parameters return a random trace or point.
