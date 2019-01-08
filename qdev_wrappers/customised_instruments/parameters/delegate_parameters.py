@@ -1,20 +1,46 @@
 from qcodes.instrument.parameter import Parameter, ArrayParameter, MultiParameter
-
+from qcodes.instrument.base import Instrument
+from qcodes.instrument.chann import Instrument
 
 class DelegateParameter(Parameter):
-    def __init__(self, name: str, source: Parameter, *args, **kwargs):
+    """
+    Parameter which by default behaves like ManualParameter but can
+    be easily configured to get/set a source parameter or run a
+    function when get/set is called. The functions if specified
+    have priority over the source. For setting if function and source
+    are specified the function will be executed and then the source set.
+    If a function is False it means the parameter cannot be get/set.
+    """
+    def __init__(self, name: str, source: Parameter=None, 
+        get_fn=None, set_fn=None, *args, **kwargs):
         self.source = source
+        self.set_fn = set_fn
+        self.get_fn = get_fn
         super().__init__(name=name, *args, **kwargs)
 
     def get_raw(self, *args, **kwargs):
-        return self.source.get(*args, **kwargs)
+        if self.get_fn is False:
+            raise RuntimeError(f'Parmeter {self.name} not gettable')
+        elif self.get_fn is not None:
+            return self._get_fn(*args, **kwargs)
+        elif self.source is not None:
+            return self.source.get(*args, **kwargs)
+        else:
+            return self._latest['value']
 
     def set_raw(self, *args, **kwargs):
-        self.source(*args, **kwargs)
+        if self.set_fn is False:
+            raise RuntimeError(f'Parmeter {self.name} not settable')
+        elif self.set_fn is not None:
+            self.set_fn(*args, **kwargs)
+        if self.source is not None:
+            self.source.set(*args, **kwargs)
 
 
 class DelegateArrayParameter(ArrayParameter):
-    def __init__(self, name, source, **kwargs):
+    """
+    """
+    def __init__(self, name: str, source: Parameter, **kwargs):
         label = kwargs.pop('label') if 'label' in kwargs else source.label
         unit = kwargs.pop('unit') if 'unit' in kwargs else source.unit
         self.source = source
@@ -28,7 +54,7 @@ class DelegateArrayParameter(ArrayParameter):
                          setpoint_units=source.setpoint_units,
                          **kwargs)
 
-    def get_raw(self):
+    def get_raw(self, *args, **kwargs):
         self.shape = self.source.shape
         self.label = self.source.label
         self.unit = self.source.unit
@@ -36,11 +62,11 @@ class DelegateArrayParameter(ArrayParameter):
         self.setpoint_names = self.source.setpoint_names
         self.setpoint_labels = self.source.setpoint_labels
         self.setpoint_units = self.source.setpoint_units
-        return self.source.get()
+        return self.source.get(*args, **kwargs)
 
 
 class DelegateMultiParameter(MultiParameter):
-    def __init__(self, name, source, **kwargs):
+    def __init__(self, name: str, source: Parameter, **kwargs):
         self.source = source
         names = kwargs.pop('names') if 'names' in kwargs else source.names
         labels = kwargs.pop('labels') if 'labels' in kwargs else source.labels
@@ -56,7 +82,7 @@ class DelegateMultiParameter(MultiParameter):
                          setpoint_units=source.setpoint_units,
                          **kwargs)
 
-    def get_raw(self):
+    def get_raw(self, *args, **kwargs):
         self.names = self.source.names
         self.shapes = self.source.shapes
         self.labels = self.source.labels
@@ -65,11 +91,11 @@ class DelegateMultiParameter(MultiParameter):
         self.setpoint_names = self.source.setpoint_names
         self.setpoint_labels = self.source.setpoint_labels
         self.setpoint_units = self.source.setpoint_units
-        return self.source.get()
+        return self.source.get(*args, **kwargs)
 
 
 class DelegateMultiChannelParameter(MultiParameter):
-    def __init__(self, name, instrument, channellist, paramname, **kwargs):
+    def __init__(self, name: str, instrument: Instrument, channellist, paramname, **kwargs):
         self._full_name = instrument.name + '_Multi_' + paramname
         self._param_name = paramname
         self._channels = channellist
