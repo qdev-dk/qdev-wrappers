@@ -40,29 +40,50 @@ class DelegateParameter(Parameter):
 class DelegateArrayParameter(ArrayParameter):
     """
     """
-    def __init__(self, name: str, source: Parameter, **kwargs):
-        label = kwargs.pop('label') if 'label' in kwargs else source.label
-        unit = kwargs.pop('unit') if 'unit' in kwargs else source.unit
+    def __init__(self, name: str, source: Parameter=None, 
+        get_fn=None, set_fn=None, **kwargs):
         self.source = source
-        super().__init__(name=name,
-                         shape=source.shape,
-                         label=label,
-                         unit=unit,
-                         setpoints=source.setpoints,
-                         setpoint_names=source.setpoint_names,
-                         setpoint_labels=source.setpoint_labels,
-                         setpoint_units=source.setpoint_units,
-                         **kwargs)
+        self.set_fn = set_fn
+        self.get_fn = get_fn
+        if source is not None:
+            super().__init__(name=name,
+                             shape=source.shape,
+                             label=source.label,
+                             unit=source.unit,
+                             setpoints=source.setpoints,
+                             setpoint_names=source.setpoint_names,
+                             setpoint_labels=source.setpoint_labels,
+                             setpoint_units=source.setpoint_units,
+                             **kwargs)
+        else:
+            super().__init__(name=name,
+                             shape=source.shape,
+                             **kwargs)
+
 
     def get_raw(self, *args, **kwargs):
-        self.shape = self.source.shape
-        self.label = self.source.label
-        self.unit = self.source.unit
-        self.sepoints = self.source.setpoints
-        self.setpoint_names = self.source.setpoint_names
-        self.setpoint_labels = self.source.setpoint_labels
-        self.setpoint_units = self.source.setpoint_units
-        return self.source.get(*args, **kwargs)
+        if self.get_fn is False:
+            raise RuntimeError(f'Parmeter {self.name} not gettable')
+        elif self.get_fn is not None:
+            return self._get_fn(*args, **kwargs)
+        elif self.source is not None:
+            self.label = self.source.label
+            self.unit = self.source.unit
+            self.sepoints = self.source.setpoints
+            self.setpoint_names = self.source.setpoint_names
+            self.setpoint_labels = self.source.setpoint_labels
+            self.setpoint_units = self.source.setpoint_units
+            return self.source.get(*args, **kwargs)
+        else:
+            return np.random.random(self.shape)
+
+    def set_raw(self, *args, **kwargs):
+        if self.set_fn is False:
+            raise RuntimeError(f'Parmeter {self.name} not settable')
+        elif self.set_fn is not None:
+            self.set_fn(*args, **kwargs)
+        if self.source is not None:
+            self.source.set(*args, **kwargs)
 
 
 class DelegateMultiParameter(MultiParameter):
@@ -87,7 +108,7 @@ class DelegateMultiParameter(MultiParameter):
         self.shapes = self.source.shapes
         self.labels = self.source.labels
         self.units = self.source.units
-        self.sepoints = self.source.setpoints
+        self.setpoints = self.source.setpoints
         self.setpoint_names = self.source.setpoint_names
         self.setpoint_labels = self.source.setpoint_labels
         self.setpoint_units = self.source.setpoint_units
