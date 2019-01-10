@@ -153,9 +153,9 @@ class DelegateMultiParameter(MultiParameter):
             self.setpoint_units = self.source.setpoint_units
             return self.source.get(**kwargs)
         elif isinstance(self.get_fn, Callable):
-            return self._get_fn(**kwargs)
+            return self.get_fn(**kwargs)
         else:
-            return (np.random.random(sh) for sh in self.shapes)
+            return tuple(np.random.random(sh) for sh in self.shapes)
 
 
 class DelegateMultiChannelParameter(MultiParameter):
@@ -166,7 +166,6 @@ class DelegateMultiChannelParameter(MultiParameter):
 
     Args:
         name (str): local namee of the parameter
-        instrument (Instrument): the instrument to which the channels belong.
         get_fn (Bool, None, Callable):
             - If False then getting the parameter is prohibited.
             - Otherwise returns the results of the
@@ -174,21 +173,20 @@ class DelegateMultiChannelParameter(MultiParameter):
     """
     def __init__(self,
                  name: str,
-                 instrument: Instrument,
                  channellist: ChannelList,
                  paramname: str,
                  get_fn: Optional[bool]=None,
                  **kwargs):
         self.get_fn = get_fn
-        self._full_name = instrument.name + '_Multi_' + paramname
+        self._full_name = channellist._parent.name + '_Multi_' + paramname
         self._param_name = paramname
         self._channels = channellist
-        shapes = kwargs.pop('shapes', ((1,) for _ in self._channels))
-        names = kwargs.pop('names', (ch.name for ch in self._channels))
+        shapes = kwargs.pop('shapes', tuple((1,) for _ in self._channels))
+        names = kwargs.pop('names', tuple(ch.name for ch in self._channels))
         super().__init__(name=name,
                          shapes=shapes,
                          names=names,
-                         instrument=instrument)
+                         instrument=channellist._parent)
 
     def get_raw(self, **kwargs):
         if self.get_fn is False:
