@@ -1,7 +1,7 @@
 from functools import partial
 from qcodes import Instrument
 from qcodes.utils import validators as vals
-from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 
 
 class _ConfigurableSwitchInterface(Instrument):
@@ -30,7 +30,7 @@ class _ConfigurableSwitchInterface(Instrument):
         for param in switch_params:
             self.add_parameter(name=param,
                                set_fn=partial(self._set_switch_param, param),
-                               parameter_class=InterfaceParameter)
+                               parameter_class=DelegateParameter)
         self.add_parameter(
             name='configuration',
             set_cmd=self._set_configuration,
