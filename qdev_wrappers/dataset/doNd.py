@@ -4,7 +4,12 @@ import time
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import progressbar
+try:
+    import progressbar
+except ImportError:
+    raise ImportError('doNd wrappers requires module Progressbar2. '
+                        'Install by activating qcodes environment and '
+                        'typing <pip install progressbar2')
 
 from qcodes.dataset.measurements import Measurement
 from qcodes.instrument.parameter import _BaseParameter, ArrayParameter, MultiParameter
