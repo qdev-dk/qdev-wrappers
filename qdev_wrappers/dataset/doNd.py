@@ -131,6 +131,7 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
 
     try:
         with meas.run() as datasaver:
+            progress_bar.update(points_taken)
             last_time = time.time()
             for set_point in np.linspace(start, stop, num_points):
                 param_set.set(set_point)
@@ -240,6 +241,7 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
 
     try:
         with meas.run() as datasaver:
+            progress_bar.update(points_taken)
             last_time = time.time()
             for set_point1 in np.linspace(start1, stop1, num_points1):
                 param_set1.set(set_point1)
