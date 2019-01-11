@@ -19,9 +19,10 @@ class DelegateParameter(Parameter):
         random_return (bool): If no source given and get_allowed this
             implements random number generation for get function
         get_fn (Optional[Callable]): If no source given and get_allowed this
-            allows custom function to be given for get function
+            allows custom function to be given for get function. If a source is
+            given this function is executed before returning the source.get
         set_fn (Optional[Callable]): If set_allowed this allows custom function
-            to be run (this is run before the source is set)
+            to be run (this is run before the source is set if applicable)
     """
 
     def __init__(self,
@@ -38,19 +39,21 @@ class DelegateParameter(Parameter):
         self.get_allowed = get_allowed
         self.set_allowed = set_allowed
         self.set_fn = set_fn
+        self.get_fn = get_fn
         if source is not None:
-            self.get_fn = source.get
             self.unit = source.unit
             if 'label' not in kwargs:
                 self.label = source.label
         elif random_return:
             self.get_fn = np.random.random
-        else:
-            self.get_fn = get_fn
 
     def get_raw(self, **kwargs):
         if not self.get_allowed:
             raise RuntimeError(f'Parmeter {self.name} not gettable')
+        elif self.source is not None:
+            if self.get_fn is not None:
+                self.get_fn(**kwargs)
+            return self.source.get(**kwargs)
         elif self.get_fn is None:
             return self._latest['raw_value']
         else:
@@ -76,7 +79,8 @@ class DelegateArrayParameter(ArrayParameter):
         get_allowed (bool)
         get_fn (Optional[Callable]): If no source given and get_allowed this
             allows custom function to be given for get function, otherwise a
-            random array of the right shape is returned.
+            random array of the right shape is returned. If a source is
+            given this function is executed before returning the source.get
     """
 
     def __init__(self,
@@ -89,8 +93,8 @@ class DelegateArrayParameter(ArrayParameter):
         super().__init__(name=name, shape=shape, **kwargs)
         self.source = source
         self.get_allowed = get_allowed
+        self.get_fn = get_fn
         if source is not None:
-            self.get_fn = self.get_from_source
             self.unit = source.unit
             self.setpoints = self.source.setpoints
             self.setpoint_names = self.source.setpoint_names
@@ -98,8 +102,8 @@ class DelegateArrayParameter(ArrayParameter):
             self.setpoint_units = self.source.setpoint_units
             if 'label' not in kwargs:
                 self.label = source.label
-        else:
-            self.get_fn = self.get_random if get_fn is None else get_fn
+        elif get_fn is None:
+            self.get_fn = self.get_random
 
     def get_from_source(self, **kwargs):
         self.setpoints = self.source.setpoints
@@ -114,6 +118,10 @@ class DelegateArrayParameter(ArrayParameter):
     def get_raw(self, **kwargs):
         if self.get_allowed is False:
             raise RuntimeError(f'Parmeter {self.name} not gettable')
+        elif self.source is not None:
+            if self.get_fn is not None:
+                self.get_fn(**kwargs)
+            return self.get_from_source(**kwargs)
         else:
             return self.get_fn(**kwargs)
 
@@ -129,7 +137,8 @@ class DelegateMultiParameter(MultiParameter):
         get_allowed (bool)
         get_fn (Optional[Callable]): If no source given and get_allowed this
             allows custom function to be given for get function, otherwise a
-            random tuple of arrays of the right shapes is returned.
+            random tuple of arrays of the right shapes is returned. If a source
+            is given this function is executed before returning the source.get
     """
 
     def __init__(self,
@@ -144,8 +153,8 @@ class DelegateMultiParameter(MultiParameter):
         super().__init__(name=name, names=names, shapes=shapes, **kwargs)
         self.source = source
         self.get_allowed = get_allowed
+        self.get_fn = get_fn
         if source is not None:
-            self.get_fn = self.get_from_source
             self.names = source.names
             self.shapes = source.shapes
             self.units = source.units
@@ -155,8 +164,8 @@ class DelegateMultiParameter(MultiParameter):
             self.setpoint_units = self.source.setpoint_units
             if 'labels' not in kwargs:
                 self.labels = source.labels
-        else:
-            self.get_fn = self.get_random if get_fn is None else get_fn
+        elif get_fn is None:
+            self.get_fn = self.get_random
 
     def get_from_source(self, **kwargs):
         self.setpoints = self.source.setpoints
@@ -171,6 +180,10 @@ class DelegateMultiParameter(MultiParameter):
     def get_raw(self, **kwargs):
         if self.get_allowed is False:
             raise RuntimeError(f'Parmeter {self.name} not gettable')
+        elif self.source is not None:
+            if self.get_fn is not None:
+                self.get_fn(**kwargs)
+            return self.get_from_source(**kwargs)
         else:
             return self.get_fn(**kwargs)
 
@@ -186,12 +199,14 @@ class DelegateMultiChannelParameter(MultiParameter):
         name (str): local namee of the parameter
         channes (ChannelList): the list of channels from which the
             parameter will be gotten.
-        paramn_ame (bool): the name of the parameter to be gotten from
+        param_name (bool): the name of the parameter to be gotten from
             the channels
         get_allowed (bool)
         set_allowed (bool)
-
-    # TODO: extend to include set_fn and get_fn? (nataliejpg)
+        get_fn (Optional[Callable]): If get_allowed this function is executed
+            before returning the channel parameter.get results
+        set_fn (Optional[Callable]): If set_allowed this allows custom function
+            to be run before the source is set.
     """
 
     def __init__(self,
@@ -200,6 +215,8 @@ class DelegateMultiChannelParameter(MultiParameter):
                  param_name: str,
                  get_allowed: bool=True,
                  set_allowed: bool=True,
+                 set_fn: Optional[Callable]=None,
+                 get_fn: Optional[Callable]=None,
                  **kwargs):
         self._channels = channels
         self._param_name = param_name
@@ -215,6 +232,8 @@ class DelegateMultiChannelParameter(MultiParameter):
             self._set_setpoints_info(parameters)
         self.get_allowed = get_allowed
         self.set_allowed = set_allowed
+        self.set_fn = set_fn
+        self.get_fn = get_fn
 
     def _get_names(self):
         return tuple("{}_{}".format(chan.name, self._param_name) for
@@ -241,22 +260,23 @@ class DelegateMultiChannelParameter(MultiParameter):
     def get_raw(self, **kwargs):
         if self.get_allowed is False:
             raise RuntimeError(f'Parmeter {self.name} not gettable')
-        else:
-            parameters = [chan.parameters[self._param_name] for
-                          chan in self._channels]
-            self.names = self._get_names()
-            self.shapes = self._get_shapes(parameters)
-            self.labels = self._get_labels(parameters)
-            self.units = self._get_units(parameters)
-            if self._is_array_param:
-                self._set_setpoints_info(parameters)
+        if self.get_fn is not None:
+            self.get_fn()
+        parameters = [chan.parameters[self._param_name] for
+                      chan in self._channels]
+        self.names = self._get_names()
+        self.shapes = self._get_shapes(parameters)
+        self.labels = self._get_labels(parameters)
+        self.units = self._get_units(parameters)
+        if self._is_array_param:
+            self._set_setpoints_info(parameters)
         return tuple(chan.parameters[self._param_name].get(**kwargs) for chan
                      in self._channels)
 
     def set_raw(self, *args, **kwargs):
         if self.set_allowed is False:
             raise RuntimeError(f'Parmeter {self.name} not settable')
-        else:
-            for chan in self._channels:
-                chan.parameters[self._param_name].set(*args, **kwargs)
-
+        if self.set_fn is not None:
+            self.set_fn(**kwargs)
+        for chan in self._channels:
+            chan.parameters[self._param_name].set(*args, **kwargs)
