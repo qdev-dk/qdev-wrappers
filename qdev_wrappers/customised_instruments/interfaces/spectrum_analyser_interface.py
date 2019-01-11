@@ -3,33 +3,9 @@ from qcodes.utils import validators as vals
 from qcodes.instrument.base import Instrument
 from functools import partial
 import os
-from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
-from qcodes.instrument.parameter import ArrayParameter
-from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter, DelegateArrayParameter
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import (DelegateParameter,
+DelegateArrayParameter)
 
-
-class DelegateTraceParameter(DelegateArrayParameter):
-    def get_raw(self):
-        self.instrument._update_for_trace()
-        return self.parent.get_raw()
-
-
-class DelegatePowerParameter(DelegateParameter):
-    def get_raw(self):
-        self.instrument._update_for_trace(name=self.name)
-        return self.parent.get_raw()
-
-
-class SimulatedTraceParameter(ArrayParameter):
-    def get_raw(self):
-        start_freq = self.instrument.frequency() - self.instrument.span() / 2
-        stop_freq = self.instrument.frequency() + self.instrument.span() / 2
-        npts = self.instrument.npts()
-        freq_points = tuple(np.linspace(start_freq, stop_freq, npts))
-        self.shape = (npts, )
-        self.setpoints = (freq_points,)
-        self.instrument._trace_updated = True
-        return np.random.random(npts)
 
 
 class _SpectrumAnalyserInterface(Instrument):
@@ -42,25 +18,34 @@ class _SpectrumAnalyserInterface(Instrument):
         self.add_parameter('frequency',
                            label='Frequency',
                            unit='Hz',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='span',
                            label='Span',
                            unit='Hz',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='bandwidth',
                            label='Bandwidth',
                            unit='Hz',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='avg',
                            label='Number of Averages',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='npts',
                            label='Number of Averages',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='mode',
                            label='Mode',
                            vals=vals.Enum('trace', 'single'),
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
+        self.add_parameter(name='single',
+                           label='Magnitude',
+                           unit='dBm',
+                           set_allowed=False,
+                           parameter_class=DelegateParameter)
+        self.add_parameter(name='trace',
+                           label='Magnitude',
+                           unit='dBm',
+                           parameter_class=DelegateArrayParameter)
         self.mode._save_val('trace')
 
     def _update_for_trace(self, **kwargs):
@@ -85,40 +70,30 @@ class USB_SA124BSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
     def __init__(self, name, spectrum_analyser):
         self._spectrum_analyser = spectrum_analyser
         super().__init__(name)
-        self.frequency._source = spectrum_analyser.frequency
-        self.span._set_fn = partial(
+        self.frequency.source = spectrum_analyser.frequency
+        self.span.set_fn = partial(
             self._set_spectrum_analyser_param, 'span')
         self.span._save_val(spectrum_analyser.span())
-        self.bandwidth._set_fn = partial(
+        self.bandwidth.set_fn = partial(
             self._set_spectrum_analyser_param, 'rbw')
         self.bandwidth._save_val(spectrum_analyser.rbw())
-        self.avg._source = spectrum_analyser.avg
-        self.npts._set_fn = False
-        self.npts._get_fn = self._get_npts
-        self.mode._set_fn = self._set_mode
-        self.mode._get_fn = self._get_mode
+        self.avg.source = spectrum_analyser.avg
+        self.npts.set_fn = False
+        self.npts.get_fn = self._get_npts
+        self.mode.set_fn = self._set_mode
+        self.mode.get_fn = self._get_mode
         mode_docstring = ("If set to 'trace' sets the bandwidth and "
                           "span of the instrument to match the parameter "
                           "values. If set to 'single' set them to their "
                           "minimum values for a single point measurement.")
         self.mode.__doc__ = os.linesep.join(
             (mode_docstring, '', self.mode.__doc__))
+        self.trace.source = spectrum_analyser.trace
+        self.trace.get_fn = self.instrument._update_for_trace
+        self.single.source = self._spectrum_analyser.power
         self.add_parameter('sleep_time',
                            source=spectrum_analyser.sleep_time,
-                           parameter_class=InterfaceParameter)
-        self.add_parameter(
-            name='trace',
-            label='Magnitude',
-            unit='dBm',
-            source=spectrum_analyser.trace,
-            parameter_class=DelegateTraceParameter)
-        self.add_parameter(
-            name='single',
-            instrument=self,
-            label='Magnitude',
-            unit='dBm',
-            source=self._spectrum_analyser.power,
-            parameter_class=DelegateTraceParameter)
+                           parameter_class=DelegateParameter)
 
     def _get_npts(self):
         return self._spectrum_analyser.QuerySweep()[0]
@@ -159,19 +134,10 @@ class SimulatedSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
     def __init__(self, name):
         super().__init__(name)
         self.npts._set_fn = self._set_npts
-        self.add_parameter(
-            name='trace',
-            unit='dBm',
-            label='Magnitude',
-            setpoint_units=('Hz',),
-            setpoint_labels=('Frequency',),
-            setpoint_names=('frequency',),
-            parameter_class=SimulatedTraceParameter)
-        self.add_parameter(
-            name='single',
-            unit='dBm',
-            label='Magnitude',
-            get_cmd=lambda: np.random.random())
+        self.trace.setpoint_units = ('Hz',)
+        self.trace.setpoint_labels = ('Frequency',)
+        self.trace.setpoint_names = ('frequency',)
+        self.trace.get_fn = self._get_simulated_trace
 
     def _set_npts(self, val):
         self.bandwidth._save_val(self.span() / val)
@@ -181,3 +147,14 @@ class SimulatedSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
 
     def _set_bandwidth(self, val):
         self.npts._save_val(self.span() / val)
+
+    def _get_simulated_trace(self):
+        start_freq = self.instrument.frequency() - self.instrument.span() / 2
+        stop_freq = self.instrument.frequency() + self.instrument.span() / 2
+        npts = self.instrument.npts()
+        freq_points = tuple(np.linspace(start_freq, stop_freq, npts))
+        self.shape = (npts, )
+        self.setpoints = (freq_points,)
+        self.instrument._trace_updated = True
+        return np.random.random(npts)
+
