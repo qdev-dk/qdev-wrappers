@@ -20,8 +20,8 @@ class DelegateParameter(Parameter):
             implements random number generation for get function
         get_fn (Optional[Callable]): If no source given and get_allowed this
             allows custom function to be given for get function
-        set_fn (Optional[Callable]): If no source given and set_allowed this
-            allows custom function to be given for set function
+        set_fn (Optional[Callable]): If set_allowed this allows custom function
+            to be run (this is run before the source is set)
     """
 
     def __init__(self,
@@ -37,18 +37,16 @@ class DelegateParameter(Parameter):
         self.source = source
         self.get_allowed = get_allowed
         self.set_allowed = set_allowed
+        self.set_fn = set_fn
         if source is not None:
-            self.set_fn = source.set
             self.get_fn = source.get
             self.unit = source.unit
             if 'label' not in kwargs:
                 self.label = source.label
+        elif random_return:
+            self.get_fn = np.random.random
         else:
-            self.set_fn = set_fn
-            if random_return:
-                self.get_fn = np.random.random
-            else:
-                self.get_fn = get_fn
+            self.get_fn = get_fn
 
     def get_raw(self, **kwargs):
         if not self.get_allowed:
@@ -59,12 +57,12 @@ class DelegateParameter(Parameter):
             return self.get_fn(**kwargs)
 
     def set_raw(self, *args, **kwargs):
-        if not self.get_allowed:
+        if not self.set_allowed:
             raise RuntimeError(f'Parmeter {self.name} not settable')
-        elif self.set_fn is None:
-            pass
-        else:
+        elif self.set_fn is not None:
             self.set_fn(*args, **kwargs)
+        if self.source is not None:
+            self.source.set(*args, **kwargs)
 
 
 class DelegateArrayParameter(ArrayParameter):
@@ -180,9 +178,9 @@ class DelegateMultiParameter(MultiParameter):
 class DelegateMultiChannelParameter(MultiParameter):
     """
     This is basically a reimagining of MultiChannelInstrumentParameter which
-    allows the parameter to stick around instead of a new instance being createed
-    every time the parameter of a channellist it called. There is no simulation
-    option and a backend ChannelList must be provided.
+    allows the parameter to stick around instead of a new instance being
+    created every time the parameter of a channellist it called. There is no
+    simulation option and a backend ChannelList must be provided.
 
     Args:
         name (str): local namee of the parameter
@@ -192,6 +190,8 @@ class DelegateMultiChannelParameter(MultiParameter):
             the channels
         get_allowed (bool)
         set_allowed (bool)
+
+    # TODO: extend to include set_fn and get_fn? (nataliejpg)
     """
 
     def __init__(self,
