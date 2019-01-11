@@ -1,5 +1,5 @@
 from qcodes.instrument.base import Instrument
-from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 from qcodes.utils.helpers import create_on_off_val_mapping
 import qcodes.utils.validators as vals
 
@@ -16,20 +16,20 @@ class _MicrowaveSourceInterface(Instrument):
         self.add_parameter(name='frequency',
                            label='Frequency',
                            unit='Hz',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='power',
                            label='Power',
                            unit='dBm',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='status',
                            label='Status',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='IQ_state',
                            label='IQ State',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='pulsemod_state',
                            label='Pulse Modulation State',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
 
 
 class SGS100AMicrowaveSourceInterface(_MicrowaveSourceInterface):
