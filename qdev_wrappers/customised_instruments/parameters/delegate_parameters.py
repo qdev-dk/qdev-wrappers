@@ -140,7 +140,10 @@ class DelegateMultiParameter(MultiParameter):
                  get_allowed: bool=True,
                  get_fn: Optional[Callable]=None,
                  **kwargs):
-        super().__init__(name=name, **kwargs)
+        names = kwargs.pop('names', ('delegate_parameter1',
+                                      'delegate_parameter2'))
+        shapes = kwargs.pop('shapes', ((1,), (1,)))
+        super().__init__(name=name, names=names, shapes=shapes, **kwargs)
         self.source = source
         self.get_allowed = get_allowed
         if source is not None:
@@ -155,9 +158,6 @@ class DelegateMultiParameter(MultiParameter):
             if 'labels' not in kwargs:
                 self.labels = source.labels
         else:
-            self.shapes = kwargs.pop('shapes', ((1,), (1,)))
-            self.names = kwargs.pop('names', ('delegate_parameter1',
-                                              'delegate_parameter2'))
             self.get_fn = self.get_random if get_fn is None else get_fn
 
     def get_from_source(self, **kwargs):
@@ -211,7 +211,7 @@ class DelegateMultiChannelParameter(MultiParameter):
         super().__init__(name=name, names=names, shapes=shapes)
         self.labels = self._get_labels(parameters)
         self.units = self._get_units(parameters)
-        self._is_array_param:
+        if self._is_array_param:
             self._set_setpoints_info(parameters)
         self.get_allowed = get_allowed
         self.set_allowed = set_allowed
