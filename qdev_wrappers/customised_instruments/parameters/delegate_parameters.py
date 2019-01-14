@@ -16,8 +16,6 @@ class DelegateParameter(Parameter):
             is a delegate of.
         set_allowed (bool)
         get_allowed (bool)
-        random_return (bool): If no source given and get_allowed this
-            implements random number generation for get function
         get_fn (Optional[Callable]): If no source given and get_allowed this
             allows custom function to be given for get function. If a source is
             given this function is executed before returning the source.get
@@ -30,7 +28,6 @@ class DelegateParameter(Parameter):
                  source: Optional['Parameter']=None,
                  set_allowed: bool=True,
                  get_allowed: bool=True,
-                 random_return: bool=False,
                  get_fn: Optional[Callable]=None,
                  set_fn: Optional[Callable]=None,
                  *args, **kwargs):
@@ -44,8 +41,6 @@ class DelegateParameter(Parameter):
             self.unit = source.unit
             if 'label' not in kwargs:
                 self.label = source.label
-        elif random_return:
-            self.get_fn = np.random.random
 
     def get_raw(self, **kwargs):
         if not self.get_allowed:
