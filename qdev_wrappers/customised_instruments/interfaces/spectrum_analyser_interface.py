@@ -2,6 +2,7 @@ import numpy as np
 from qcodes.utils import validators as vals
 from qcodes.instrument.base import Instrument
 from functools import partial
+import qcodes.utils.validators as vals
 import os
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import (DelegateParameter,
 DelegateArrayParameter)
@@ -13,7 +14,7 @@ class _SpectrumAnalyserInterface(Instrument):
     Interface base class for the spectrum analyser which by default
     has only manual parameters and no parameter for measurment.
     """
-    def _init__(self, name):
+    def __init__(self, name):
         super().__init__(name)
         self.add_parameter('frequency',
                            label='Frequency',
@@ -29,9 +30,13 @@ class _SpectrumAnalyserInterface(Instrument):
                            parameter_class=DelegateParameter)
         self.add_parameter(name='avg',
                            label='Number of Averages',
+                           vals=vals.Ints(),
+                           get_parser=int,
                            parameter_class=DelegateParameter)
         self.add_parameter(name='npts',
                            label='Number of Averages',
+                           vals=vals.Ints(),
+                           get_parser=int,
                            parameter_class=DelegateParameter)
         self.add_parameter(name='mode',
                            label='Mode',
@@ -71,15 +76,17 @@ class USB_SA124BSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
         self._spectrum_analyser = spectrum_analyser
         super().__init__(name)
         self.frequency.source = spectrum_analyser.frequency
+        self.avg.source = spectrum_analyser.avg
+        self.avg()
         self.span.set_fn = partial(
-            self._set_spectrum_analyser_param, 'span')
+            self._set_mode_dependent_param, 'span')
         self.span._save_val(spectrum_analyser.span())
         self.bandwidth.set_fn = partial(
-            self._set_spectrum_analyser_param, 'rbw')
+            self._set_mode_dependent_param, 'rbw')
         self.bandwidth._save_val(spectrum_analyser.rbw())
-        self.avg.source = spectrum_analyser.avg
         self.npts.set_fn = False
         self.npts.get_fn = self._get_npts
+        self.npts()
         self.mode.set_fn = self._set_mode
         self.mode.get_fn = self._get_mode
         mode_docstring = ("If set to 'trace' sets the bandwidth and "
@@ -114,7 +121,7 @@ class USB_SA124BSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
         else:
             return 'trace'
 
-    def _set_spectrum_analyser_param(self, param, val):
+    def _set_mode_dependent_param(self, param, val):
         if self.mode() == 'trace':
             self._spectrum_analyser.parameters[param].set(val)
 
@@ -133,11 +140,18 @@ class SimulatedSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
     """
     def __init__(self, name):
         super().__init__(name)
-        self.npts._set_fn = self._set_npts
+        self.npts.set_fn = self._set_npts
+        self.bandwidth.set_fn = self._set_bandwidth
+        self.span.set_fn = self._set_span
         self.trace.setpoint_units = ('Hz',)
         self.trace.setpoint_labels = ('Frequency',)
         self.trace.setpoint_names = ('frequency',)
         self.trace.get_fn = self._get_simulated_trace
+        self.single.get_fn = self._get_simulated_single
+        self.npts._latest['raw_value'] = 100
+        self.avg._latest['raw_value'] = 1
+        self.span._latest['raw_value'] = 10e6
+        self.bandwidth._latest['raw_value'] = 100e3
 
     def _set_npts(self, val):
         self.bandwidth._save_val(self.span() / val)
@@ -148,13 +162,17 @@ class SimulatedSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
     def _set_bandwidth(self, val):
         self.npts._save_val(self.span() / val)
 
+    def _get_simulated_single(self):
+        self.mode('single')
+        return np.random.random()
+
     def _get_simulated_trace(self):
-        start_freq = self.instrument.frequency() - self.instrument.span() / 2
-        stop_freq = self.instrument.frequency() + self.instrument.span() / 2
-        npts = self.instrument.npts()
+        self.mode('trace')
+        start_freq = self.frequency() - self.span() / 2
+        stop_freq = self.frequency() + self.span() / 2
+        npts = self.npts()
         freq_points = tuple(np.linspace(start_freq, stop_freq, npts))
-        self.shape = (npts, )
-        self.setpoints = (freq_points,)
-        self.instrument._trace_updated = True
-        return np.random.random(npts)
+        self.trace.shape = (npts, )
+        self.trace.setpoints = (freq_points,)
+        return np.random.random(int(npts))
 

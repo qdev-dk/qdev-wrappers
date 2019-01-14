@@ -50,7 +50,7 @@ class DelegateParameter(Parameter):
                 self.get_fn(**kwargs)
             return self.source.get(**kwargs)
         elif self.get_fn is None:
-            return self._latest['raw_value']
+                return self._latest['raw_value']
         else:
             return self.get_fn(**kwargs)
 
