@@ -7,6 +7,7 @@ from qdev_wrappers.customised_instruments.parameters.delegate_parameters import 
 
 class AWGChannelInterface(InstrumentChannel):
     def __init__(self, parent, name):
+        super().__init__(parent, name)
         # self.add_parameter('power') # TODO replace Vpp with power
         self.add_parameter(name='Vpp',
                            unit='V',
@@ -53,6 +54,8 @@ class SimulatedAWGInterface(_AWGInterface):
         self.forged_sequence = None
         super().__init__(name)
         self.sample_rate._save_val(1e9)
+        for ch in self.channels:
+            ch.Vpp._save_val(1)
 
     def upload(self, forged_sequence: ForgedSequenceType):
         print(f'uploading')
