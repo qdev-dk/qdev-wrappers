@@ -3,7 +3,7 @@ from broadbean.plotting import plotter
 from time import sleep
 from qcodes.instrument.base import Instrument
 from qcodes.instrument.channel import InstrumentChannel, ChannelList
-from qdev_wrappers.interfaces.interface_parameter import InterfaceParameter
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 
 class AWGChannelInterface(InstrumentChannel):
     def __init__(self, parent, name):
@@ -11,7 +11,7 @@ class AWGChannelInterface(InstrumentChannel):
         self.add_parameter(name='Vpp',
                            unit='V',
                            label='Peak to Peak Voltage',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
 
 
 class AWGInterface(Instrument):
@@ -28,7 +28,7 @@ class AWGInterface(Instrument):
         self.add_parameter(name='sample_rate',
                            label='Sample Rate',
                            unit='Hz',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
 
     def upload(self, forged_sequence: ForgedSequenceType):
         raise NotImplementedError()
