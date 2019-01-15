@@ -14,7 +14,7 @@ class AWGChannelInterface(InstrumentChannel):
                            parameter_class=DelegateParameter)
 
 
-class AWGInterface(Instrument):
+class _AWGInterface(Instrument):
     CHAN_NUM = 4
 
     def __init__(self, name):
@@ -47,7 +47,7 @@ class AWGInterface(Instrument):
         raise NotImplementedError()
 
 
-class SimulatedAWGInterface(AWGInterface):
+class SimulatedAWGInterface(_AWGInterface):
     def __init__(self, name, chan_num=4):
         self.CHAN_NUM = chan_num
         self.forged_sequence = None
@@ -85,7 +85,7 @@ class SimulatedAWGInterface(AWGInterface):
         plotter(self.forged_sequence, SR=self.get_SR())
 
 
-class AWG5014Interface(AWGInterface):
+class AWG5014Interface(_AWGInterface):
     CHAN_NUM = 4
 
     def __init__(self, name, awg):
