@@ -154,13 +154,13 @@ class SimulatedSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
         self.bandwidth._latest['raw_value'] = 100e3
 
     def _set_npts(self, val):
-        self.bandwidth._save_val(self.span() / val)
+        self.bandwidth._latest['raw_value'] = self.span() / val
 
     def _set_span(self, val):
-        self.bandwidth._save_val(val / self.npts())
+        self.bandwidth._latest['raw_value'] = val / self.npts()
 
     def _set_bandwidth(self, val):
-        self.npts._save_val(self.span() / val)
+        self.npts._latest['raw_value'] = self.span() / val
 
     def _get_simulated_single(self):
         self.mode('single')
