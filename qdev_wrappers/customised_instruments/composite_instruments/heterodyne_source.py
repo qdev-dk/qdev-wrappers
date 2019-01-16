@@ -2,7 +2,7 @@ from qcodes.instrument.base import Instrument
 from qcodes.utils import validators as vals
 import os
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
-from qdev_wrappers.customised_instruments.interfaces.microwace_source_interface import _MicrowaveSourceInterface
+from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface import _MicrowaveSourceInterface
 
 class _HeterodyneSource(Instrument):
     """
@@ -18,8 +18,8 @@ class _HeterodyneSource(Instrument):
     on the implementation.
     """
 
-    def __init__(self, name):
-        super().__init__(name: str)
+    def __init__(self, name: str):
+        super().__init__(name)
         self.add_parameter(name='frequency',
                            label='Carrier Frequency',
                            unit='Hz',
