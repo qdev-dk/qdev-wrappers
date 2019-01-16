@@ -12,7 +12,7 @@ from qcodes.station import Station
 import qcodes.utils.validators as validators
 from qcodes.instrument.parameter import Parameter
 from qcodes.monitor.monitor import Monitor
-from .parameters import DelegateParameter
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 use_pyyaml = False
 try:
     from ruamel.yaml import YAML
