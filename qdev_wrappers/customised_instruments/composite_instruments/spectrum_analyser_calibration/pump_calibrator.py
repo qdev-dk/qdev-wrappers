@@ -1,30 +1,31 @@
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
-from qdev_wrappers.customised_instruments.spectrum_analyser_calibration.base import SpectrumAnalyserCalibrator
+from qdev_wrappers.customised_instruments.interfaces.spectrum_analyser_interface import _SpectrumAnalyserInterface
+from qdev_wrappers.customised_instruments.composite_instruments.spectrum_analyser_calibration.base import _SpectrumAnalyserCalibrator
+from qdev_wrappers.
 
-
-class Pump_Calibrator(SpectrumAnalyserCalibrator):
-    def __init__(self, name, spectrum_analyser_interface,
-                 pump_source_interface, signal_source_interface):
-        super().__init__(name, spectrum_analyser_interface)
-        self.signal_frequency._source = signal_source_interface.frequency
+class Pump_Calibrator(_SpectrumAnalyserCalibrator):
+    def __init__(self, name, spectrum_analyser_if,
+                 signal_source_if, pump_source_if):
+        super().__init__(name, spectrum_analyser_if)
+        self.signal_frequency.source = spectrum_analyser_if.frequency
         self.add_parameter(name='signal_power',
                            label='Signal Power',
                            unit='dBm',
-                           source=signal_source_interface.power,
+                           source=signal_source_if.power,
                            parameter_class=DelegateParameter)
         self.add_parameter(name='pump_power',
                            label='Pump Power',
                            unit='dBm',
-                           source=pump_source_interface.power,
+                           source=pump_source_if.power,
                            parameter_class=DelegateParameter)
         self.add_parameter(name='pump_frequency',
                            label='Pump Frequency',
                            unit='Hz',
-                           source=pump_source_interface.frequency,
+                           source=pump_source_if.frequency,
                            parameter_class=DelegateParameter)
         self.add_parameter(name='pump_status',
                            label='Pump Status',
-                           source=pump_source_interface.frequency,
+                           source=pump_source_if.status,
                            parameter_class=DelegateParameter)
         self.add_parameter(name='measure_gain',
                            label='Gain',
