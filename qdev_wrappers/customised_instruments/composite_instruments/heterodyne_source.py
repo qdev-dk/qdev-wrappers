@@ -42,7 +42,7 @@ class _HeterodyneSource(Instrument):
         self.add_parameter(name='mode',
                            label='Mode',
                            parameter_class=DelegateParameter,
-                           vals=vals.Strings())
+                           vals=vals.Enum('basic', 'sidebanded', 'sidebanded_modulated'))
 
 
 class OneSourceHeterodyneSource(_HeterodyneSource):
@@ -53,35 +53,41 @@ class OneSourceHeterodyneSource(_HeterodyneSource):
     Available modes are 'basic', 'sidebanded', and 'sideband_modulated'.
     """
 
-    def __init__(self, name, microwave_source_interface):
-        self._microwave_source_interface = microwave_source_interface
+    def __init__(self, name, microwave_source_if, localos_power=10):
+        self._microwave_source_if = microwave_source_if
         super().__init__(name)
-        self.frequency._source = microwave_source_interface.frequency
-        self.power._source = microwave_source_interface.power
-        self.demodulation_frequency._set_fn = False
+        self.frequency.source = microwave_source_if.frequency
+        self.power.source = microwave_source_if.power
+        self.demodulation_frequency.set_allowed = False
         self.demodulation_frequency._save_val(0)
-        self.localos_power._set_fn = False
-        self.localos_power._get_fn = microwave_source_interface.power.get  # TODO
-        self.status._source = microwave_source_interface.status
-        self.mode._set_fn = self._set_mode
-        self.mode.vals = vals.Enum('basic', 'sidebanded', 'sideband_modulated')
+        self.localos_power.set_allowed = False
+        self.localos_power.get_fn = lambda: localos_power  # TODO
+        self.status.source = microwave_source_if.status
+        self.mode.set_fn = self._set_mode
         mode_docstring = ("Sets the configuration of the carrier source: /n "
                           "basic - IQ off, pulsemod off /n sidebanded - "
                           "IQ on, pulsemod off /n sidebanded_modulated - "
                           "IQ on, pulsemod on.")
         self.mode.__doc__ = os.linesep.join(
             (mode_docstring, '', self.mode.__doc__))
+        if (microwave_source_if.pulsemod_state() and
+                microwave_source_if.IQ_state()):
+            self.mode._save_val('sideband_modulated')
+        elif (microwave_source_if.pulsemod_state()):
+            self.mode._save_val('sidebanded')
+        else:
+            self.mode._save_val('basic')
 
     def _set_mode(self, val):
         if val == 'basic':
-            self._microwave_source_interface.IQ_state(0)
-            self._microwave_source_interface.pulsemod_state(0)
+            self._microwave_source_if.IQ_state(0)
+            self._microwave_source_if.pulsemod_state(0)
         elif val == 'sidebanded':
-            self._microwave_source_interface.IQ_state(1)
-            self._microwave_source_interface.pulsemod_state(0)
+            self._microwave_source_if.IQ_state(1)
+            self._microwave_source_if.pulsemod_state(0)
         elif val == 'sidebanded_modulated':
-            self._microwave_source_interface.IQ_state(1)
-            self._microwave_source_interface.pulsemod_state(1)
+            self._microwave_source_if.IQ_state(1)
+            self._microwave_source_if.pulsemod_state(1)
 
 
 class TwoSourceHeterodyneSource(_HeterodyneSource):
@@ -91,69 +97,68 @@ class TwoSourceHeterodyneSource(_HeterodyneSource):
     and 'sideband_modulated'.
     """
 
-    def __init__(self, name, carrier_source_interface, localos_source_interface):
-        self._carrier_source_interface = carrier_source_interface
-        self._localos_source_interface = localos_source_interface
+    def __init__(self, name, carrier_source_if, localos_source_if):
+        self._carrier_source_if = carrier_source_if
+        self._localos_source_if = localos_source_if
         super().__init__(name)
-        self.frequency._set_fn = self._set_carrier_frequency
-        self.frequency._get_fn = carrier_source_interface.frequency.get
-        self.power._source = carrier_source_interface.power
-        self.demodulation_frequency._set_fn = self._set_base_demod_frequency
-        self.demodulation_frequency._get_fn = self._get_base_demod_frequency
-        self.localos_power._source = localos_source_interface.power
-        self.status._set_fn = self._set_status
-        self.status._get_fn = carrier_source_interface.status.get
-        self.mode._set_fn = self._set_mode
-        self.mode.vals = vals.Enum(
-            'basic', 'sidebanded_basic', 'sidebanded', 'sideband_modulated')
+        self.frequency.source = carrier_source_if.frequency
+        self.frequency.set_fn = self._set_carrier_frequency
+        self.power.source = carrier_source_if.power
+        self.demodulation_frequency.set_fn = self._set_base_demod_frequency
+        self.demodulation_frequency.get_fn = self._get_base_demod_frequency
+        self.localos_power.source = localos_source_if.power
+        self.status.source = carrier_source_if.status
+        self.status.set_fn = self._set_status
+        self.mode.set_fn = self._set_mode
         mode_docstring = ("Sets the configuration of the carrier and "
                           "localos sources: /n basic - localos off, IQ off,"
-                          " pulsemod off /n sidebanded_basic - "
-                          "localos off, IQ on, pulsemod off /n"
+                          " pulsemod off /n "
                           "sidebanded - localos on, IQ on, "
                           "pulsemod off /n sidebanded_modulated - "
                           "localos on, IQ on, pulsemod on.")
         self.mode.__doc__ = os.linesep.join(
             (mode_docstring, '', self.mode.__doc__))
+        self.status._save_val(carrier_source_if.status())
+        if (carrier_source_if.IQ_state() and
+                carrier_source_if.pulsemod_state()):
+            self.mode._save_val('sidebanded_modulated')
+        elif carrier_source_if.IQ_state():
+            self.mode._save_val('sidebanded')
+        else:
+            localos_source_if.status(0)
+            self.mode._save_val('basic')
+        localos_source_if.pulsemod_state(0)
 
     def _set_carrier_frequency(self, val):
-        self._carrier_source_interface.frequency(val)
-        self._localos_source_interface.frequency(
+        self._localos_source_if.frequency(
             val + self.demodulation_frequency())
 
     def _set_base_demod_frequency(self, val):
-        self._localos_source_interface.frequency(
-            self._carrier_source_interface.frequency() + val)
+        self._localos_source_if.frequency(
+            self._carrier_source_if.frequency() + val)
 
     def _get_base_demod_frequency(self):
-        return (self._localos_source_interface.frequency() -
-                self._carrier_source_interface.frequency())
+        return (self._localos_source_if.frequency() -
+                self._carrier_source_if.frequency())
 
     def _set_status(self, val):
-        self._localos_source_interface.status(val)
-        self._carrier_source_interface.status(val)
+        if self.mode() in ['sidebanded', 'sidebanded_modulated']:
+            self._localos_source_if.status(val)
 
     def _set_mode(self, val):
+        status = self.status()
         if val == 'basic':
-            self._carrier_source_interface.status(1)
-            self._localos_source_interface.status(0)
-            self._carrier_source_interface.IQ_state(0)
-            self._carrier_source_interface.pulsemod_state(0)
-        elif val == 'sidebanded_basic':
-            self._carrier_source_interface.status(1)
-            self._localos_source_interface.status(0)
-            self._carrier_source_interface.IQ_state(1)
-            self._carrier_source_interface.pulsemod_state(0)
+            self._localos_source_if.status(0)
+            self._carrier_source_if.IQ_state(0)
+            self._carrier_source_if.pulsemod_state(0)
         elif val == 'sidebanded':
-            self._carrier_source_interface.status(1)
-            self._localos_source_interface.status(1)
-            self._carrier_source_interface.IQ_state(1)
-            self._carrier_source_interface.pulsemod_state(0)
+            self._localos_source_if.status(status)
+            self._carrier_source_if.IQ_state(1)
+            self._carrier_source_if.pulsemod_state(0)
         elif val == 'sidebanded_modulated':
-            self._carrier_source_interface.status(1)
-            self._localos_source_interface.status(1)
-            self._carrier_source_interface.IQ_state(1)
-            self._carrier_source_interface.pulsemod_state(1)
+            self._localos_source_if.status(status)
+            self._carrier_source_if.IQ_state(1)
+            self._carrier_source_if.pulsemod_state(1)
 
 
 """
