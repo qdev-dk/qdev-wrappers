@@ -1,7 +1,7 @@
 from qcodes.instrument.base import Instrument
 from qcodes.utils import validators as vals
 import os
-from qdev_wrappers.customised_instruments.interfaces.interface_parameter import InterfaceParameter
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 
 
 class _HeterodyneSource(Instrument):
@@ -23,25 +23,25 @@ class _HeterodyneSource(Instrument):
         self.add_parameter(name='frequency',
                            label='Carrier Frequency',
                            unit='Hz',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='power',
                            label='Carrier Power',
                            unit='dBm',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='demodulation_frequency',
                            label='Base Demodulation Frequency',
                            unit='Hz',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='localos_power',
                            label='Demodulation Signal Power',
                            unit='dBm',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='status',
                            label='Status',
-                           parameter_class=InterfaceParameter)
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='mode',
                            label='Mode',
-                           parameter_class=InterfaceParameter,
+                           parameter_class=DelegateParameter,
                            vals=vals.Strings())
 
 
