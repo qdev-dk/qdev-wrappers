@@ -62,3 +62,8 @@ class SimulatedMicrowaveSourceInterface(_MicrowaveSourceInterface):
         self.status.inverse_val_mapping = inversevalmappingdict
         self.IQ_state.inverse_val_mapping = inversevalmappingdict
         self.pulsemod_state.inverse_val_mapping = inversevalmappingdict
+        self.frequency(7e9)
+        self.power(-10)
+        self.status(0)
+        self.IQ_state(0)
+        self.pulsemod_state(0)
