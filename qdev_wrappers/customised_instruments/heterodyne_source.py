@@ -2,7 +2,7 @@ from qcodes.instrument.base import Instrument
 from qcodes.utils import validators as vals
 import os
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
-
+from qdev_wrappers.customised_instruments.interfaces.microwace_source_interface import _MicrowaveSourceInterface
 
 class _HeterodyneSource(Instrument):
     """
@@ -19,7 +19,7 @@ class _HeterodyneSource(Instrument):
     """
 
     def __init__(self, name):
-        super().__init__(name)
+        super().__init__(name: str)
         self.add_parameter(name='frequency',
                            label='Carrier Frequency',
                            unit='Hz',
@@ -53,7 +53,8 @@ class OneSourceHeterodyneSource(_HeterodyneSource):
     Available modes are 'basic', 'sidebanded', and 'sideband_modulated'.
     """
 
-    def __init__(self, name, microwave_source_if, localos_power=10):
+    def __init__(self, name: str, microwave_source_if: _MicrowaveSourceInterface,
+                 localos_power: float=10):
         self._microwave_source_if = microwave_source_if
         super().__init__(name)
         self.frequency.source = microwave_source_if.frequency
@@ -97,7 +98,8 @@ class TwoSourceHeterodyneSource(_HeterodyneSource):
     and 'sideband_modulated'.
     """
 
-    def __init__(self, name, carrier_source_if, localos_source_if):
+    def __init__(self, name: str, carrier_source_if: _MicrowaveSourceInterface,
+                 localos_source_if: _MicrowaveSourceInterface):
         self._carrier_source_if = carrier_source_if
         self._localos_source_if = localos_source_if
         super().__init__(name)
