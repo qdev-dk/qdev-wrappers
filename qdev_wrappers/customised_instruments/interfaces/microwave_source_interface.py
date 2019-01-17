@@ -68,8 +68,3 @@ class SimulatedMicrowaveSourceInterface(_MicrowaveSourceInterface):
         self.IQ_state.vals = vals.Enum(*valmappingdict.keys())
         self.IQ_state.val_mapping = valmappingdict
         self.IQ_state.inverse_val_mapping = inversevalmappingdict
-        self.frequency._latest['raw_value'] = 7e9
-        self.power._latest['raw_value'] = -10
-        self.status._latest['raw_value'] = 0
-        self.pulsemod_state._latest['raw_value'] = 0
-        self.IQ_state._latest['raw_value'] = 0
