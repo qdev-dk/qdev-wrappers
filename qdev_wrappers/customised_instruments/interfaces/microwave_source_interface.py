@@ -41,6 +41,7 @@ class _MicrowaveSourceInterface(Instrument):
         harmless defaults:
         - frequency: 6e9
         - power: -10
+        - status: 0
         - pulsemod_state: 0
         - IQ_state: 0
         """
