@@ -13,6 +13,7 @@ class _MicrowaveSourceInterface(Instrument):
     """
     def __init__(self, name, IQ_option=True):
         super().__init__(name)
+        self._IQ_option = IQ_option
         self.add_parameter(name='frequency',
                            label='Frequency',
                            unit='Hz',
@@ -33,6 +34,18 @@ class _MicrowaveSourceInterface(Instrument):
         if not IQ_option:
             self.IQ_state._latest['raw_value'] = 0
             self.IQ_state.set_allowed = False
+
+    def to_default(self):
+        """
+        Sets the instrument to some relatively arbitrary but hopefully
+        harmless defaults
+        """
+        self.frequency(6e9)
+        self.power(-10)
+        self.status(0)
+        self.pulsemod_state(0)
+        if self._IQ_option:
+            self.IQ_state(1)
 
 
 class SGS100AMicrowaveSourceInterface(_MicrowaveSourceInterface):
