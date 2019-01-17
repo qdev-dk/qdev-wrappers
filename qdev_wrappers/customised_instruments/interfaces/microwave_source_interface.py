@@ -38,14 +38,18 @@ class _MicrowaveSourceInterface(Instrument):
     def to_default(self):
         """
         Sets the instrument to some relatively arbitrary but hopefully
-        harmless defaults
+        harmless defaults:
+        - frequency: 6e9
+        - power: -10
+        - pulsemod_state: 0
+        - IQ_state: 0
         """
         self.frequency(6e9)
         self.power(-10)
         self.status(0)
         self.pulsemod_state(0)
         if self._IQ_option:
-            self.IQ_state(1)
+            self.IQ_state(0)
 
 
 class SGS100AMicrowaveSourceInterface(_MicrowaveSourceInterface):
