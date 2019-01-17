@@ -1,6 +1,7 @@
 from broadbean.types import ForgedSequenceType
 from broadbean.plotting import plotter
 from time import sleep
+import qcodes.utils.validators as vals
 from qcodes.instrument.base import Instrument
 from qcodes.instrument.channel import InstrumentChannel, ChannelList
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
@@ -30,23 +31,46 @@ class _AWGInterface(Instrument):
                            label='Sample Rate',
                            unit='Hz',
                            parameter_class=DelegateParameter)
+        self.add_parameter(name='sequence_mode',
+                           set_cmd=self._set_sequence_mode,
+                           vals=vals.Enum('single', 'continuos'))
+
+    def _set_sequence_mode(self, mode):
+        if mode == 'single':
+            self.
 
     def upload(self, forged_sequence: ForgedSequenceType):
-        raise NotImplementedError()
-
-    def set_infinit_loop(self, element_index: int,
-                         true_on_false_off: bool):
+        """
+        Upload a forged broadbean sequence to the awg (implemented in children)
+        and run.
+        """
         raise NotImplementedError()
 
     def set_repeated_element(self, index):
+        """
+        Repeat one element of a sequence on a loop forever.
+        """
         raise NotImplementedError()
 
     def set_repeated_element_series(self, start_index, stop_index):
+        """
+        Loop through subsection of a sequence forever.
+        """
         raise NotImplementedError()
 
     def repeat_full_sequence(self):
+        """
+        Loop through the whole sequence forever.
+        """
         raise NotImplementedError()
 
+    def to_default(self):
+        """
+
+        """
+        self.sample_rate(1e9)
+        for ch in self.channels:
+            ch.Vpp(1)
 
 class SimulatedAWGInterface(_AWGInterface):
     def __init__(self, name, chan_num=4):
@@ -70,6 +94,7 @@ class SimulatedAWGInterface(_AWGInterface):
         if self.forged_sequence is None:
             print(f'but there was not sequence uploaded')
             return
+        print(f'running element {index}')
         plotter(self.forged_sequence[index], SR=self.get_SR())
 
     def set_repeated_element_series(self, start_index, stop_index):
