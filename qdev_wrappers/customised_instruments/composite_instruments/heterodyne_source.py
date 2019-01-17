@@ -44,6 +44,24 @@ class _HeterodyneSource(Instrument):
                            parameter_class=DelegateParameter,
                            vals=vals.Enum('basic', 'sidebanded', 'sidebanded_modulated'))
 
+    def to_default(self):
+        """Sets the instrument to some relatively arbitrary but hopefully
+        harmless defaults:
+        - frequency: 6e9
+        - power: -10
+        - demodulation_frequency: 0
+        - localos_power (if set allowed): -10
+        - status: 0
+        - mode: 'basic'
+        """
+        self.frequency(6e9)
+        self.power(-10)
+        if self.demodulation_frequency.set_allowed:
+            self.demodulation_frequency(0)
+        if self.localos_power.set_allowed:
+            self.localos_power(-10)
+        self.status(0)
+        self.mode('basic')
 
 class OneSourceHeterodyneSource(_HeterodyneSource):
     """
@@ -62,7 +80,7 @@ class OneSourceHeterodyneSource(_HeterodyneSource):
         self.demodulation_frequency.set_allowed = False
         self.demodulation_frequency._save_val(0)
         self.localos_power.set_allowed = False
-        self.localos_power.get_fn = lambda: localos_power  # TODO
+        self.localos_power.get_fn = lambda: localos_power
         self.status.source = microwave_source_if.status
         self.mode.set_fn = self._set_mode
         mode_docstring = ("Sets the configuration of the carrier source: /n "
@@ -71,13 +89,17 @@ class OneSourceHeterodyneSource(_HeterodyneSource):
                           "IQ on, pulsemod on.")
         self.mode.__doc__ = os.linesep.join(
             (mode_docstring, '', self.mode.__doc__))
-        if (microwave_source_if.pulsemod_state() and
-                microwave_source_if.IQ_state()):
-            self.mode._save_val('sideband_modulated')
-        elif (microwave_source_if.pulsemod_state()):
-            self.mode._save_val('sidebanded')
-        else:
-            self.mode._save_val('basic')
+        try:
+            if (microwave_source_if.pulsemod_state() and
+                    microwave_source_if.IQ_state()):
+                self.mode._save_val('sideband_modulated')
+            elif (microwave_source_if.pulsemod_state()):
+                self.mode._save_val('sidebanded')
+            else:
+                self.mode._save_val('basic')
+        except TypeError:
+            microwave_source_if.to_default()
+            self.mode('basic')
 
     def _set_mode(self, val):
         if val == 'basic':
@@ -120,7 +142,18 @@ class TwoSourceHeterodyneSource(_HeterodyneSource):
                           "localos on, IQ on, pulsemod on.")
         self.mode.__doc__ = os.linesep.join(
             (mode_docstring, '', self.mode.__doc__))
-        self.status._save_val(carrier_source_if.status())
+
+        try:
+            self.status._save_val(carrier_source_if.status())
+        except TypeError:
+            carrier_source_if.to_default()
+            self.status._save_val(carrier_source_if.status())
+
+        try:
+            localos_source_if.status()
+        except TypeError:
+            localos_source_if.to_default()
+
         if (carrier_source_if.IQ_state() and
                 carrier_source_if.pulsemod_state()):
             self.mode._save_val('sidebanded_modulated')
