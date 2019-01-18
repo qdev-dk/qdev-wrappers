@@ -6,6 +6,7 @@ from qcodes.instrument.base import Instrument
 from qcodes.instrument.channel import InstrumentChannel, ChannelList
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 
+
 class AWGChannelInterface(InstrumentChannel):
     def __init__(self, parent, name):
         super().__init__(parent, name)
@@ -21,6 +22,8 @@ class _AWGInterface(Instrument):
 
     def __init__(self, name):
         super().__init__(name)
+        self._index = 0
+        self._last_index = None
         channels = ChannelList(self, 'channels', AWGChannelInterface)
         self.add_submodule('channels', channels)
         for ch in range(self.CHAN_NUM):
@@ -32,12 +35,49 @@ class _AWGInterface(Instrument):
                            unit='Hz',
                            parameter_class=DelegateParameter)
         self.add_parameter(name='sequence_mode',
-                           set_cmd=self._set_sequence_mode,
-                           vals=vals.Enum('single', 'continuos'))
+                           set_cmd=self._set_seq_mode,
+                           vals=vals.Enum('element', 'sequence'))
+        self.add_parameter(name='repetition_mode',
+                           set_cmd=self._set_rep_mode,
+                           vals=vals.Enum('single', 'inf'))
+        self.add_parameter(name='trigger_mode',
+                           set_cmd=self._set_trigger_mode,
+                           vals=vals.Bools())
 
-    def _set_sequence_mode(self, mode):
-        if mode == 'single':
-            self.
+    def _set_seq_mode(self, seq_mode):
+        rep_mode = self.repetition_mode()
+        if rep_mode == 'single' and seq_mode == 'element':
+            self.set_goto_index(self._index, -1)
+            self.set_goto_index(self._last_index, 0)
+            self.set_element(self._index)
+        elif rep_mode == 'single' and seq_mode == 'sequence':
+            self.set_goto_index(self._index, self._index + 1)
+            self.set_goto_index(self._last_index, -1)
+            self.set_element(0)
+        elif rep_mode == 'single' and seq_mode == 'sequence':
+            self.set_goto_index(self._index, self._index + 1)
+            self.set_goto_index(self._last_index, -1)
+            self.set_element(0)
+
+    def _set_rep_mode(self, rep_mode):
+        seq_mode = self.sequence_mode()
+        if seq_mode == 'element' and rep_mode == 'single':
+            self.set_goto_index(self._index, -1)
+            self.set_nreps(self._index, 1)
+            self.set_element(self._index)
+        elif seq_mode == 'element' and rep_mode == 'inf':
+            self.set_goto_index(self._index, self._index + 1)
+            self.set_nreps(self._index, 'inf')
+            self.set_element(self._index)
+        elif seq_mode == 'sequence' and rep_mode == 'single':
+            self.set_goto_index(self._last_index, -1)
+            self.set_element(0)
+        elif seq_mode == 'sequence' and rep_mode == 'inf':
+            self.set_goto_index(self._last_index, 0)
+            self.set_element(0)
+
+
+
 
     def upload(self, forged_sequence: ForgedSequenceType):
         """
@@ -46,23 +86,31 @@ class _AWGInterface(Instrument):
         """
         raise NotImplementedError()
 
-    def set_repeated_element(self, index):
+    def set_element(self, index=None):
         """
-        Repeat one element of a sequence on a loop forever.
-        """
-        raise NotImplementedError()
-
-    def set_repeated_element_series(self, start_index, stop_index):
-        """
-        Loop through subsection of a sequence forever.
+        Repeat one element of a sequence.
         """
         raise NotImplementedError()
 
-    def repeat_full_sequence(self):
+    def set_goto_index(self, elem_index, goto_index):
+        raise NotImplementedError
+
+    # def set_repeated_element_series(self, start_index, stop_index):
+    #     """
+    #     Loop through subsection of a sequence forever.
+    #     """
+    #     raise NotImplementedError()
+    def set_nreps(self, elem_index, nreps):
+        raise NotImplementedError
+
+    def set_full_sequence(self):
         """
         Loop through the whole sequence forever.
         """
         raise NotImplementedError()
+
+    def run(self):
+        raise NotImplementedError
 
     def to_default(self):
         """
@@ -71,6 +119,7 @@ class _AWGInterface(Instrument):
         self.sample_rate(1e9)
         for ch in self.channels:
             ch.Vpp(1)
+
 
 class SimulatedAWGInterface(_AWGInterface):
     def __init__(self, name, chan_num=4):
@@ -98,14 +147,15 @@ class SimulatedAWGInterface(_AWGInterface):
         plotter(self.forged_sequence[index], SR=self.get_SR())
 
     def set_repeated_element_series(self, start_index, stop_index):
-        print(f'setting repeated element series from {start_index} to '
-              f'{stop_index}')
+
         # AWG is not zero indexed but one, convert to zero index
         start_index -= start_index
         stop_index -= stop_index
         if self.forged_sequence is None:
             print(f'but there was not sequence uploaded')
             return
+        print(f'setting repeated element series from {start_index} to '
+              '{stop_index}')
         plotter(self.forged_sequence[start_index:stop_index], SR=self.get_SR())
 
     def repeat_full_sequence(self):
