@@ -7,12 +7,10 @@ class Guess:
         pass
 
 
-
 class ExpDecayGuess(Guess):
-
     """Guess for f(x) = a * e^(-x/b)  +  c"""
 
-    def make_guess(self, x, y):
+    def make_guess(self, y, x):
 
         length = len(y)
         val_init = y[0:round(length / 20)].mean()
@@ -32,7 +30,7 @@ class ExpDecayGuess(Guess):
 class ExpDecaySinGuess(Guess):
     """Guess for f(x) = a * e^(-x/b) sin(wx+p)  + c"""
 
-    def make_guess(self, x, y):
+    def make_guess(self, y, x):
 
         a = y.max() - y.min()
 
@@ -56,7 +54,7 @@ class PowerDecayGuess(Guess):
 
     """Guess for f(x) = a * b^x + c"""
 
-    def make_guess(self, x, y):
+    def make_guess(self, y, x):
 
         length = len(y)
         val_init = y[0:round(length / 20)].mean()
@@ -76,9 +74,9 @@ class PowerDecayGuess(Guess):
 
 class RabiT1Guess(Guess):
 
-    """Guess for f(x) = e^(-x/b) cos^2(wx/2)"""
+    """Guess for f(x) = e^(-x/b) cos^2(wx/2 + p)"""
 
-    def make_guess(self, x, y):
+    def make_guess(self, y, x):
 
         # guess b as point half way point in data
         b = x[round(len(x) / 2)]
@@ -90,3 +88,24 @@ class RabiT1Guess(Guess):
         w = freqs[idx] * 2
 
         return [b, w]
+
+
+class CosineGuess(Guess):
+
+    """Guess for f(x) = a * cos(wx + p) + b"""
+
+    def make_guess(self, y, x):
+
+        b = y.mean()
+
+        a = y.max() - y.min()
+
+        # Get initial guess for frequency from a fourier transform
+        yhat = fftpack.rfft(y - y.mean())
+        idx = (yhat ** 2).argmax()
+        freqs = fftpack.rfftfreq(len(x), d=(x[1] - x[0]) / (2 * np.pi))
+        w = freqs[idx]
+
+        p = 0
+
+        return [a, w, p, b]
