@@ -1,11 +1,9 @@
 import numpy as np
 import scipy.fftpack as fftpack
 from typing import List
-from qcodes import Instrument
-from scipy.optimize import curve_fit
 
 
-class LeastSquaresFit(Instrument):
+class LeastSquaresFit:
     """
     Base class for fit functions to be used with curve_fit. Specifies
     a function for fitting, function for guessing initial parameters for fit
@@ -20,32 +18,12 @@ class LeastSquaresFit(Instrument):
 
     def __init__(self, name, fun_str, fun_np,
                  param_names, param_labels, param_units):
-        super().__init__(name)
+        self.name = name
         self.fun_str = fun_str
         self.fun_np = fun_np
         self.param_names = param_names
-
-        for idx, parameter in enumerate(self.param_names):
-            self.add_parameter(name=parameter,
-                               unit=param_units[idx],
-                               label=param_labels[idx],
-                               set_cmd=False)
-        del self.parameters['IDN']
-
-    def perform_fit(self, input_data_array, output_data_array):
-
-        # find start parameters, run curve_fit function to perform fit
-        p_guess = self.guess(input_data_array, output_data_array)
-        popt, pcov = curve_fit(self.fun,
-                               input_data_array,
-                               output_data_array,
-                               p0=p_guess)
-
-        # update guess and fit results in fit parameters
-        for i, param in enumerate(self.param_names):
-            self.parameters[param]._save_val(popt[i])
-            self.parameters[param].start_value = p_guess[i]
-            self.parameters[param].variance = pcov[i, i]
+        self.param_labels = param_labels
+        self.param_units = param_units
 
     def fun(self, *args):
         """
@@ -133,58 +111,39 @@ class PowerDecay(LeastSquaresFit):
     def fun(self, x, a, p, b):
         return eval(self.fun_np)
 
-    def guess(self, x, y):
+    def guess(self, x, y):     # NOTE: This guess is only valid for a decaying power function (i.e. 0 < p < 1)
         if self.guess_params is not None:
             return self.guess_params
-        
-        length = len(y)
-        val_init = y[0:round(length / 20)].mean()
-        val_fin = y[-round(length / 20):].mean()
-        a = val_init - val_fin
-        b = val_fin
-
-        # guess T as point where data has fallen to 1/e of init value
-        idx = (np.abs(y - a / np.e - b)).argmin()
-        T = x[idx]
-        #guess p as e^(-1/T):
-        p = np.e**(-1/T)
-
+        a = y.max() - y.min()
+        b = y.min()
+        p = 1
         return [a, p, b]
 
-
-class FirstOrderBM(LeastSquaresFit):
-    def __init__(self, name='1st order benchmarking', guess: List=None):
+class Cosine(LeastSquaresFit):
+    def __init__(self, name='CosineFit', guess: List=None):
         super().__init__(
             name=name,
-            fun_str=r'$f(x) = A p^x + C(x-1)p^{x-2} + B$',
-            fun_np='a * p**x + c*(x-1)*p**(x-2) + b',
-            param_labels=['$A$', '$p$', '$B$'],
-            param_names=['a', 'p', 'b'],
-            param_units=['V', '', 'V'])
+            fun_str=r'$f(x) = a \cos(\omega x +\phi)+ b$',
+            fun_np='a*np.cos(w*x+p)+b',
+            param_labels=['$a$', r'$\omega$', r'$\phi$', '$b$'],
+            param_names=['a', 'w', 'p', 'b'],
+            param_units=['', '', '', ''])
         self.guess_params = guess
 
-    def fun(self, x, a, p, b):
+    def fun(self, x, a, w, p, b):
         return eval(self.fun_np)
 
     def guess(self, x, y):
         if self.guess_params is not None:
             return self.guess_params
+        a = y.max() - y.min()
+        b = y.mean()
 
-        length = len(y)
-        val_init = y[0:round(length / 20)].mean()
-        val_fin = y[-round(length / 20):].mean()
-        a = val_init - val_fin
-        c = val_fin
-        # guess T1 as point where data has fallen to 1/e of init value
-        idx = (np.abs(y - a / np.e - c)).argmin()
-        T = x[idx]
-        # guess p as e^(-1/T)
-        b = val_fin
-
-        # guess T as point where data has fallen to 1/e of init value
-        idx = (np.abs(y - a / np.e - b)).argmin()
-        T = x[idx]
-        #guess p as e^(-1/T):
-        p = np.e**(-1/T)
-
-        return [a, p, b]
+        # Get initial guess for frequency from a fourier transform
+        yhat = fftpack.rfft(y - y.mean())
+        idx = (yhat**2).argmax()
+        freqs = fftpack.rfftfreq(len(x), d=(x[1] - x[0]) / (2 * np.pi))
+        w = freqs[idx]
+        
+        p = 0
+        return [a, w, p, b]
