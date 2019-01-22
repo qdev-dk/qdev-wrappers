@@ -165,53 +165,66 @@ class AWG5014Interface(_AWGInterface):
             elif rep_mode == 'inf':
                 self.awg.set_sqel_loopcnt_to_inf(index, state=0)
                 self.awg.set_sqel_goto_target_index(last_index, 1)
+        sleep(self.sleep_time())
 
     def set_repetition_mode(self, rep_mode):
         seq_mode = self.sequence_mode()
         if seq_mode == 'element':
             index = self.index + 1
             if rep_mode == 'single':
+                # play element once and do not go to the next element after
                 self.awg.set_sqel_loopcnt_to_inf(index, state=0)
                 self.awg.set_sqel_goto_target_index(index, 0)
             elif rep_mode == 'inf':
+                # play element infinitely and go to the next element after
                 self.awg.set_sqel_loopcnt_to_inf(index, state=1)
                 self.awg.set_sqel_goto_target_index(index, index + 1)
         elif seq_mode == 'sequence':
             last_index = self.last_index + 1
             if rep_mode == 'single':
+                # at the end of the sequence stop
                 self.awg.set_sqel_goto_target_index(last_index, 0)
             elif rep_mode == 'inf':
+                # at the end of the sequence start again
                 self.awg.set_sqel_goto_target_index(last_index, 1)
+        sleep(self.sleep_time())
 
     def set_element(self, index):
         if index > self.last_index:
             raise RuntimeError(
                 f'Cannot set element to {index} as this is '
                 'longer than the last sequence index {self.last_index}')
-        # setting other elements to default looping sequence and updating
-        # sequence_mode
+
+        # configure rest of sequence to defaults
         seq_mode = self.sequence_mode()
         rep_mode = self.repetition_mode()
         if seq_mode == 'sequence':
+            # change sequence_mode to 'element' if necessary
             self.sequence_mode._save_val('element')
             if rep_mode == 'single':
+                # if the previous mode was to play the sequence once the last
+                # element should be reset so that it starts the sequence again
                 last_index = self.last_index + 1
                 self.awg.set_sqel_goto_target_index(last_index, 1)
         elif seq_mode == 'element':
             old_index = self.index + 1
             if rep_mode == 'inf':
+                # if the previous mode was to play one element infinitely that
+                # element needs to be reset to play only once
                 self.awg.set_sqel_loopcnt_to_inf(old_index, state=0)
             elif rep_mode == 'single':
+                # if the previous mode was to play one element once that
+                # element needs to be reset to go to the next element after
                 self.awg.set_sqel_goto_target_index(old_index, old_index + 1)
-        # setting element up to play according to repetition_mode
+
+        # set element up to play according to repetition_mode
         new_index = index + 1
         if rep_mode == 'single':
+            # do not go to the next element after
             self.awg.set_sqel_goto_target_index(new_index, 0)
         elif rep_mode == 'inf':
+            # play element infinitely
             self.awg.set_sqel_loopcnt_to_inf(new_index, state=1)
         self.awg.sequence_pos(new_index)
         self.index = index
-        sleep(self.sleep_time())
-
-
-
+        sleep(self.sleep_time()
