@@ -23,10 +23,10 @@ AxesTupleList = Tuple[List[matplotlib.axes.Axes],
                       List[Optional[matplotlib.colorbar.Colorbar]]]
 Number = Union[float, int]
 
-def plot_id(dataid, transform_name=None, **kwargs):
+def plot_id(dataid, transform_name=None,*args,**kwargs):
     plots = plot_by_id(dataid,**kwargs)
     if transform_name is not None:
-        transform_plot(plots,transform_name)
+        transform_plot(plots,transform_name,*args)
     return plots
 
 def save_image(dataid, transform_name=None, filename=None,**kwargs) -> AxesTupleList:
@@ -82,9 +82,10 @@ def save_image(dataid, transform_name=None, filename=None,**kwargs) -> AxesTuple
     return plots
 
 # Transform plot with user-defined functions
-def transform_plot(axs_and_cbaxs: AxesTupleList, transform_name: str):
+def transform_plot(axs_and_cbaxs: AxesTupleList, transform_name: str, *args):
 
-    defined_functions = ['avg_row', 'avg_column', 'sub_avg_row' , 'sub_avg_column']
+    defined_functions = ['avg_row', 'avg_column', 'sub_avg_row' , 'sub_avg_column',
+                        'xcut', 'ycut']
     name_string = ', '.join(defined_functions)
 
     modified_axs = []
@@ -98,9 +99,14 @@ def transform_plot(axs_and_cbaxs: AxesTupleList, transform_name: str):
             mod_ax, mod_cbax = sub_avg_heatmap(ax, cbax,'row')
         elif transform_name == 'sub_avg_column':
             mod_ax, mod_cbax = sub_avg_heatmap(ax, cbax,'column')
+        elif transform_name == 'xcut':
+            mod_ax, mod_cbax = linecut(ax, cbax,'x',*args)
+        elif transform_name == 'ycut':
+            mod_ax, mod_cbax = linecut(ax, cbax,'y',*args)
         else:
             raise ValueError('Transform name not defined. '
                     f'Allowed names are: {name_string}.')
+        mod_ax.figure.tight_layout()
         modified_axs.append(mod_ax)
         modified_cbaxs.append(mod_cbax)
 
@@ -171,6 +177,60 @@ def avg_heatmap(
 
     return ax, cbax
 
+def linecut(
+    ax: matplotlib.axes.Axes,
+    cbax: Optional[matplotlib.colorbar.Colorbar],
+    cutdim: str,
+    value: float) -> Tuple[matplotlib.axes.Axes,
+                           Optional[matplotlib.colorbar.Colorbar]]:
+    """
+    Create linecut of from a heatmap
+    """
+    # If we receive anything we can't recognize as a heatmap on a grid,
+    # then we make no attempt of averaging, but just let the arguments
+    # slip through
+    if ax.collections == []:
+        return ax, cbax
+
+    if len(ax.collections) > 1:
+        return ax, cbax
+
+    mesh = ax.collections[0]
+    if not isinstance(mesh, QuadMesh):
+        return ax, cbax
+
+
+    xlabel = ax.get_xlabel()
+    ylabel = ax.get_ylabel()
+    zlabel = cbax._label
+    title = ax.get_title()
+
+    data = get_axisdata(mesh)
+
+    # Find cut index based on nearest point to given value
+    if cutdim not in ['x', 'y']:
+        raise ValueError(f'Cutdim has to be row or column but was given {cutdim}')
+    cut_dim_int = {'x': 0, 'y': 1}[cutdim]
+    idx = (np.abs(data[cut_dim_int] - value)).argmin()
+    
+    ax.clear()
+    if cutdim == 'x':
+        zdata = data[2][idx,:]
+    else:
+        zdata = data[2][:,idx]
+
+    ax.plot(data[np.mod(cut_dim_int+1,2)], zdata)
+
+    new_xlabel = {'y': xlabel, 'x': ylabel}[cutdim]
+    ax.set_xlabel(new_xlabel)
+
+    ax.set_ylabel(zlabel)
+    fixed_label = {'x': xlabel, 'y': ylabel}[cutdim]
+    new_title = f"{title}\nLine cut at: {fixed_label} = {data[cut_dim_int][idx]}"
+    ax.set_title(new_title)
+    cbax.remove()
+    cbax = None
+    return ax, cbax
 
 def sub_avg_heatmap(
     ax: matplotlib.axes.Axes,
