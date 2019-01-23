@@ -213,12 +213,15 @@ def linecut(
     cut_dim_int = {'x': 0, 'y': 1}[cutdim]
     idx = (np.abs(data[cut_dim_int] - value)).argmin()
     
-    ax.clear()
     if cutdim == 'x':
         zdata = data[2][idx,:]
+        # Get cut value in correct units
+        cut_value = ax.xaxis.get_major_formatter()(data[cut_dim_int][idx])
     else:
         zdata = data[2][:,idx]
-
+        cut_value = ax.yaxis.get_major_formatter()(data[cut_dim_int][idx])
+    
+    ax.clear()
     ax.plot(data[np.mod(cut_dim_int+1,2)], zdata)
 
     new_xlabel = {'y': xlabel, 'x': ylabel}[cutdim]
@@ -226,7 +229,7 @@ def linecut(
 
     ax.set_ylabel(zlabel)
     fixed_label = {'x': xlabel, 'y': ylabel}[cutdim]
-    new_title = f"{title}\nLine cut at: {fixed_label} = {data[cut_dim_int][idx]}"
+    new_title = f"{title}\nLine cut at: {fixed_label} = {cut_value}"
     ax.set_title(new_title)
     cbax.remove()
     cbax = None
