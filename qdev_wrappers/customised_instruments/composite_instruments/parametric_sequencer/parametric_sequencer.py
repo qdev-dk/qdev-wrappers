@@ -127,9 +127,14 @@ class ParametricSequencer(Instrument):
         # this parameter has to be added at the end because setting it
         # to its initial value is only is defined when a sequence is uploaded
         self.add_parameter(
-            'repeat_mode',
+            'sequence_mode',
             vals=validators.Enum('element', 'inner', 'sequence'),
-            set_cmd=self._set_repeat_mode)
+            set_cmd=self._set_sequence_mode)
+
+        self.add_parameter(
+            'repetition_mode',
+            vals=validators.Enum('inf', 'single'),
+            set_cmd=self._set_repetition_mode)
 
         # populate the sequence channel with the provided symbols
         # suppress upload if sequence passed in by the constructor is
