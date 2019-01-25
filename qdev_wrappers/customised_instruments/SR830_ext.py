@@ -13,7 +13,7 @@ class ConductanceBuffer(ChannelBuffer):
 
     def __init__(self, name: str, instrument: 'SR830', **kwargs):
         super().__init__(name, instrument, channel=1)
-        self.unit = ('e^2/h')
+        self.unit = ('e$^2$/h')
 
     def get(self):
         # If X is not being measured, complain
@@ -23,12 +23,38 @@ class ConductanceBuffer(ChannelBuffer):
 
         resistance_quantum = 25.818e3  # (Ohm)
         xarray = super().get()
-        iv_conv = self._instrument.iv_gain
+        iv_conv = self._instrument.iv_gain()
         ac_excitation = self._instrument.amplitude.get_latest()
 
         gs = xarray / iv_conv / ac_excitation * resistance_quantum
 
         return gs
+
+class ResistanceBuffer(ChannelBuffer):
+    """
+    A full-buffered version of the current biased resistance based on an
+    array of X measurements
+
+    We basically just slightly tweak the get method
+    """
+
+    def __init__(self, name: str, instrument: 'SR830', **kwargs):
+        super().__init__(name, instrument, channel=1)
+        self.unit = ('Ohm')
+
+    def get(self):
+        # If X is not being measured, complain
+        if self._instrument.ch1_display() != 'X':
+            raise ValueError('Can not return conductance since X is not '
+                                'being measured on channel 1.')
+
+        xarray = super().get()
+        v_conv = self._instrument.v_gain()
+        ac_excitation = self._instrument.amplitude.get_latest()
+
+        rs = xarray / v_conv / ac_excitation
+
+        return rs
 
 
 # Subclass the SR830
@@ -41,7 +67,15 @@ class SR830_ext(SR830):
                             label='I/V Gain',
                             unit='',
                             set_cmd=lambda x: x,
-                            get_parser=float)
+                            get_parser=float,
+                            docstring='Gain of transimpedance preamplifier')
+
+        self.add_parameter(name='v_gain',
+                            label='V Gain',
+                            unit='',
+                            set_cmd=lambda x: x,
+                            get_parser=float,
+                            docstring='Gain of voltage preamplifer')        
 
         self.add_parameter(name='g',
                             label='Conductance',
@@ -67,6 +101,22 @@ class SR830_ext(SR830):
                             get_cmd=self._get_resistance_X,
                             get_parser=float)
 
+        self.add_parameter(name='resistance_i_bias',
+                            label='Resistance_I_bias',
+                            unit='Ohm',
+                            get_cmd=self._get_resistance_i_bias,
+                            get_parser=float,
+                            docstring='Resistance assuming current bias with AC'
+                                ' current sourced from the lockin')
+
+        self.add_parameter(name='g_buff',
+                            label='Conductance',
+                            parameter_class = ConductanceBuffer)
+
+        self.add_parameter(name='r_buff',
+                            label='Resistance',
+                            parameter_class = ResistanceBuffer)
+
     def _get_conductance(self):
         V = self.amplitude.get_latest()
         I = abs(self.R()/self.iv_gain.get_latest())
@@ -87,6 +137,11 @@ class SR830_ext(SR830):
     def _get_resistance_X(self):
         V = self.amplitude.get_latest()
         I = self.X()/self.iv_gain.get_latest()
+        return (V/I)
+
+    def _get_resistance_i_bias(self):
+        I = self.amplitude.get_latest()
+        V = self.X()/self.v_gain.get_latest()
         return (V/I)
 
 
