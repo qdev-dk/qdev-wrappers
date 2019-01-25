@@ -13,7 +13,7 @@ class ConductanceBuffer(ChannelBuffer):
 
     def __init__(self, name: str, instrument: 'SR830', **kwargs):
         super().__init__(name, instrument, channel=1)
-        self.unit = ('e^2/h')
+        self.unit = ('e$^2$/h')
 
     def get(self):
         # If X is not being measured, complain
@@ -23,7 +23,7 @@ class ConductanceBuffer(ChannelBuffer):
 
         resistance_quantum = 25.818e3  # (Ohm)
         xarray = super().get()
-        iv_conv = self._instrument.iv_gain
+        iv_conv = self._instrument.iv_gain()
         ac_excitation = self._instrument.amplitude.get_latest()
 
         gs = xarray / iv_conv / ac_excitation * resistance_quantum
@@ -49,7 +49,7 @@ class ResistanceBuffer(ChannelBuffer):
                                 'being measured on channel 1.')
 
         xarray = super().get()
-        v_conv = self._instrument.v_gain
+        v_conv = self._instrument.v_gain()
         ac_excitation = self._instrument.amplitude.get_latest()
 
         rs = xarray / v_conv / ac_excitation
@@ -114,7 +114,7 @@ class SR830_ext(SR830):
                             parameter_class = ConductanceBuffer)
 
         self.add_parameter(name='r_buff',
-                            label='Conductance',
+                            label='Resistance',
                             parameter_class = ResistanceBuffer)
 
     def _get_conductance(self):
