@@ -20,7 +20,8 @@ from qcodes.utils import validators
 
 from lomentum import Sequence, Element, in_context
 
-from qdev_wrappers.customised_instruments.interfaces.awg_interface import AWGInterface
+from qdev_wrappers.customised_instruments.interfaces.AWG_interface import _AWGInterface
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 
 log = logging.getLogger(__name__)
 
@@ -49,11 +50,13 @@ class OutOfRangeException(Exception):
         self.value = value
         self.erange = erange
 
+
 class RoundingWarning(Warning):
     def __init__(self, message, original, rounded):
         self.message = message
         self.original = original
         self.rounded = rounded
+
 
 class SequenceChannel(InstrumentChannel):
     """
@@ -61,6 +64,7 @@ class SequenceChannel(InstrumentChannel):
     of the sequence symbols. All the logic is still contained in the
     ParametricSequencer.
     """
+
     def __init__(self, parent: 'ParametricSequencer', name: str) -> None:
         super().__init__(parent, name)
 
@@ -71,6 +75,7 @@ class RepeatChannel(InstrumentChannel):
     of the sequence symbols assosicated with stepping. All the logic is still
     contained in the ParametricSequencer.
     """
+
     def __init__(self, parent: 'ParametricSequencer', name: str) -> None:
         super().__init__(parent, name)
 
@@ -86,12 +91,12 @@ class ParametricSequencer(Instrument):
 
     def __init__(self,
                  name: str,
-                 awg: AWGInterface,
+                 awg: _AWGInterface,
                  routes: Optional[RoutesDictType]=None,
                  units: Optional[Dict[Symbol, str]]=None,
                  labels: Optional[Dict[Symbol, str]]=None,
                  template_element: _Optional[Element]=NOT_GIVEN,
-                 inner_setpoints: _Optional[Union[SetpointsType,str]]=NOT_GIVEN,
+                 inner_setpoints: _Optional[Union[SetpointsType, str]]=NOT_GIVEN,
                  outer_setpoints: _Optional[SetpointsType]=NOT_GIVEN,
                  context: _Optional[ContextDict]=NOT_GIVEN,
                  first_sequence_element: _Optional[Element]=NOT_GIVEN,
@@ -99,10 +104,9 @@ class ParametricSequencer(Instrument):
         super().__init__(name)
         self.awg = awg
         self.routes = routes
-        
         self.units: Dict[Symbol, str] = units or {}
         self.labels: Dict[Symbol, str] = labels or {}
-        
+
         # we need to initialise these attributes with `None`. The actual value
         # gets set via the `change_sequence` call
         self._template_element: Optional[Element] = None
@@ -111,10 +115,10 @@ class ParametricSequencer(Instrument):
         self._context: ContextDict = {}
         self._first_sequence_element: Optional[Element] = None
         self._initial_element: Optional[Element] = None
-        
+
         # inital values of states
         self._do_upload = True
-        self._do_sync_repetion_state = True
+        self._do_sync_seq_rep_state = True
         self.deviation_margin = None
 
         # all symbols are mapped to parameters that live on the SequenceChannel
@@ -129,17 +133,15 @@ class ParametricSequencer(Instrument):
         self.add_parameter(
             'sequence_mode',
             vals=validators.Enum('element', 'inner', 'sequence'),
-            set_cmd=self._set_sequence_mode)
+            source=self.awg.sequence_mode,
+            parameter_class=DelegateParameter)
 
         self.add_parameter(
             'repetition_mode',
-            vals=validators.Enum('inf', 'single'),
-            set_cmd=self._set_repetition_mode)
+            source=self.awg.repetition_mode,
+            parameter_class=DelegateParameter)
 
         # populate the sequence channel with the provided symbols
-        # suppress upload if sequence passed in by the constructor is
-        # incomplete
-        self._do_upload = self._is_sequence_complete()
         self.change_sequence(
             template_element=template_element,
             inner_setpoints=inner_setpoints,
@@ -173,10 +175,14 @@ class ParametricSequencer(Instrument):
         # add it before the upload so that if there is a crash, the
         # state that is causing the crash is captured in the metadata
         self._update_metadata()
-        # self._validate_sequence()
+
+        # if the sequence is not complete return without uploading
+        if not self._is_sequence_complete():
+            return
 
         # no matter what is changed, the sequence is no longer up to date.
         self._sequence_up_to_date = False
+
         with self.single_upload():
             # only update parameters if context changed
             if context is not NOT_GIVEN:
@@ -191,12 +197,11 @@ class ParametricSequencer(Instrument):
                         set_cmd=partial(self._set_context_parameter, name),
                         initial_value=value)
             if (inner_setpoints is not NOT_GIVEN or
-               outer_setpoints is not NOT_GIVEN):
+                    outer_setpoints is not NOT_GIVEN):
                 self._update_setpoints()
 
-    def _validate_sequence(self):
-        # TODO: implement error
-        assert self._is_sequence_complete()
+    def run(self):
+        self.awg.run()
 
     def _is_sequence_complete(self) -> bool:
         # TODO: implement validation that checks if all symbols are provided
@@ -214,10 +219,6 @@ class ParametricSequencer(Instrument):
         self._inner_index = 0
         self._outer_index = 0
 
-        # setting this state to False is needed to avoid syncing when the
-        # initial value of the parameters is set.
-        self._do_sync_repetion_state = False
-
         self.repeat.parameters = {}
         for setpoints in (self._inner_setpoints, self._outer_setpoints):
             if setpoints is None:
@@ -227,12 +228,11 @@ class ParametricSequencer(Instrument):
             self.repeat.add_parameter(name=symbol,
                                       get_cmd=None,
                                       set_cmd=partial(
-                                          self._set_repeated_element,
+                                          self._set_element,
                                           set_inner=set_inner),
                                       unit=self.units.get(symbol, ''),
-                                      label=self.labels.get(symbol, ''),
-                                      initial_value=setpoints.values[0])
-        self._do_sync_repetion_state = True
+                                      label=self.labels.get(symbol, ''))
+            self.repeat.parameters[symbol]._save_val(setpoints.values[0])
 
         # define shortcuts
         self._inner_setpoint_parameter = None
@@ -255,11 +255,13 @@ class ParametricSequencer(Instrument):
         # self.metadata['template_element'] = template_element
         # self.metadata['initial_element'] = initial_element
 
-    def get_inner_setpoints(self):
-        return self._inner_setpoints
-
-    def get_outer_setpoints(self):
-        return self._outer_setpoints
+    def get_element(self):
+        if self.sequence_mode() != 'element':
+            warn(f"Warning: getting the element while being in sequence mode")
+        return self._sequence_object.forge(
+            SR=self.awg.sample_rate(),
+            routes=self.routes,
+            context=self._sequence_context)[self.index]
 
     # context managers
     @contextmanager
@@ -283,27 +285,24 @@ class ParametricSequencer(Instrument):
             self._upload_sequence()
 
     # Parameter getters and setters
-    def _set_repeat_mode(self, mode):
-        self._sync_repetion_state(mode)
-
     def _set_context_parameter(self, parameter, val):
         self._context[parameter] = val
         self._sequence_up_to_date = False
         if self._do_upload:
             self._upload_sequence()
 
-    def _set_repeated_element(self, value, set_inner):
-        if self.repeat_mode() == 'sequence':
+    def _set_element(self, value, set_inner):
+        if self.sequence_mode() != 'element':
             warn(f"Warning: setting the {['outer', 'inner'][set_inner]} "
                  f"setpoints to while being in sequence mode")
         try:
             if set_inner:
                 self._inner_index = self._value_to_index(value,
-                                                        self._inner_setpoints)
+                                                         self._inner_setpoints)
                 self.last_inner_index = self._inner_index
             else:
                 self._outer_index = self._value_to_index(value,
-                                                        self._outer_setpoints)
+                                                         self._outer_setpoints)
                 self.last_outer_index = self._outer_index
         except OutOfRangeException as e:
             setpoints_name = [self._outer_setpoints,
@@ -313,51 +312,33 @@ class ParametricSequencer(Instrument):
                 f'the {["outer", "inner"][set_inner]} setpoints ' +
                 f'{setpoints_name}: \n' +
                 e.message)
+        if self.sequence_mode() == 'element':
+            self.awg.set_element(self.index)
+        else:
+            self.awg.index = self.index
 
-        if self._do_sync_repetion_state:
-            self._sync_repetion_state()
-
-    def _get_repeated_element(self, set_inner):
-        # TODO: implement
-        return None
-
-    def _sync_repetion_state(self, repeat_mode=None):
-        if repeat_mode is None:
-            repeat_mode = self.repeat_mode()
-        if repeat_mode == 'sequence':
-            self.awg.repeat_full_sequence()
-        if repeat_mode == 'element':
-            if self._outer_setpoints is None:
-                index = self._inner_index
-            else:
-                index = (self._outer_index *
-                         len(self._outer_setpoints.values) +
-                         self._inner_index)
-
+    # Properties
+    @property
+    def index(self):
+        if self._outer_setpoints is None:
+            index = self._inner_index
+        else:
+            index = (self._outer_index *
+                     len(self._outer_setpoints.values) +
+                     self._inner_index)
+        if self._initial_element is not None:
             index += 1
-            if self._initial_element is not None:
-                index += 1
-            self.awg.set_repeated_element(int(index))
-            # # assert correct mode
-            # if self._outer_setpoints:
-            #     index = (outer_index*len(self._outer_setpoints.values) +
-            #              inner_index)
-            # else:
-            #     assert set_inner
-            #     index = self._value_to_index(value, self._inner_setpoints)
-            #     self.last_inner_index = index
-            # # most awgs are 1 indexed not 0 indexed
-            # index += 1
-            # if self.initial_element is not None:
-            #     index += 1
-            # self.awg.set_repeated_element(index)
-        elif repeat_mode == 'inner':
-            raise NotImplementedError('The "inner" repeat_mode is not yet'
-                                      ' implemented')
-            # if not set_inner:
-            #     raise RuntimeWarning('Cannot set repeated outer setpoint '
-            #                          'when repeat mode is "inner"')
+        return index
 
+    @property
+    def inner_setpoints(self):
+        return self._inner_setpoints
+
+    @property
+    def outer_setpoints(self):
+        return self._outer_setpoints
+
+    # Private methods
     def _value_to_index(self, value, setpoints):
         # setpoints may have any type. For numbers apply interpolation
         if isinstance(value, Number):
@@ -372,7 +353,7 @@ class ParametricSequencer(Instrument):
             index = (np.abs(values - value)).argmin()
             deviation = abs(values[index] - value)
             relative_deviation = deviation / (
-                (rmax-rmin) / len(values))
+                (rmax - rmin) / len(values))
             close_to_zero_deviation = np.isclose(relative_deviation, 0)
 
             # if None: warn if not close
@@ -395,17 +376,12 @@ class ParametricSequencer(Instrument):
         else:
             return setpoints.values.index(value)
 
-    # Private methods
     def _upload_sequence(self):
         self._update_sequence()
         self.awg.upload(
-            self._sequence_object.forge(SR=self.awg.SR(),
+            self._sequence_object.forge(SR=self.awg.sample_rate(),
                                         routes=self.routes,
                                         context=self._sequence_context))
-        # uploading a sequence will clear the state of the current element
-        # so we need to sync the repetition state or revert the value of
-        # repetition mode
-        self._sync_repetion_state()
 
     def _update_sequence(self):
         if self._sequence_up_to_date:
@@ -418,7 +394,7 @@ class ParametricSequencer(Instrument):
                 kwarg = {self._outer_setpoints.symbol: outer_value}
                 for j, inner_value in enumerate(self._inner_setpoints.values):
                     if (self._first_sequence_element is not None and
-                        j == 0 and i == 0):
+                            j == 0 and i == 0):
                         template = self._first_sequence_element
                     else:
                         template = self._template_element
@@ -430,7 +406,7 @@ class ParametricSequencer(Instrument):
             kwarg = {}
             for j, inner_value in enumerate(self._inner_setpoints.values):
                 if (self._first_sequence_element is not None and
-                    j == 0):
+                        j == 0):
                     template = self._first_sequence_element
                 else:
                     template = self._template_element
@@ -442,7 +418,7 @@ class ParametricSequencer(Instrument):
             if self._first_sequence_element is not None:
                 elements.append(self._first_sequence_element)
             elements.append(self._template_element)
-    
+
         # make sequence repeat indefinitely
         elements[-1].sequencing['goto_state'] = 1
 
@@ -452,12 +428,12 @@ class ParametricSequencer(Instrument):
         self._sequence_object = Sequence(elements)
 
         if self._outer_setpoints is not None:
-            condition = lambda k: (k != self._inner_setpoints.symbol and
-                                   k != self._outer_setpoints.symbol)
+            def condition(k): return (k != self._inner_setpoints.symbol and
+                                      k != self._outer_setpoints.symbol)
         elif self._inner_setpoints is not None:
-            condition = lambda k: k != self._inner_setpoints.symbol
+            def condition(k): return k != self._inner_setpoints.symbol
         else:
-            condition = lambda k: True
+            def condition(k): return True
 
         self._sequence_context = {k: v for k, v in self._context.items()
                                   if condition(k)}
