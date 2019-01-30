@@ -1,0 +1,47 @@
+  decadac:
+    driver: local_instruments.Decadac_local
+    type: Decadac_local
+    address: ASRL3::INSTR
+    enable_forced_reconnect: true
+    init:
+      min_val: -10
+      max_val: 10
+    parameters:
+      slots.Slot0.channels.Chan0.fine_volt:
+        alias: Q0
+        label: Q0 gate
+        step: 0.1
+        inter_delay: 1
+        monitor: true
+      slots.Slot0.channels.Chan1.fine_volt:
+        alias: Q1
+        label: Q1 gate
+        step: 0.1
+        inter_delay: 1
+        monitor: true
+      slots.Slot1.channels.Chan0.fine_volt:
+        alias: Q2
+        label: Q2 gate
+        step: 0.1
+        inter_delay: 1
+        monitor: true
+      slots.Slot1.channels.Chan1.fine_volt:
+        alias: Q3
+        label: Q3 gate
+        step: 0.1
+        inter_delay: 1
+        monitor: true
+      slots.Slot2.channels.Chan0.fine_volt:
+        alias: Q4
+        label: Q4 gate
+        step: 0.1
+        inter_delay: 1
+        monitor: true
+      slots.Slot2.channels.Chan1.fine_volt:
+        alias: Q5
+        label: Q5 gate
+        step: 0.1
+        inter_delay: 1
+        monitor: true
+    init:
+      terminator: \n
