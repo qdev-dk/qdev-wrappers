@@ -1,4 +1,4 @@
-from qdev_wrappers.customised_instruments.alazar_tech.alazar_channel import AlazarChannel
+from qdev_wrappers.alazar_controllers.alazar_channel import AlazarChannel
 from typing import Dict, Union
 
 

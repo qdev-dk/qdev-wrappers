@@ -1,12 +1,12 @@
 from qcodes.utils import validators as vals
-from qdev_wrappers.customised_instruments.parametric_waveform_analyser.setpoints_channel import SetpointsChannel
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.setpoints_channel import SetpointsChannel
 from qcodes.instrument.channel import InstrumentChannel
 import importlib
 import qcodes as qc
 import os
 import sys
 import yaml
-from broadbean.loader import read_element
+from lomentum.loader import read_element
 scriptfolder = qc.config["user"]["scriptfolder"]
 pulsebuildingfoldername = qc.config["user"]["pulsebuildingfolder"]
 

@@ -2,8 +2,8 @@ import logging
 import numpy as np
 from qcodes.instrument.base import Instrument
 import math
-from qdev_wrappers.customised_instruments.parametric_waveform_analyser.readout_drive_channel import ReadoutChannel, DriveChannel
-from qdev_wrappers.customised_instruments.parametric_waveform_analyser.sequence_channel import SequenceChannel
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.readout_drive_channel import ReadoutChannel, DriveChannel
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.sequence_channel import SequenceChannel
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,8 @@ class ParametricWaveformAnalyser(Instrument):
         self.readout._sidebanding_channels.clear()
         self.drive._sidebanding_channels.clear()
 
-    def _get_alazar_ch_settings(self):
+    @property
+    def alazar_ch_settings(self):
         """
         Based on the current instrument settings calculates the settings
         configuration for an alazar channel as a dictionary with keys:

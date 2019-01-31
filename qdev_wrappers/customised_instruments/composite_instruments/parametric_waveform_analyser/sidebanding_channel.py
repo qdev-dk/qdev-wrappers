@@ -1,9 +1,9 @@
 from qcodes.instrument.channel import InstrumentChannel, ChannelList
 from qdev_wrappers.alazar_controllers.alazar_multidim_parameters import AlazarMultiChannelParameter
-from qdev_wrappers.customised_instruments.parametric_waveform_analyser.parameters import AlazarMultiChannelParameterHack, PulseBuildingParameter
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.parameters import AlazarMultiChannelParameterHack, PulseBuildingParameter
 from typing import Optional, Dict, Union
 from qdev_wrappers.alazar_controllers.acquisition_parameters import NonSettableDerivedParameter
-from qdev_wrappers.customised_instruments.parametric_waveform_analyser.alazar_channel_ext import AlazarChannel_ext
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.alazar_channel_ext import AlazarChannel_ext
 
 class SidebandingChannel(InstrumentChannel):
     """

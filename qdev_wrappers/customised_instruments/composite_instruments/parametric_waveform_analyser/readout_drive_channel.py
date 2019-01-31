@@ -2,10 +2,10 @@ from qcodes.instrument.channel import InstrumentChannel
 from qcodes.utils import validators as vals
 from qcodes.instrument.parameter import Parameter
 from contextlib import contextmanager
-from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
-from qdev_wrappers.customised_instruments.parametric_waveform_analyser.pulse_building_parameter import PWAPulseBuildingParameter
-from qdev_wrappers.customised_instruments.settings_instrument.settings_parameters import SettingsMultiChannelParameter
-from qdev_wrappers.customised_instruments.parametric_waveform_analyser.sidebanding_channel import ReadoutSidebandingChannel, DriveSidebandingChannel
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter, DelegateMultiChannelParameter
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.pulse_building_parameter import PWAPulseBuildingParameter
+# from qdev_wrappers.customised_instruments.settings_instrument.settings_parameters import SettingsMultiChannelParameter
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.sidebanding_channel import ReadoutSidebandingChannel, DriveSidebandingChannel
 
 
 class CarrierFreqParam(Parameter):
@@ -151,7 +151,7 @@ class ReadoutChannel(MixingChannel):
     def __init__(self, parent, name: str):
         super().__init__(parent, name)
         self.all_readout_channels = parent._alazar_controller.channels
-        multichanalazarparam = SettingsMultiChannelParameter(
+        multichanalazarparam = DelegateMultiChannelParameter(
             'data', self, parent._alazar_controller.channels, 'data')
         self.parameters['data'] = multichanalazarparam
         # heterodyne source parameters
