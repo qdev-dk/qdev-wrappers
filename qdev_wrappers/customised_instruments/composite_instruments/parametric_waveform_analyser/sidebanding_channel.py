@@ -224,3 +224,243 @@ class ReadoutSidebandingChannel(SidebandingChannel):
             self.alazar_channels.append(ch)
             self._parent._parent._alazar_controller.channels.append(ch)
             ch.demod_freq(self.demodulation_frequency())
+
+
+#######################################
+
+
+from qcodes import Instrument
+from qcodes.instrument.channels import InstrumentChannel
+from qcodes.instrument.parameter import Parameter
+from qdev_wrappers.customised_instruments.parameters.delegate_parameter imp
+from qdev_wrappers.alazar_controllers.alazar_multidim_parameters import AlazarMultiChannelParameter
+from qdev_wrappers.customised_instruments.parametric_waveform_analyser.alazar_channel_ext import AlazarChannel_ext
+from qdev_wrappers.alazar_controllers.acquisition_parameters import NonSettableDerivedParameter
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateMultiChannelParameter
+from functools import partial
+from warnings import warn
+
+
+class PulseBuildingParameter(Parameter):
+    def __init__(self, **kwargs):
+        super().__init__(*args, **kwargs)
+
+
+class Sidebander(Instrument):
+    """
+    An instrument which represents a sequencer and microwave drive where the
+    sequencer is used to sideband the microwave drive.
+    """
+
+    def __init__(self, name, sequencer, carrier_param, full_name=None,
+                 **kwargs):
+        super().__init__(name)
+        if full_name is not None:
+            self.full_name = full_name
+
+        self._carrier_frequency = carrier_param
+        self._sequencer = sequencer
+
+        # special pulse building parameters
+        self.add_parameter(
+            name='frequency',
+            set_cmd=self._set_frequency,
+            get_cmd=self._get_frequency)
+
+        # pulse building parameters
+        self.add_parameter(
+            name='sideband_frequency',
+            set_cmd=self._set_sideband,
+            get_cmd=partial(self._get_pulse_building_param,
+                            'sideband_frequency'),
+            parameter_class=PulseBuildingParameter)
+        self.add_parameter(
+            name='I_offset',
+            set_cmd=partial(self._set_pulse_building_param,
+                            'I_offset'),
+            get_cmd=partial(self._get_pulse_building_param,
+                            'I_offset'),
+            parameter_class=PulseBuildingParameter)
+        self.add_parameter(
+            name='Q_offset',
+            set_cmd=partial(self._set_pulse_building_param,
+                            'Q_offset'),
+            get_cmd=partial(self._get_pulse_building_param,
+                            'Q_offset'),
+            parameter_class=PulseBuildingParameter)
+        self.add_parameter(
+            name='gain_offset',
+            set_cmd=partial(self._set_pulse_building_param,
+                            'gain_offset'),
+            get_cmd=partial(self._get_pulse_building_param,
+                            'gain_offset'),
+            parameter_class=PulseBuildingParameter)
+        self.add_parameter(
+            name='phase_offset',
+            set_cmd=partial(self._set_pulse_building_param,
+                            'phase_offset'),
+            get_cmd=partial(self._get_pulse_building_param,
+                            'phase_offset'),
+            parameter_class=PulseBuildingParameter)
+
+    def _set_pulse_building_param(self, paramname, val):
+        """
+        Sets the parameter on the repeat channel of the sequencer where
+        possible. If not then attempts to set on the sequence channel.
+        """
+        name = self.full_name + '_' + paramname
+        if name in self._sequencer.repeat.parameters:
+            self._sequencer.repeat.parameters[name](val)
+        elif name in self._sequencer.sequence.parameters:
+            self._sequencer.sequence.parameters[name](val)
+        else:
+            warn(f'Attempted to set {name} on sequencer but this '
+                  'parameter was not found.')
+
+    def _get_pulse_building_param(self, paramname, val):
+        """
+        Gets the parameter value from the repeat channel of the sequencer where
+        possible. If not then attempts to get from the sequence channel.
+        """
+        if paramname in self._sequencer.repeat.parameters:
+            return self._sequencer.repeat.parameters[paramname]()
+        elif paramname in self._sequencer.sequence.parameters:
+            return self._sequencer.sequence.parameters[paramname]()
+        else:
+            warn(f'Attempted to set {paramname} on sequencer but this '
+                  'parameter was not found.')
+            return None
+
+    def _set_sideband(self, val):
+        """
+        Attempts set on the awg and then updates the frequency parameter
+        """
+        self._set_pulse_building_param(self.full_name + '_sideband_frequency')
+        self.frequency._save_val(self._carrier_frequency() + val)
+
+    def _set_frequency(self, val):
+        """
+        Sets new sidebandn to generate required frequency
+        """
+        new_sideband = val - self._carrier_frequency()
+        self.sideband_frequency(new_sideband)
+
+    def _get_frequency(self, val):
+        """
+        Calculates and returns resultant frequency
+        """
+        return self._carrier_frequency() + self.sideband_frequency()
+
+    @property
+    def pulse_building_parameters(self):
+        return {n, p for n, p in self.parameters if
+                isinstance(p, PulseBuildingParameter)}
+
+
+class DriveChannel(Sidebander, InstrumentChannel):
+    """
+    An instrument channel which can be used to represent the drive of a single qubit.
+    """
+
+    def __init__(self, parent, name, sequencer, carrier_param, full_name=None):
+        super().__init__(name=name,
+                         parent=parent,
+                         sequencer=sequencer,
+                         carrier_param=carrier_param,
+                         full_name=full_name)
+        self.add_parameter(
+            name='DRAG_amplitude',
+            set_cmd=partial(self._set_pulse_building_param,
+                            'DRAG_amplitude'),
+            get_cmd=partial(self._get_pulse_building_param,
+                            'DRAG_amplitude'),
+            parameter_class=PulseBuildingParameter)
+        self.add_parameter(
+            name='spectroscopy_amplitude',
+            set_cmd=partial(self._set_pulse_building_param,
+                            'spectroscopy_amplitude'),
+            get_cmd=partial(self._get_pulse_building_param,
+                            'spectroscopy_amplitude'),
+            parameter_class=PulseBuildingParameter)
+        self.add_parameter(
+            name='gate_amplitude',
+            set_cmd=partial(self._set_pulse_building_param,
+                            'gate_amplitude'),
+            get_cmd=partial(self._get_pulse_building_param,
+                            'gate_amplitude'),
+            parameter_class=PulseBuildingParameter)
+
+
+class SidebandedReadoutChannel(Sidebander, InstrumentChannel):
+    def __init__(self, parent, name, sequencer, carrier_param, demod_param, pwa, full_name=None):
+        super().__init__(name=name,
+                         parent=parent,
+                         sequencer=sequencer,
+                         carrier_param=carrier_param,
+                         full_name=full_name)
+        self._base_demod_param = demod_param
+
+        # restructuring so that each readout channel does not have access
+        # to shared pulse building settings
+        del self.parameters['I_offset']
+        del self.parameters['Q_offset']
+        del self.parameters['gain_offset']
+        del self.parameters['phase_offset']
+
+        # updating the frequency parameter to additionaly update demodulation
+        # frequencies
+        freq_param = self.parameters.pop('frequency')
+        self.add_parameter(name='frequency',
+                           set_fn=self._set_frequency,
+                           source=freq_param)
+
+        # creating alazar channels and adding the channellist and
+        # multichanparam to the instrument
+        alazar_channels = self._create_alazar_channels(settings)
+        alazar_chan_list = ChannelList(
+            self, 'alazar_channels', AlazarChannel_ext,
+            multichan_paramclass=AlazarMultiChannelParameter,
+            chan_list=alazar_channels)
+        self.add_submodule('alazar_channels', alazar_chan_list)
+        self.parameters['data'] = DelegateMultiChannelParameter(
+            'data', self, alazar_chan_list, set_allowed=False)
+
+    def _set_frequency(self, val):
+        new_demod = val - self._carrier_param() + self._base_demod_param()
+        self.alazar_channels.demod_freq(val)
+        super()._set_frequency(val)
+
+    def _create_alazar_channels(self, pwa):
+        """
+        Create alazar channel pair based on the pwa settings dictionary to
+        readout at this sidebanded frequency. Put channels alazar_channels
+        submodule and pwa._alazar_controller.channels.
+        """
+        settings = pwa.alazar_ch_settings
+        chan1 = AlazarChannel_ext(
+            parent=pwa._alazar_controller,
+            name=self.full_name + '_realmag',
+            demod=True,
+            average_records=settings['average_records'],
+            average_buffers=settings['average_buffers'],
+            integrate_samples=pwa.readout.integrate_time())
+        chan2 = AlazarChannel_ext(
+            parent=pwa._alazar_controller,
+            name=self.full_name + '_imaginaryphase',
+            demod=True,
+            average_records=settings['average_records'],
+            average_buffers=settings['average_buffers'],
+            integrate_samples=pwa.readout.integrate_time())
+        if pwa.readout.demodulation_type() == 'magphase':
+            chan1.demod_type('magnitude')
+            chan1.data.label = f'Q{self.ch_num} Magnitude'
+            chan2.demod_type('phase')
+            chan2.data.label = f'Q{self.ch_num} Phase'
+        else:
+            chan1.demod_type('real')
+            chan1.data.label = f'Q{self.ch_num} Real'
+            chan2.demod_type('imag')
+            chan2.data.label = f'Q{self.ch_num} Imaginary'
+        for ch in (chan1, chan2):
+            pwa._alazar_controller.channels.append(ch)
+            ch.demod_freq(self.demodulation_frequency())
