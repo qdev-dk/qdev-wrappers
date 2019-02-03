@@ -87,6 +87,12 @@ class _AWGInterface(Instrument):
         """
         raise NotImplementedError
 
+    def stop(self):
+        """
+        Stops the sequence or element from running
+        """
+        raise NotImplementedError
+
     def to_default(self):
         """
         Convenience function which sets up some defaults for sample_rate and
@@ -150,6 +156,9 @@ class SimulatedAWGInterface(_AWGInterface):
 
     def run(self):
         print('running')
+
+    def stop(self):
+        print('stop')
 
 
 class AWG5014Interface(_AWGInterface):
@@ -261,3 +270,9 @@ class AWG5014Interface(_AWGInterface):
         sleep(self.sleep_time())
         if rep_mode == 'inf':
             self.run()
+
+    def run(self):
+        self.awg.run()
+
+    def stop(self):
+        self.awg.stop()
