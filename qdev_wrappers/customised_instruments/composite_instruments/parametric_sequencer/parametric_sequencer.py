@@ -203,57 +203,8 @@ class ParametricSequencer(Instrument):
     def run(self):
         self.awg.run()
 
-    def _is_sequence_complete(self) -> bool:
-        # TODO: implement validation that checks if all symbols are provided
-        # this might be best done in the lomentum layer
-        return (
-            self._template_element is not None and
-            self._context is not None
-        )
-
-    def _update_setpoints(self):
-        self._sequence_up_to_date = False
-
-        self.last_inner_index = 0
-        self.last_outer_index = 0
-        self._inner_index = 0
-        self._outer_index = 0
-
-        self.repeat.parameters = {}
-        for setpoints in (self._inner_setpoints, self._outer_setpoints):
-            if setpoints is None:
-                continue
-            symbol = setpoints.symbol
-            set_inner = setpoints is self._inner_setpoints
-            self.repeat.add_parameter(name=symbol,
-                                      get_cmd=None,
-                                      set_cmd=partial(
-                                          self._set_element,
-                                          set_inner=set_inner),
-                                      unit=self.units.get(symbol, ''),
-                                      label=self.labels.get(symbol, ''))
-            self.repeat.parameters[symbol]._save_val(setpoints.values[0])
-
-        # define shortcuts
-        self._inner_setpoint_parameter = None
-        self._outer_setpoint_parameter = None
-        if self._inner_setpoints:
-            self._inner_setpoint_parameter = (
-                self.repeat.parameters[self._inner_setpoints.symbol])
-        if self._outer_setpoints:
-            self._outer_setpoint_parameter = (
-                self.repeat.parameters[self._outer_setpoints.symbol])
-
-        if self._do_upload:
-            self._upload_sequence()
-
-    def _update_metadata(self):
-        # add metadata, that gets added to the snapshot automatically
-        self.metadata['inner_setpoints'] = self._inner_setpoints
-        self.metadata['outer_setpoints'] = self._outer_setpoints
-        # TODO: add serialization of the elements
-        # self.metadata['template_element'] = template_element
-        # self.metadata['initial_element'] = initial_element
+    def stop(self):
+        self.awg.stop()
 
     def get_element(self):
         if self.sequence_mode() != 'element':
@@ -263,7 +214,7 @@ class ParametricSequencer(Instrument):
             routes=self.routes,
             context=self._sequence_context)[self.index]
 
-    # context managers
+    # Context managers
     @contextmanager
     def no_upload(self):
         # we have to save the oringinal stat in order to allow nesting of
@@ -339,6 +290,55 @@ class ParametricSequencer(Instrument):
         return self._outer_setpoints
 
     # Private methods
+    def _is_sequence_complete(self) -> bool:
+        # TODO: implement validation that checks if all symbols are provided
+        # this might be best done in the lomentum layer
+        return (self._template_element is not None and
+                self._context is not None)
+
+    def _update_setpoints(self):
+        self._sequence_up_to_date = False
+
+        self.last_inner_index = 0
+        self.last_outer_index = 0
+        self._inner_index = 0
+        self._outer_index = 0
+
+        self.repeat.parameters = {}
+        for setpoints in (self._inner_setpoints, self._outer_setpoints):
+            if setpoints is None:
+                continue
+            symbol = setpoints.symbol
+            set_inner = setpoints is self._inner_setpoints
+            self.repeat.add_parameter(name=symbol,
+                                      get_cmd=None,
+                                      set_cmd=partial(
+                                          self._set_element,
+                                          set_inner=set_inner),
+                                      unit=self.units.get(symbol, ''),
+                                      label=self.labels.get(symbol, ''))
+            self.repeat.parameters[symbol]._save_val(setpoints.values[0])
+
+        # define shortcuts
+        self._inner_setpoint_parameter = None
+        self._outer_setpoint_parameter = None
+        if self._inner_setpoints:
+            self._inner_setpoint_parameter = (
+                self.repeat.parameters[self._inner_setpoints.symbol])
+        if self._outer_setpoints:
+            self._outer_setpoint_parameter = (
+                self.repeat.parameters[self._outer_setpoints.symbol])
+        if self._do_upload:
+            self._upload_sequence()
+
+    def _update_metadata(self):
+        # add metadata, that gets added to the snapshot automatically
+        self.metadata['inner_setpoints'] = self._inner_setpoints
+        self.metadata['outer_setpoints'] = self._outer_setpoints
+        # TODO: add serialization of the elements
+        # self.metadata['template_element'] = template_element
+        # self.metadata['initial_element'] = initial_element
+
     def _value_to_index(self, value, setpoints):
         # setpoints may have any type. For numbers apply interpolation
         if isinstance(value, Number):
@@ -371,7 +371,6 @@ class ParametricSequencer(Instrument):
                     f'`{values[index]}` which deviates more than the '
                     f'configured deviation margin `{self.deviation_margin}` '
                     f'Refusing to continue!')
-
             return index
         else:
             return setpoints.values.index(value)
