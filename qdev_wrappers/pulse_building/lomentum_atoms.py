@@ -1,5 +1,5 @@
 import numpy as np
-from broadbean.atoms import atom
+from lomentum.atoms import atom
 
 
 @atom

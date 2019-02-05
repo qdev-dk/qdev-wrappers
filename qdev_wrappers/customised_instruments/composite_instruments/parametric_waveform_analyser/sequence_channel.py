@@ -18,7 +18,6 @@ class SequenceChannel(InstrumentChannel):
     including the sequence mode, the template element and the setpoint
     related paramters.
     """
-    # TODO: template element to be a parameter (serialisable)
     # TODO: better way to check if up to date, eg if sequencer has been used by another instr
 
     def __init__(self, parent, name: str):
@@ -60,7 +59,7 @@ class SequenceChannel(InstrumentChannel):
                 'seq modes on sequencer and alazar do not match')
 
     def _set_seq_mode(self, mode):
-        pwa = self._parent
+        pwa = self.root_instrument
         if str(mode).upper() in ['TRUE', '1', 'ON']:
             pwa._alazar.seq_mode(True)
             pwa._sequencer.repeat_mode('sequence')
@@ -76,12 +75,12 @@ class SequenceChannel(InstrumentChannel):
         self._set_not_up_to_date()
 
     def _sync_repeat_params(self):
-        pwa = self._parent
+        pwa = self.root_instrument
         for paramname, param in pwa._sequencer.repeat.parameters.items():
             param.set(pwa._pulse_building_parameters[paramname].get())
 
     def _set_not_up_to_date(self):
-        for ch in self._parent._alazar_controller.channels:
+        for ch in self.root_instrument._alazar_controller.channels:
             ch._stale_setpoints = True
         self._up_to_date = False
 
@@ -94,7 +93,7 @@ class SequenceChannel(InstrumentChannel):
         context = {}
         labels = {}
         units = {}
-        for name, param in self._parent._pulse_building_parameters.items():
+        for name, param in self.root_instrument._pulse_building_parameters.items():
             context[name] = param()
             labels[name] = param.label
             units[name] = param.unit
@@ -106,8 +105,9 @@ class SequenceChannel(InstrumentChannel):
         outer setpoints and the template element uploads a sequence
         and updates the alazar_channels.
         """
+        pwa = self.root_instrument
         if not self._up_to_date:
-            self._parent._sequencer.change_sequence(
+            pwa._sequencer.change_sequence(
                 self._template_element_dict[self.template_element()],
                 initial_element=self._first_element,
                 inner_setpoints=self.inner_setpoints.setpoints,
@@ -116,7 +116,7 @@ class SequenceChannel(InstrumentChannel):
             self._up_to_date = True
         if not self.mode():
             self._sync_repeat_params()
-        self._parent.readout.update_alazar_channels()
+        pwa.readout.update_alazar_channels()
 
     def reload_template_element_dict(self):
         """
