@@ -80,9 +80,8 @@ class Analysis:
 
     def get_result(self, **setpoint_values):
         """
-        Args:
-            dictionary of setpoint values.
-            ie. {'frequency:1e9, 'power':-10}
+        Keyword arguments:
+            setpoint values, i.e. frequency=1e9, power=-10
         Returns:
             dict for fit where these conditions are satisfied
         """
@@ -99,7 +98,11 @@ class Analysis:
     def _plot_1d(self, xdata, ydata, parameter_values, param_variance, rescale_axes=True):
 
         # plot data, and fit if successful
-        fig, ax = plt.subplots(1, 1)
+        plt.figure(figsize=(10, 4))
+        ax = plt.subplot(111)
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
+        
         ax.plot(xdata['data'], ydata['data'], marker='.', markersize=5, linestyle='', color='C0')
         if parameter_values is None:
             pass
@@ -137,9 +140,6 @@ class Analysis:
         return ax
 
     def plot(self, rescale_axes: bool = True, show_variance=False, save_plot=False):
-        """
-        setpoint : None or a dict of form {name: value, name2: value, ...}
-        """
 
         if len(self.function_vars) > 1:
             raise NotImplementedError("Sorry, you have specified multiple function variables, and plotting only "

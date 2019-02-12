@@ -169,7 +169,11 @@ def _plot_1d(analysis_run_id, data_run_id, xdata, ydata, param_dict, **setpoints
             f"{analysis_info.exp_name} ({analysis_info.sample_name})"
 
     # plot for 1D fit or 1D cut of fit
-    fig, ax = plt.subplots(1, 1)
+    plt.figure(figsize=(10, 4))
+    ax = plt.subplot(111)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.7, box.height])
+
     ax.plot(xdata['data'], ydata['data'], marker='.', markersize=5, linestyle='', color='C0')
 
     # plot fit if successful, define textbox string for fit
@@ -201,7 +205,7 @@ def _plot_1d(analysis_run_id, data_run_id, xdata, ydata, param_dict, **setpoints
     data_lst = [xdata, ydata]
     _rescale_ticks_and_units(ax, data_lst)
 
-    ax.text(1.05, 0.7, textstr, transform=ax.transAxes, fontsize=14,
+    ax.text(1.05, 0.75, textstr, transform=ax.transAxes, fontsize=14,
             verticalalignment='top', bbox={'ec': 'k', 'fc': 'w'})
 
     ax.set_title(title)

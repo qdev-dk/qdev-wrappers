@@ -151,3 +151,30 @@ class RabiT1(LeastSquaresModel):
                           'np': 'np.exp(-x/T) * np.cos(w * x / 2 ) ** 2 + (1 - np.exp(-x/T)) / 2'}
 
         super().__init__(model_parameters, model_vars, model_function, guess)
+
+class RabiT1(LeastSquaresModel):
+
+    def __init__(self):
+        guess = g.RabiT1Guess()
+        model_parameters = {'T': {'label': '$T_2$',      'unit': 's'},
+                            'w': {'label': '$w_{rabi}$', 'unit': 'Hz'}}
+        model_vars = ['x']
+        model_function = {'str': r'$f(x) = e^(-x/T_1) \cos^2(\omega x / 2) + (1 - e^(-x/T_1)) / 2$',
+                          'np': 'np.exp(-x/T) * np.cos(w * x / 2 ) ** 2 + (1 - np.exp(-x/T)) / 2'}
+
+        super().__init__(model_parameters, model_vars, model_function, guess)
+
+
+
+class LauritsMobility1(LeastSquaresModel):
+
+    def __init__(self):
+        guess = None
+        model_parameters = {'vt': {'label': '$V_th$', 'unit': 'V'},
+                            'a': {'label': r'$\alpha$', 'unit': ''},
+                            'r': {'label': '$R_s$', 'unit': ''}}
+        model_vars = ['vg']
+        model_function = {'str': r'$f(V_g) = 1/ (R + (\alpha /(V_g - V_th))$',
+                          'np': '1/(r + a/(vg-vt))'}
+
+        super().__init__(model_parameters, model_vars, model_function, guess)
