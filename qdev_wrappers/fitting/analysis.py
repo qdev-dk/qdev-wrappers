@@ -298,7 +298,7 @@ class Analysis:
                         'inferred_from': {'run_id': self.experiment_info['run_id'],
                                           'exp_id': self.experiment_info['exp_id'],
                                           'dept_var': self.dept_var['name']}}
-        dataset = new_data_set('analysis',
+        dataset = new_data_set('results',
                                specs=paramspecs,
                                metadata=all_metadata)
 
