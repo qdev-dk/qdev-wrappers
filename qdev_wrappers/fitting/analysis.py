@@ -102,7 +102,7 @@ class Analysis:
         ax = plt.subplot(111)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
-        
+
         ax.plot(xdata['data'], ydata['data'], marker='.', markersize=5, linestyle='', color='C0')
         if parameter_values is None:
             pass
