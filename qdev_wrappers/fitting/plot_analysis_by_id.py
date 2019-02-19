@@ -25,11 +25,6 @@ def plot_analysis_by_id(analysis_run_id, save_plot=False, **setpoints):
     # ToDo: save dill of model, use this instead of model metadata from fit
     if 'function' not in model_info.keys():
         raise RuntimeError("That model did not save function information for plotting, so plotting doesn't work.")
-    elif type(model_info['function']) is not dict:
-        raise RuntimeError("Function information for that model was not saved as a dictionary, so the numpy function "
-                           "for plotting can't be retrieved.")
-    elif 'func_np' not in model_info['function'].keys():
-        raise RuntimeError("That model did not save a numpy function for plotting, so plotting doesn't work.")
 
     # If data is for a 1D plot, retrieve fit parameters and x- and y-data
     if len(data) == 2:
@@ -162,6 +157,12 @@ def _retrieve_parameter_dict(analysis_run_id, data_length, **setpoints):
 
 
 def _plot_1d(analysis_run_id, data_run_id, xdata, ydata, param_dict, **setpoints):
+
+    if type(model_info['function']) is not dict:
+        raise RuntimeError("Function information for that model was not saved as a dictionary, so the numpy function "
+                           "for plotting can't be retrieved.")
+    elif 'func_np' not in model_info['function'].keys():
+        raise RuntimeError("That model did not save a numpy function for plotting, so plotting doesn't work.")
 
     analysis_info = load_by_id(analysis_run_id)
     model_info = eval(analysis_info.metadata['model'])
