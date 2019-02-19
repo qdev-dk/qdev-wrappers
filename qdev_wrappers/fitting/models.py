@@ -10,7 +10,8 @@ class Model(object):
         self.guess = guess         # to be updated if a different guess than the default is given
 
         self.summary = {'method': '',
-                        'function': [self.func_str, self.func_np]}  # TODO: add dill here
+                        'function': [self.func_str, self.func_np],
+                        'parameters': self.parameters.copy()}  # TODO: add dill here
 
         """Any results the model returns for the parameters beyond the parameter values themselves 
         should be included in "data_saving_info". See least_squares_models for example"""
@@ -65,7 +66,8 @@ class SimpleMinimum(Model):
 
         super().__init__(model_parameters, model_vars, model_function, guess)
         self.summary = {'method': 'using np.argmin to find minimum',
-                        'function': [self.func_str, self.func_np]}
+                        'function': [self.func_str, self.func_np],
+                        'parameters': self.parameters.copy()}
 
     def evaluate(self, *args):
         raise NotImplementedError("This model only returns the minimum, not "
