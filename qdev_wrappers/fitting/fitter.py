@@ -76,7 +76,7 @@ class Fitter:
                 for i in range(1, len(setpoint_names)):
                     new_indices = np.argwhere(
                             setpoints[setpoint_names[0]]['data'] == setpoint_combination[0]).flatten()
-                    indices = indices.intesection(new_indices)
+                    indices = indices.intersection(new_indices)
                 indices = list(indices)
                 output_data_array = full_output_data_array[indices]
                 function_variable_arrays = {}
