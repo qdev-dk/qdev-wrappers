@@ -1,6 +1,6 @@
 import numpy as np
-from models import Model
-import guess as g
+from qdev_wrappers.fitting.models import Model
+import qdev_wrappers.fitting.guess as g
 from scipy.optimize import curve_fit
 
 
