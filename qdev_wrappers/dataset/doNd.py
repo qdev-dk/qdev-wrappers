@@ -6,10 +6,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 try:
     import progressbar
+    has_progressbar = True
 except ImportError:
-    raise ImportError('doNd wrappers requires module Progressbar2. '
-                        'Install by activating qcodes environment in command '
-                        'line and typing <pip install progressbar2>')
+    has_progressbar = False
 
 from qcodes.dataset.measurements import Measurement
 from qcodes.instrument.parameter import _BaseParameter, ArrayParameter, MultiParameter
@@ -45,10 +44,11 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
 
     for parameter in param_meas:
         if isinstance(parameter, (ArrayParameter, MultiParameter)):
-            meas.register_parameter(parameter, paramtype='array')
-            output.append([parameter, None])
+            paramtype = 'array'
         elif isinstance(parameter, _BaseParameter):
-            meas.register_parameter(parameter)
+            paramtype = 'numeric'
+        if isinstance(parameter, _BaseParameter):
+            meas.register_parameter(parameter, paramtype=paramtype)
             output.append([parameter, None])
         
     with meas.run() as datasaver:
@@ -57,7 +57,7 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
         for parameter in param_meas:
             if isinstance(parameter, _BaseParameter):
                 output[i][1] = parameter.get()
-                i += 1 
+                i += 1
             elif callable(parameter):
                 parameter()
         datasaver.add_result(*output)
@@ -112,7 +112,8 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
     param_set.post_delay = delay
     interrupted = False
 
-    progress_bar = progressbar.ProgressBar(max_value=num_points)
+    if has_progressbar:
+        progress_bar = progressbar.ProgressBar(max_value=num_points)
     points_taken = 0
     time.sleep(0.1)
 
@@ -127,16 +128,18 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
     output = []
     for parameter in param_meas:
         if isinstance(parameter, (ArrayParameter, MultiParameter)):
-            meas.register_parameter(parameter, setpoints=(param_set,),
-                                    paramtype='array')
-            output.append([parameter, None])
+            paramtype = 'array'
         elif isinstance(parameter, _BaseParameter):
-            meas.register_parameter(parameter,setpoints=(param_set,))
+            paramtype = 'numeric'
+        if isinstance(parameter, _BaseParameter):
+            meas.register_parameter(parameter, setpoints=(param_set,),
+                                    paramtype=paramtype)
             output.append([parameter, None])
 
     try:
         with meas.run() as datasaver:
-            progress_bar.update(points_taken)
+            if has_progressbar:
+                progress_bar.update(points_taken)
             last_time = time.time()
             for set_point in np.linspace(start, stop, num_points):
                 param_set.set(set_point)
@@ -154,8 +157,10 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
                 current_time = time.time()
                 if current_time - last_time >= refresh_time:
                     last_time = current_time
-                    progress_bar.update(points_taken)
-            progress_bar.update(points_taken)
+                    if has_progressbar:
+                        progress_bar.update(points_taken)
+            if has_progressbar:
+                progress_bar.update(points_taken)
     except KeyboardInterrupt:
         interrupted = True
 
@@ -225,7 +230,8 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     param_set1.post_delay = delay2
     interrupted = False
 
-    progress_bar = progressbar.ProgressBar(max_value=num_points1 * num_points2)
+    if has_progressbar:
+        progress_bar = progressbar.ProgressBar(max_value=num_points1 * num_points2)
     points_taken = 0
     time.sleep(0.1)
 
@@ -237,16 +243,19 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     output = []
     for parameter in param_meas:
         if isinstance(parameter, (ArrayParameter, MultiParameter)):
-            meas.register_parameter(parameter, setpoints=(param_set1, param_set2),
-                                    paramtype='array')
-            output.append([parameter, None])
+            paramtype = 'array'
         elif isinstance(parameter, _BaseParameter):
-            meas.register_parameter(parameter,setpoints=(param_set1, param_set2))
+            paramtype = 'numeric'
+        if isinstance(parameter, _BaseParameter):
+            meas.register_parameter(parameter,
+                                    setpoints=(param_set1, param_set2),
+                                    paramtype=paramtype)
             output.append([parameter, None])
 
     try:
         with meas.run() as datasaver:
-            progress_bar.update(points_taken)
+            if has_progressbar:
+                progress_bar.update(points_taken)
             last_time = time.time()
             for set_point1 in np.linspace(start1, stop1, num_points1):
                 param_set1.set(set_point1)
@@ -269,11 +278,13 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
                     current_time = time.time()
                     if current_time - last_time >= refresh_time:
                         last_time = current_time
-                        progress_bar.update(points_taken)
+                        if has_progressbar:
+                            progress_bar.update(points_taken)
 
                 for action in after_inner_actions:
                     action()
-            progress_bar.update(points_taken)
+            if has_progressbar:
+                progress_bar.update(points_taken)
     except KeyboardInterrupt:
         interrupted = True
 
