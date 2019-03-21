@@ -62,10 +62,10 @@ class soft_sweep():
     '''
     Helper class to utilize buffers within doNd measurements.
     How to:
-        do0d(lockin.soft_sweep(para_set, start, stor, num_points, delay), lockin.g_buff)
+        do0d(lockin.soft_sweep.sweep(para_set, start, stor, num_points, delay), lockin.g_buff)
     The class can be instanciated with a list of lockins if multiple needs to be measured at each point:
     Nlockin_sweep = soft_sweep((lockin1,lockin2))
-        do0d(Nlockin_sweep(para_set, start, stor, num_points, delay), lockin1.g_buff, lockin2.g_buff)
+        do0d(Nlockin_sweep.sweep(para_set, start, stor, num_points, delay), lockin1.g_buff, lockin2.g_buff)
     '''
     def __init__(self, lockins):
         self.lockins = lockins
@@ -77,8 +77,6 @@ class soft_sweep():
         self.setpoints = np.linspace(start, stop, num_points)
         for lockin in self.lockins:
             lockin.buffer_SR('Trigger')
-            lockin.buffer_reset
-            lockin.buffer_start
             # Get list of ChannelBuffer type attributes on lockin
             buffer_list = [getattr(lockin, name) 
                             for name in dir(lockin) 
@@ -94,6 +92,9 @@ class soft_sweep():
         return self.perform_sweep
     
     def perform_sweep(self):
+        for lockin in self.lockins:
+            lockin.buffer_reset()
+            lockin.buffer_start()
         for set_val in self.setpoints:
             self.param_set(set_val)
             for lockin in self.lockins:
