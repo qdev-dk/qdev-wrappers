@@ -1,5 +1,6 @@
 from qcodes.instrument_drivers.stanford_research.SR830 import SR830, ChannelBuffer
-
+import time
+import numpy as np
 # A conductance buffer, needed for the faster 2D conductance measurements
 # (Dave Wecker style)
 
@@ -57,8 +58,51 @@ class ResistanceBuffer(ChannelBuffer):
         return rs
 
 
-# Subclass the SR830
+class soft_sweep():
+    '''
+    Helper class to utilize buffers within doNd measurements.
+    How to:
+        do0d(lockin.soft_sweep(para_set, start, stor, num_points, delay), lockin.g_buff)
+    The class can be instanciated with a list of lockins if multiple needs to be measured at each point:
+    Nlockin_sweep = soft_sweep((lockin1,lockin2))
+        do0d(Nlockin_sweep(para_set, start, stor, num_points, delay), lockin1.g_buff, lockin2.g_buff)
+    '''
+    def __init__(self, lockins):
+        self.lockins = lockins
+    
+    def sweep(self, param_set, start, stop,
+        num_points, delay):
+        self.param_set = param_set
+        self.param_set.post_delay = delay
+        self.setpoints = np.linspace(start, stop, num_points)
+        for lockin in self.lockins:
+            lockin.buffer_SR('Trigger')
+            lockin.buffer_reset
+            lockin.buffer_start
+            # Get list of ChannelBuffer type attributes on lockin
+            buffer_list = [getattr(lockin, name) 
+                            for name in dir(lockin) 
+                            if isinstance(getattr(lockin, name),ChannelBuffer)]
+            for buffer_type in buffer_list:
+                buffer_type.prepare_buffer_readout()
+                buffer_type.setpoints = (tuple(self.setpoints),)
+                buffer_type.shape = self.setpoints.shape           
+                buffer_type.setpoint_units = (param_set.unit,)
+                buffer_type.setpoint_names = (param_set.name,)
+                buffer_type.setpoint_labels = (param_set.label,)
+        time.sleep(0.1)
+        return self.perform_sweep
+    
+    def perform_sweep(self):
+        for set_val in self.setpoints:
+            self.param_set(set_val)
+            for lockin in self.lockins:
+                lockin.send_trigger()
+        self.param_set(self.setpoints[0])
 
+    
+
+# Subclass the SR830
 class SR830_ext(SR830):
     def __init__(self, name, address, **kwargs):
         super().__init__(name, address, **kwargs)
@@ -116,6 +160,8 @@ class SR830_ext(SR830):
         self.add_parameter(name='r_buff',
                             label='Resistance',
                             parameter_class = ResistanceBuffer)
+
+        self.soft_sweep = soft_sweep([self])
 
     def _get_conductance(self):
         V = self.amplitude.get_latest()
