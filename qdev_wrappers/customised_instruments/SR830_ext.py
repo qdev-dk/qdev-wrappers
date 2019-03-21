@@ -87,6 +87,7 @@ class soft_sweep():
                 buffer_type.setpoint_names = (param_set.name,)
                 buffer_type.setpoint_labels = (param_set.label,)
             lockin._buffer1_ready = True
+            lockin._buffer2_ready = True
         time.sleep(0.1)
         return self.perform_sweep
     
