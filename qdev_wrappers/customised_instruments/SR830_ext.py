@@ -76,18 +76,17 @@ class soft_sweep():
         self.param_set.post_delay = delay
         self.setpoints = np.linspace(start, stop, num_points)
         for lockin in self.lockins:
-            lockin.buffer_SR('Trigger')
             # Get list of ChannelBuffer type attributes on lockin
             buffer_list = [getattr(lockin, name) 
                             for name in dir(lockin) 
                             if isinstance(getattr(lockin, name),ChannelBuffer)]
             for buffer_type in buffer_list:
-                buffer_type.prepare_buffer_readout()
                 buffer_type.setpoints = (tuple(self.setpoints),)
                 buffer_type.shape = self.setpoints.shape           
                 buffer_type.setpoint_units = (param_set.unit,)
                 buffer_type.setpoint_names = (param_set.name,)
                 buffer_type.setpoint_labels = (param_set.label,)
+            lockin._buffer1_ready = True
         time.sleep(0.1)
         return self.perform_sweep
     
