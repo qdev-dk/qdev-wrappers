@@ -2,6 +2,7 @@ import logging
 from typing import Union, Sequence, Tuple, List
 
 import numpy as np
+from scipy import signal
 
 import qdev_wrappers.alazar_controllers.acq_helpers as helpers
 from qcodes import ChannelList
@@ -316,8 +317,11 @@ class ATSChannelController(AcquisitionController):
 
             data = []
             if raw:
+                decimation_factor = settings.get('software_decimation_factor', 1)
                 if settings['integrate_samples']:
                     data.append(np.squeeze(np.mean(recordA, axis=-1)))
+                elif not decimation_factor == 1:
+                    data.append(signal.decimate(recordA, decimation_factor))
                 else:
                     data.append(np.squeeze(recordA))
             # do demodulation

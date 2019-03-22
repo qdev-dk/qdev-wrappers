@@ -121,6 +121,7 @@ class AlazarNDParameter(ArrayParameter):
         cntrl.shape_info['average_buffers'] = channel._average_buffers
         cntrl.shape_info['average_records'] = channel._average_records
         cntrl.shape_info['integrate_samples'] = channel._integrate_samples
+        cntrl.shape_info['software_decimation_factor'] = channel.software_decimation_factor()
         cntrl.shape_info['output_order'] = [0]
 
         params_to_kwargs = ['samples_per_record', 'records_per_buffer',
@@ -187,7 +188,9 @@ class Alazar1DParameter(AlazarNDParameter):
         # int_delay = self._instrument.int_delay.get() or 0
         # total_time = int_time + int_delay
         if not self._integrate_samples:
+            software_decimation_factor = self._instrument.software_decimation_factor.get()
             samples = self._instrument._parent.samples_per_record.get()
+            samples = int(samples/software_decimation)
             sample_rate = self._instrument._parent._get_alazar().get_sample_rate()
             start = 0
             stop = samples/sample_rate
@@ -251,7 +254,10 @@ class Alazar2DParameter(AlazarNDParameter):
     def set_setpoints_and_labels(self):
         records = self._instrument.records_per_buffer()
         buffers = self._instrument.buffers_per_acquisition()
+
+        software_decimation_factor = self._instrument.software_decimation_factor.get()
         samples = self._instrument._parent.samples_per_record.get()
+        samples = int(samples/software_decimation_factor)
         if self._integrate_samples:
             self.shape = (buffers,records)
             inner_setpoints = tuple(np.linspace(0, records, records, endpoint=False))
