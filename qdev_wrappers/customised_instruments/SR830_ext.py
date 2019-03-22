@@ -15,14 +15,14 @@ class ConductanceBuffer(ChannelBuffer):
         super().__init__(name, instrument, channel=1)
         self.unit = ('e$^2$/h')
 
-    def get(self):
+    def get_raw(self):
         # If X is not being measured, complain
         if self._instrument.ch1_display() != 'X':
             raise ValueError('Can not return conductance since X is not '
                                 'being measured on channel 1.')
 
         resistance_quantum = 25.818e3  # (Ohm)
-        xarray = super().get()
+        xarray = super().get_raw()
         iv_conv = self._instrument.iv_gain()
         ac_excitation = self._instrument.amplitude.get_latest()
 
@@ -42,13 +42,13 @@ class ResistanceBuffer(ChannelBuffer):
         super().__init__(name, instrument, channel=1)
         self.unit = ('Ohm')
 
-    def get(self):
+    def get_raw(self):
         # If X is not being measured, complain
         if self._instrument.ch1_display() != 'X':
             raise ValueError('Can not return conductance since X is not '
                                 'being measured on channel 1.')
 
-        xarray = super().get()
+        xarray = super().get_raw()
         v_conv = self._instrument.v_gain()
         ac_excitation = self._instrument.amplitude.get_latest()
 
