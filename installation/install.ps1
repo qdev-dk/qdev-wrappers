@@ -34,6 +34,10 @@
 # to temporarily elevate the rights to executed foreign scripts
 # then open or paste the script and press run (or press F5).
 
+# When the installation is complete you can run jupyter (qcodes) from the desktop or
+# start menu. Navigate to %USER%/qcodes/docs/examples to find example notebooks 
+# to get started with qcodes. A good starting point is `DataSet/Dataset Context Manager.ipynb`
+
 
 
 $chickpea_url = "https://github.com/nataliejpg/chickpea"
