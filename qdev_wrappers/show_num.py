@@ -174,9 +174,11 @@ def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
                     for i in range(len(array_list)):
                         # TODO(DV): get colorbar from plot children (should be ax.qcodes_colorbar)
                         if clim is None:
-                            clim = np.nanmin(clims[0]), np.nanmax(clims[1])
+                            internal_clim = np.nanmin(clims[0]), np.nanmax(clims[1])
+                        else:
+                            internal_clim = clim
                         colorbar = plot[0].get_children()[i].colorbar
-                        apply_color_scale_limits(colorbar, new_lim=clim)
+                        apply_color_scale_limits(colorbar, new_lim=internal_clim)
 
                 # Set figure titles
                 plot.fig.suptitle(samplefolder)
