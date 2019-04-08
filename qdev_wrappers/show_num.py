@@ -2,13 +2,16 @@ import qcodes as qc
 import numpy as np
 from os.path import sep
 import collections
+from typing import Optional, Union, Tuple, cast
 import matplotlib.pyplot as plt
 
 from qdev_wrappers.file_setup import CURRENT_EXPERIMENT
-from qcodes.utils.plotting import auto_range_iqr
+from qcodes.utils.plotting import auto_range_iqr, apply_color_scale_limits
 from qcodes.plots.pyqtgraph import QtPlot
 from qcodes.plots.qcmatplotlib import MatPlot
-from qcodes import config
+import qcodes
+
+Number = Union[float, int]
 
 def check_experiment_is_initialized():
     if not getattr(CURRENT_EXPERIMENT, "init", True): 
@@ -19,7 +22,9 @@ def check_experiment_is_initialized():
 def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
              do_plots=True, savepng=True, fig_size=[6,4], clim=None,
              dataname=None, xlim=None, ylim=None, transpose=False,
-             smart_colorscale=None, **kwargs):
+             auto_color_scale: Optional[bool]=None,
+             cutoff_percentile: Optional[Union[Tuple[Number, Number], Number]]=None,
+             **kwargs):
     """
     Show and return plot and data.
     Args:
@@ -35,15 +40,25 @@ def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
         xlim [xmin,xmax]: Set limits on x axis
         ylim [ymin,ymax]: set limits on y axis
         transpose (boolean): Transpose data to be plotted (only works for 2D scans and qc.MatPlot)
+        auto_color_scale: if True, the colorscale of heatmap plots will be
+            automatically adjusted to disregard outliers.
+        cutoff_percentile: percentile of data that may maximally be clipped
+            on both sides of the distribution.
+            If given a tuple (a,b) the percentile limits will be a and 100-b.
+            See also the plotting tuorial notebook.
         **kwargs: Are passed to plot function
 
     Returns:
         data, plots : returns the plots and the datasets
 
     """
-    # Defaults
-    if smart_colorscale is None:
-        smart_colorscale = config.gui.smart_colorscale
+    # default values
+    if auto_color_scale is None:
+        auto_color_scale = qcodes.config.plotting.auto_color_scale.enabled
+    if cutoff_percentile is None:
+        cutoff_percentile = cast(
+            Tuple[Number, Number],
+            tuple(qcodes.config.plotting.auto_color_scale.cutoff_percentile))
 
     if not isinstance(ids, collections.Iterable):
         ids = (ids,)
@@ -117,11 +132,13 @@ def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
                         xlims[1].append(np.nanmax(arrays.set_arrays[1]))
                         ylims[0].append(np.nanmin(arrays.set_arrays[0]))
                         ylims[1].append(np.nanmax(arrays.set_arrays[0]))
-                        if smart_colorscale:
-                            clims[0], clims[1] = auto_range_iqr(arrays.ndarray)
+                        if auto_color_scale:
+                            vlims = auto_range_iqr(arrays.ndarray)
                         else:
-                            clims[0].append(np.nanmin(arrays.ndarray))
-                            clims[1].append(np.nanmax(arrays.ndarray))
+                            vlims = (np.nanmin(arrays.ndarray),
+                                     np.nanmax(arrays.ndarray))
+                        clims[0].append(vlims[0])
+                        clims[1].append(vlims[1])
                     else:
                         xlims[0].append(np.nanmin(arrays.set_arrays[0]))
                         xlims[1].append(np.nanmax(arrays.set_arrays[0]))
@@ -155,10 +172,13 @@ def show_num(ids, samplefolder=None, useQT=False, avg_sub='',
                     plot[0].axes.set_ylim(ylim)
                 if len(arrays.set_arrays)==2:
                     for i in range(len(array_list)):
+                        # TODO(DV): get colorbar from plot children (should be ax.qcodes_colorbar)
                         if clim is None:
-                            plot[0].get_children()[i].set_clim(np.nanmin(clims[0]),np.nanmax(clims[1]))
+                            internal_clim = np.nanmin(clims[0]), np.nanmax(clims[1])
                         else:
-                            plot[0].get_children()[i].set_clim(clim)
+                            internal_clim = clim
+                        colorbar = plot[0].get_children()[i].colorbar
+                        apply_color_scale_limits(colorbar, new_lim=internal_clim)
 
                 # Set figure titles
                 plot.fig.suptitle(samplefolder)
