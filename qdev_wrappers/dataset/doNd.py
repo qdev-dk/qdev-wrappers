@@ -54,7 +54,16 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
     dataid = datasaver.run_id
 
     if do_plot is True:
-        ax, cbs = _save_image(datasaver)
+        plt.ioff()
+        start = time.time()
+        axes, cbs = plot_by_id(dataid)
+        stop = time.time()
+        print(f"plot by id took {stop-start}")
+        plt.ion()
+        experiment_name = datasaver._dataset.exp_name
+        sample_name = datasaver._dataset.sample_name
+        _save_image(axes, experiment_name=experiment_name,
+                    sample_name=sample_name, run_id=dataid)
     else:
         ax = None,
         cbs = None
@@ -136,7 +145,16 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
     dataid = datasaver.run_id  # convenient to have for plotting
 
     if do_plot is True:
-        ax, cbs = _save_image(datasaver)
+        plt.ioff()
+        start = time.time()
+        axes, cbs = plot_by_id(dataid)
+        stop = time.time()
+        print(f"plot by id took {stop-start}")
+        plt.ion()
+        experiment_name = datasaver._dataset.exp_name
+        sample_name = datasaver._dataset.sample_name
+        _save_image(axes, experiment_name=experiment_name,
+                    sample_name=sample_name, run_id=dataid)
     else:
         ax = None,
         cbs = None
@@ -235,7 +253,16 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     dataid = datasaver.run_id
 
     if do_plot is True:
-        ax, cbs = _save_image(datasaver)
+        plt.ioff()
+        start = time.time()
+        axes, cbs = plot_by_id(dataid)
+        stop = time.time()
+        print(f"plot by id took {stop-start}")
+        plt.ion()
+        experiment_name = datasaver._dataset.exp_name
+        sample_name = datasaver._dataset.sample_name
+        _save_image(axes, experiment_name=experiment_name,
+                    sample_name=sample_name, run_id=dataid)
     else:
         ax = None,
         cbs = None
@@ -245,7 +272,8 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     return dataid, ax, cbs
 
 
-def _save_image(datasaver) -> AxesTupleList:
+def save_image(axes, experiment_name=None, sample_name=None,
+               run_id=None, name_extension=None) -> AxesTupleList:
     """
     Save the plots created by datasaver as pdf and png
 
@@ -254,35 +282,32 @@ def _save_image(datasaver) -> AxesTupleList:
             as plot.
 
     """
-    plt.ioff()
-    dataid = datasaver.run_id
-    start = time.time()
-    axes, cbs = plot_by_id(dataid)
-    stop = time.time()
-    print(f"plot by id took {stop-start}")
-
+    run_id = run_id or 0
     mainfolder = config.user.mainfolder
-    experiment_name = datasaver._dataset.exp_name
-    sample_name = datasaver._dataset.sample_name
 
-    storage_dir = os.path.join(mainfolder, experiment_name, sample_name)
-    os.makedirs(storage_dir, exist_ok=True)
-
-    png_dir = os.path.join(storage_dir, 'png')
-    pdf_dif = os.path.join(storage_dir, 'pdf')
+    if experiment_name and sample_name:
+        storage_dir = os.path.join(mainfolder, experiment_name, sample_name)
+        os.makedirs(storage_dir, exist_ok=True)
+        png_dir = os.path.join(storage_dir, 'png')
+        pdf_dir = os.path.join(storage_dir, 'pdf')
+    else:
+        png_dir = 'png'
+        pdf_dir = 'pdf'
 
     os.makedirs(png_dir, exist_ok=True)
-    os.makedirs(pdf_dif, exist_ok=True)
+    os.makedirs(pdf_dir, exist_ok=True)
 
     save_pdf = config.user.get('save_pdf', True)
     save_png = config.user.get('save_png', True)
 
     for i, ax in enumerate(axes):
+        filename = f'{run_id}_{i}'
+        if name_extension is not None:
+            filename += name_extension
         if save_pdf:
-            full_path = os.path.join(pdf_dif, f'{dataid}_{i}.pdf')
+            full_path = os.path.join(pdf_dir, filename + '.pdf')
             ax.figure.savefig(full_path, dpi=500)
         if save_png:
-            full_path = os.path.join(png_dir, f'{dataid}_{i}.png')
+            full_path = os.path.join(png_dir, filename + '.png')
             ax.figure.savefig(full_path, dpi=500)
-    plt.ion()
     return axes, cbs
