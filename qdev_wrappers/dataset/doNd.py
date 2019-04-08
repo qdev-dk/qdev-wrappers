@@ -62,13 +62,13 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
         plt.ion()
         experiment_name = datasaver._dataset.exp_name
         sample_name = datasaver._dataset.sample_name
-        _save_image(axes, experiment_name=experiment_name,
-                    sample_name=sample_name, run_id=dataid)
+        save_image(axes, experiment_name=experiment_name,
+                   sample_name=sample_name, run_id=dataid)
     else:
-        ax = None,
+        axes = None,
         cbs = None
 
-    return dataid, ax, cbs
+    return dataid, axes, cbs
 
 
 def do1d(param_set: _BaseParameter, start: number, stop: number,
@@ -153,15 +153,15 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
         plt.ion()
         experiment_name = datasaver._dataset.exp_name
         sample_name = datasaver._dataset.sample_name
-        _save_image(axes, experiment_name=experiment_name,
-                    sample_name=sample_name, run_id=dataid)
+        save_image(axes, experiment_name=experiment_name,
+                   sample_name=sample_name, run_id=dataid)
     else:
-        ax = None,
+        axes = None,
         cbs = None
 
     if interrupted:
         raise KeyboardInterrupt
-    return dataid, ax, cbs
+    return dataid, axes, cbs
 
 
 def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
@@ -261,15 +261,15 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
         plt.ion()
         experiment_name = datasaver._dataset.exp_name
         sample_name = datasaver._dataset.sample_name
-        _save_image(axes, experiment_name=experiment_name,
-                    sample_name=sample_name, run_id=dataid)
+        save_image(axes, experiment_name=experiment_name,
+                   sample_name=sample_name, run_id=dataid)
     else:
-        ax = None,
+        axes = None,
         cbs = None
     if interrupted:
         raise KeyboardInterrupt
 
-    return dataid, ax, cbs
+    return dataid, axes, cbs
 
 
 def save_image(axes, experiment_name=None, sample_name=None,
@@ -301,13 +301,13 @@ def save_image(axes, experiment_name=None, sample_name=None,
     save_png = config.user.get('save_png', True)
 
     for i, ax in enumerate(axes):
-        filename = f'{run_id}_{i}'
+        filename = f'{run_id}'
         if name_extension is not None:
-            filename += name_extension
+            filename += '_' + name_extension
+        filename += f'_{i}'
         if save_pdf:
             full_path = os.path.join(pdf_dir, filename + '.pdf')
             ax.figure.savefig(full_path, dpi=500)
         if save_png:
             full_path = os.path.join(png_dir, filename + '.png')
             ax.figure.savefig(full_path, dpi=500)
-    return axes, cbs
