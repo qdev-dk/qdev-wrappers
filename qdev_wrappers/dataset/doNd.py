@@ -60,9 +60,9 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
         stop = time.time()
         print(f"plot by id took {stop-start}")
         plt.ion()
-        experiment_name = datasaver._dataset.exp_name
+        exp_name = datasaver._dataset.exp_name
         sample_name = datasaver._dataset.sample_name
-        save_image(axes, experiment_name=experiment_name,
+        save_image(axes, exp_name=exp_name,
                    sample_name=sample_name, run_id=dataid)
     else:
         axes = None,
@@ -151,9 +151,9 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
         stop = time.time()
         print(f"plot by id took {stop-start}")
         plt.ion()
-        experiment_name = datasaver._dataset.exp_name
+        exp_name = datasaver._dataset.exp_name
         sample_name = datasaver._dataset.sample_name
-        save_image(axes, experiment_name=experiment_name,
+        save_image(axes, exp_name=exp_name,
                    sample_name=sample_name, run_id=dataid)
     else:
         axes = None,
@@ -259,9 +259,9 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
         stop = time.time()
         print(f"plot by id took {stop-start}")
         plt.ion()
-        experiment_name = datasaver._dataset.exp_name
+        exp_name = datasaver._dataset.exp_name
         sample_name = datasaver._dataset.sample_name
-        save_image(axes, experiment_name=experiment_name,
+        save_image(axes, exp_name=exp_name,
                    sample_name=sample_name, run_id=dataid)
     else:
         axes = None,
@@ -272,8 +272,8 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     return dataid, axes, cbs
 
 
-def save_image(axes, experiment_name=None, sample_name=None,
-               run_id=None, name_extension=None) -> AxesTupleList:
+def save_image(axes, exp_name=None, sample_name=None,
+               run_id=None, name_extension=None, **kwargs) -> AxesTupleList:
     """
     Save the plots created by datasaver as pdf and png
 
@@ -285,8 +285,8 @@ def save_image(axes, experiment_name=None, sample_name=None,
     run_id = run_id or 0
     mainfolder = config.user.mainfolder
 
-    if experiment_name and sample_name:
-        storage_dir = os.path.join(mainfolder, experiment_name, sample_name)
+    if exp_name and sample_name:
+        storage_dir = os.path.join(mainfolder, exp_name, sample_name)
         os.makedirs(storage_dir, exist_ok=True)
         png_dir = os.path.join(storage_dir, 'png')
         pdf_dir = os.path.join(storage_dir, 'pdf')
