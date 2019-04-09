@@ -1,12 +1,20 @@
 import numpy as np
+import warnings
 from typing import List, Dict
 from qdev_wrappers.fitting import guess
 from scipy.optimize import curve_fit
 from qcodes.instrument.base import Instrument
 from qcodes.instrument.channel import InstrumentChannel
 from qcodes import validators as vals
+from qcodes.instrument.parameter import Parameter
 
 # TODO: docstrings
+# TODO: remove r2 limit or make it a saveable parameter
+
+
+class FitParameter(Parameter):
+    def __str__(self):
+        return self.name
 
 
 class Fitter(Instrument):
@@ -20,15 +28,18 @@ class Fitter(Instrument):
         for paramname, paraminfo in fit_parameters.items():
             self.fit_parameters.add_parameter(name=paramname,
                                               set_cmd=False,
+                                              parameter_class=FitParameter,
                                               **paraminfo)
         self.add_parameter(name='success',
                            set_cmd=False,
+                           parameter_class=FitParameter,
                            vals=vals.Enum(0, 1))
         self.success._save_val(0)
         self.experiment_parameters = experiment_parameters
         self.metadata = {'method': None,
                          'name': name,
                          'function': None,
+                         'experiment_parameters': experiment_parameters,
                          'fit_parameters': list(self.fit_parameters.parameters.keys())}
         if metadata is not None:
             self.metadata.update(metadata)
@@ -78,7 +89,8 @@ class LeastSquaresFitter(Fitter):
                 name=paramname + '_variance',
                 label=paraminfo.get('label', paramname) + ' Variance',
                 unit=paraminfo['unit'] + '^2' if 'unit' in paraminfo else None,
-                set_cmd=False)
+                set_cmd=False,
+                parameter_class=FitParameter)
         initial_value_parameters_ch = InstrumentChannel(
             self, 'initial_value_parameters')
         self.add_submodule('initial_value_parameters',
@@ -88,7 +100,8 @@ class LeastSquaresFitter(Fitter):
                 name=paramname + '_initial_value',
                 label=paraminfo.get('label', paramname) + ' Initial Value',
                 unit=paraminfo.get('unit', None),
-                set_cmd=False)
+                set_cmd=False,
+                parameter_class=FitParameter)
         self.metadata.update(
             {'method': 'LeastSquares',
              'function': function_metadata,
@@ -108,8 +121,9 @@ class LeastSquaresFitter(Fitter):
         """
         fit_params = list(self.fit_parameters.parameters.keys())
         if len(fit_values) == 0:
-            fit_values = [v() for v in self.fit_parameters.values()]
+            fit_values = [v() for v in self.fit_parameters.parameters.values()]
         kwargs = {self.experiment_parameters[0]: experiment_values,
+                  'np': np,
                   **dict(zip(fit_params, fit_values))}
         return eval(self.metadata['function']['np'], kwargs)
 
@@ -117,13 +131,15 @@ class LeastSquaresFitter(Fitter):
         """
         Finds residual and total sum of squares, calculates the R^2 value
         """
-        ss_res = np.sum((data - estimate) ** 2)
-        ss_tot = np.sum((data - np.mean(data)) ** 2)
+        meas = np.array(measured_values).flatten()
+        est = np.array(estimate).flatten()
+        ss_res = np.sum((meas - est) ** 2)
+        ss_tot = np.sum((meas - np.mean(meas)) ** 2)
         r2 = 1 - (ss_res / ss_tot)
         return r2
 
     def fit(self, measured_values, experiment_values,
-            initial_values=None, r2_limit=None):
+            initial_values=None, r2_limit=None, variance_limited=False):
         """
         Performs a fit based on the function_metadata.
         Returns a dictionary containing the model_values,
@@ -132,7 +148,7 @@ class LeastSquaresFitter(Fitter):
         self._check_fit(measured_values, experiment_values)
         if initial_values is None:
             initial_values = self.guess(measured_values, experiment_values)
-        for i, param in enumerate(self.initial_value_parameters.values()):
+        for i, param in enumerate(self.initial_value_parameters.parameters.values()):
             param._save_val(initial_values[i])
         try:
             popt, pcov = curve_fit(
@@ -141,27 +157,37 @@ class LeastSquaresFitter(Fitter):
             variance = np.diag(pcov)
             estimate = self.evaluate(experiment_values, *popt)
             r2 = self._get_r2(estimate, measured_values)
-            if r2_limit is not None and r2 > r2_limit:
+            if r2_limit is not None and r2 < r2_limit:
                 success = 0
                 message = 'r2 {:.2} exceeds limit {:.2}'.format(r2, r2_limit)
+            elif variance_limited and any(variance == np.inf):
+                success = 0
+                message = 'infinite variance'
             else:
                 success = 1
         except (RuntimeError, ValueError) as e:
             success = 0
-            message = e
+            message = str(e)
         self.success._save_val(success)
+        fit_params = list(self.fit_parameters.parameters.values())
+        variance_params = list(
+            self.variance_parameters.parameters.values())
+        initial_params = list(
+            self.initial_value_parameters.parameters.values())
         if success:
-            fit_params = list(self.fit_parameters.parameters.values())
-            variance_params = list(
-                self.variance_parameters.parameters.values())
-            initial_params = list(
-                self.initial_value_parameters.parameters.values())
             for i, val in enumerate(popt):
                 fit_params[i]._save_val(val)
-                variance_params[i]._save_val(variance[i])
+                if variance[i] == np.inf:
+                    variance_params[i]._save_val(float('nan'))
+                else:
+                    variance_params[i]._save_val(variance[i])
                 initial_params[i]._save_val(initial_values[i])
         else:
-            warning.warn('Fit failed due to: ', message)
+            for i, param in enumerate(fit_params):
+                param._save_val(float('nan'))
+                variance_params[i]._save_val(float('nan'))
+                initial_params[i]._save_val(initial_values[i])
+            warnings.warn('Fit failed due to: ' + message)
 
 
 class T1Fitter(LeastSquaresFitter):
@@ -191,9 +217,9 @@ class CosineFitter(LeastSquaresFitter):
         fit_parameters = {'a': {'label': '$a$'},
                           'w': {'label': r'$\omega$', 'unit': 'Hz'},
                           'p': {'label': r'$\phi$'},
-                          'b': {'label': '$c$', 'unit': ''}}
-        function_metadata = {'str': r'$f(x) = a\cos(\omega x + \phi)+b$',
-                             'np': 'a * np.cos(w * x + p) + b'}
+                          'c': {'label': '$c$', 'unit': ''}}
+        function_metadata = {'str': r'$f(x) = a\cos(\omega x + \phi)+c$',
+                             'np': 'a * np.cos(w * x + p) + c'}
         super().__init__('CosineFitter', fit_parameters, function_metadata)
         self.guess = guess.cosine
 

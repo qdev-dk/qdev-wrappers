@@ -2,7 +2,7 @@ import numpy as np
 import scipy.fftpack as fftpack
 
 
-def exp_decay(model, y, x):
+def exp_decay(y, x):
     """Guess for f(x) = a * e^(-x/b)  +  c"""
     length = len(y)
     val_init = y[0:round(length / 20)].mean()
@@ -19,7 +19,7 @@ def exp_decay(model, y, x):
     return [a, b, c]
 
 
-def exp_decay_sin(model, y, x):
+def exp_decay_sin(y, x):
     """Guess for f(x) = a * e^(-x/b) sin(wx+p)  + c"""
     a = y.max() - y.min()
 
@@ -39,7 +39,7 @@ def exp_decay_sin(model, y, x):
     return [a, b, w, p, c]
 
 
-def power_decay(model, y, x):
+def power_decay(y, x):
     """Guess for f(x) = a * b^x + c"""
     length = len(y)
     val_init = y[0:round(length / 20)].mean()
@@ -57,7 +57,7 @@ def power_decay(model, y, x):
     return [a, b, c]
 
 
-def rabi_t1(model, y, x):
+def rabi_t1(y, x):
     """Guess for f(x) = e^(-x/b) cos^2(wx/2 + p)"""
     # guess b as point half way point in data
     b = x[round(len(x) / 2)]
@@ -71,11 +71,11 @@ def rabi_t1(model, y, x):
     return [b, w]
 
 
-def cosine(model, y, x):
-    """Guess for f(x) = a * cos(wx + p) + b"""
-    b = y.mean()
+def cosine(y, x):
+    """Guess for f(x) = a * cos(wx + p) + c"""
+    c = y.mean()
 
-    a = y.max() - y.min()
+    a = (y.max() - y.min()) / 2
 
     # Get initial guess for frequency from a fourier transform
     yhat = fftpack.rfft(y - y.mean())
@@ -83,6 +83,11 @@ def cosine(model, y, x):
     freqs = fftpack.rfftfreq(len(x), d=(x[1] - x[0]) / (2 * np.pi))
     w = freqs[idx]
 
-    p = 0
+    if (y[0] - c) / a > 1:
+        p = 0
+    elif (y[0] - c) / a < -1:
+        p = np.pi
+    else:
+        p = np.arccos((y[0] - c) / a)
 
-    return [a, w, p, b]
+    return [a, w, p, c]

@@ -1,71 +1,147 @@
-from qcodes.dataset.data_export import get_data_by_id, load_by_id
+import numpy as np
+import json
+
+# TODO: docstrings
 
 
-def get_run_info(run_id):
-    exp_data = load_by_id(run_id)
-    return {'exp_name': exp_data.exp_name,
-            'exp_id': exp_data.exp_id,
-            'run_id': exp_data.run_id,
-            'sample_name': exp_data.sample_name}
+def organize_exp_data(data, dependent_parameter_name,
+                      *independent_parameter_names, **setpoint_values):
+    parameters = data.parameters.split(',')
+    if not all(v in parameters for v in setpoint_values.keys()):
+        raise RuntimeError(f'{list(setpoint_values.keys())} not all found '
+                           f'in dataset. Parameters present are {parameters}')
+
+    indices = []
+    for setpoint, value in setpoint_values.items():
+        d = np.array(data.get_data(setpoint)).flatten()
+        nearest_val = value + np.amin(d - value)
+        indices.append(set(np.argwhere(d == nearest_val).flatten()))
+    if len(indices) > 0:
+        u = list(set.intersection(*indices))
+    else:
+        u = None
+
+    setpoints = {}
+    for p in parameters:
+        depends_on = data.paramspecs[p].depends_on.split(', ')
+        for d in depends_on:
+            non_vals = list(setpoint_values.keys()) + [''] + list(independent_parameter_names)
+            if d not in non_vals:
+                setpoints[d] = None
+    dependent = None
+    independent = {}
+    for name in parameters:
+        if name == dependent_parameter_name:
+            dependent = {
+                'name': name,
+                'label': data.paramspecs[name].label,
+                'unit': data.paramspecs[name].unit,
+                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+        elif name in independent_parameter_names:
+            independent[name] = {
+                'name': name,
+                'label': data.paramspecs[name].label,
+                'unit': data.paramspecs[name].unit,
+                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+        elif name in setpoints:
+            setpoints[name] = {
+                'name': name,
+                'label': data.paramspecs[name].label,
+                'unit': data.paramspecs[name].unit,
+                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+    if dependent is None:
+        raise RuntimeError(f'{dependent_parameter_name} not found in dataset. '
+                           f'Parameters present are {parameters}')
+    if len(independent) != len(independent_parameter_names):
+        raise RuntimeError(f'{independent_parameter_names} not all found '
+                           f'in dataset. Parameters present are {parameters}')
+    return dependent, independent, setpoints
 
 
-def select_relevant_data(run_id, dependent_parameter_name,
-                         *independent_parameter_names, **setpoint_values):
+def organize_fit_data(data, **setpoint_values):
     """
-    This function goes through the all the data retrieved by
-    get_data_by_id(run_id), and returns the data that contains
-    the dependent variable, or throws an error if no matching
-    data is found.
-
-    Calling get_data_by_id(run_id) returns data as a list of lists
-    of dictionaries:
-        [one element per dependent parameter:
-            [one dictionary per independent parameter
-             plus one with the the dependent parameter
-            ]]
+    Takes a dataset and optionally spcific setpoint values and returns
+    dictionaries for the success, fit, variance and setpoints
 
     Returns:
-        independent_data: list
-        dependent_data: dict
-        setpoint_data: list
-
+        success (dict) with keys 'name', 'unit', 'label', data'
     """
-    # Find the data corresponding to the dependent variable
-    index = None
-    data = get_data_by_id(run_id)
-    for idx, measured_data in enumerate(data):
-        if measured_data[-1]['name'] == dependent_parameter_name:
-            index = idx
-            dependent = measured_data[-1]
-    if index is None:
-        raise RuntimeError(
-            f"No data found with dependent variable {dependent_parameter_name}. "
-             "Dataset contains variables: {load_by_id(run_id).parameters}")
-    measurement_data = data[index]
 
-    # sort into independent, dependent and setpoints
-    independent = []
-    setpoints = []
-    for d in measurement_data:
-        if d['name'] in independent_parameter_names:
-            independent.append(d)
-        elif name != dependent_parameter_name:
-            setpoints.append(d)
-    if len(independent) == 0:
+    # extract metadata and parameters present
+    try:
+        metadata = json.loads(data.metadata['fitting_metadata'])
+    except KeyError:
         raise RuntimeError(
-            f"No data with independent {independent_parameter_name}. "
-            "Dataset contains variables: {load_by_id(run_id).parameters}")
+            "'fitting_metadata' not found in dataset metadata, are you sure "
+            "this is a fitted dataset?")
+    parameters = data.parameters.split(',')
 
-    # filter data with required setpoint values
+    # check fit parameters and setpoint parameters are present
+    if 'success' not in parameters:
+        raise RuntimeError(
+            f"'success' parameter found "
+            "in dataset. Parameters present are {parameters}")
+    if not all(v in parameters for v in metadata['fitter']['fit_parameters']):
+        raise RuntimeError(
+            f"{metadata['fitter']['fit_parameters']} not all found "
+            "in dataset. Parameters present are {parameters}")
+    if not all(v in parameters for v in setpoint_values.keys()):
+        raise RuntimeError(
+            f"{list(setpoint_values.keys())} not all found "
+            "in dataset. Parameters present are {parameters}")
+
+    # find indices for specified setpoint_values
     indices = []
-    for s in setpoints:
-        if s['name'] in setpoint_values:
-            indices.append(set(np.argwhere(s['data'] == setpoint_values[s['name']]).flatten()))
+    for setpoint, value in setpoint_values.items():
+        d = np.array(data.get_data(setpoint)).flatten()
+        nearest_val = value + np.amin(d - value)
+        indices.append(set(np.argwhere(d == nearest_val).flatten()))
     if len(indices) > 0:
-        u = set.intersection(*indices)
-        dependent['data'] = dependent['data'][list(u)]
-        independent['data'] = independent['data'][list(u)]
-        for s in setpoints:
-            s['data'] = s['data'][list(u)]
+        u = list(set.intersection(*indices))
+    else:
+        u = None
 
-    return dependent, independent, setpoints
+    # populate dictionaries
+    setpoints = {}
+    for p in parameters:
+        depends_on = data.paramspecs[p].depends_on.split(', ')
+        for d in depends_on:
+            non_vals = list(setpoint_values.keys()) + ['']
+            if d not in non_vals:
+                setpoints[d] = None
+    fit = {}
+    variance = {}
+    initial_values = {}
+    for name in parameters:
+        if name == 'success':
+            success = {
+                'name': name,
+                'label': data.paramspecs[name].label,
+                'unit': data.paramspecs[name].unit,
+                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+        elif name in metadata['fitter']['fit_parameters']:
+            fit[name] = {
+                'name': name,
+                'label': data.paramspecs[name].label,
+                'unit': data.paramspecs[name].unit,
+                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+        elif name in metadata['fitter'].get('variance_parameters', []):
+            variance[name] = {
+                'name': name,
+                'label': data.paramspecs[name].label,
+                'unit': data.paramspecs[name].unit,
+                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+        elif name in metadata['fitter'].get('initial_value_parameters', []):
+            initial_values[name] = {
+                'name': name,
+                'label': data.paramspecs[name].label,
+                'unit': data.paramspecs[name].unit,
+                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+        elif name in setpoints:
+            setpoints[name] = {
+                'name': name,
+                'label': data.paramspecs[name].label,
+                'unit': data.paramspecs[name].unit,
+                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+
+    return success, fit, variance, initial_values, setpoints
