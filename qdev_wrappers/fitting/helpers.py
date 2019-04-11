@@ -4,6 +4,28 @@ import json
 # TODO: docstrings
 
 
+def make_json_metadata(dataset, fitter, dependent_parameter_name,
+                       *independent_parameter_names):
+    exp_metadata = {'run_id': dataset.run_id,
+                    'exp_id': dataset.exp_id,
+                    'exp_name': dataset.exp_name,
+                    'sample_name': dataset.sample_name}
+    metadata = {'fitter': fitter.metadata,
+                'inferred_from': {'dept_var': dependent_parameter_name,
+                                  'indept_vars': independent_parameter_names,
+                                  **exp_metadata}}
+    return 'fitting_metadata', json.dumps(metadata)
+
+
+def load_json_metadata(dataset):
+    try:
+        return json.loads(dataset.metadata['fitting_metadata'])
+    except KeyError:
+        raise RuntimeError(
+            "'fitting_metadata' not found in dataset metadata, are you sure "
+            "this is a fitted dataset?")
+
+
 def organize_exp_data(data, dependent_parameter_name,
                       *independent_parameter_names, **setpoint_values):
     parameters = data.parameters.split(',')
@@ -25,7 +47,8 @@ def organize_exp_data(data, dependent_parameter_name,
     for p in parameters:
         depends_on = data.paramspecs[p].depends_on.split(', ')
         for d in depends_on:
-            non_vals = list(setpoint_values.keys()) + [''] + list(independent_parameter_names)
+            non_vals = list(setpoint_values.keys()) + \
+                [''] + list(independent_parameter_names)
             if d not in non_vals:
                 setpoints[d] = None
     dependent = None
@@ -68,12 +91,7 @@ def organize_fit_data(data, **setpoint_values):
     """
 
     # extract metadata and parameters present
-    try:
-        metadata = json.loads(data.metadata['fitting_metadata'])
-    except KeyError:
-        raise RuntimeError(
-            "'fitting_metadata' not found in dataset metadata, are you sure "
-            "this is a fitted dataset?")
+    metadata = load_json_metadata(data)
     parameters = data.parameters.split(',')
 
     # check fit parameters and setpoint parameters are present
@@ -92,10 +110,12 @@ def organize_fit_data(data, **setpoint_values):
 
     # find indices for specified setpoint_values
     indices = []
+    point_values = []
     for setpoint, value in setpoint_values.items():
         d = np.array(data.get_data(setpoint)).flatten()
         nearest_val = value + np.amin(d - value)
         indices.append(set(np.argwhere(d == nearest_val).flatten()))
+        point_values.append(nearest_val)
     if len(indices) > 0:
         u = list(set.intersection(*indices))
     else:
@@ -144,4 +164,4 @@ def organize_fit_data(data, **setpoint_values):
                 'unit': data.paramspecs[name].unit,
                 'data': np.array(data.get_data(name)).flatten()[u].flatten()}
 
-    return success, fit, variance, initial_values, setpoints
+    return success, fit, variance, initial_values, setpoints, point_values

@@ -2,7 +2,7 @@
     "core": {
         "default_fmt": "data/{date}/#{counter}_{name}_{time}",
         "register_magic": true,
-        "db_location": "../examples2.db",
+        "db_location": "../transmons_data/transmons.db",
         "db_debug": false,
         "loglevel": "WARNING",
         "file_loglevel": "INFO"
