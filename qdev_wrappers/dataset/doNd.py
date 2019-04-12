@@ -4,11 +4,7 @@ import time
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-try:
-    import progressbar
-    has_progressbar = True
-except ImportError:
-    has_progressbar = False
+from tqdm import tqdm
 
 from qcodes.dataset.measurements import Measurement
 from qcodes.instrument.parameter import _BaseParameter, ArrayParameter, MultiParameter
@@ -112,8 +108,6 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
     param_set.post_delay = delay
     interrupted = False
 
-    if has_progressbar:
-        progress_bar = progressbar.ProgressBar(max_value=num_points)
     points_taken = 0
     time.sleep(0.1)
 
@@ -125,6 +119,8 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
     # do1D enforces a simple relationship between measured parameters
     # and set parameters. For anything more complicated this should be
     # reimplemented from scratch
+
+
     output = []
     for parameter in param_meas:
         if isinstance(parameter, (ArrayParameter, MultiParameter)):
@@ -138,10 +134,8 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
 
     try:
         with meas.run() as datasaver:
-            if has_progressbar:
-                progress_bar.update(points_taken)
             last_time = time.time()
-            for set_point in np.linspace(start, stop, num_points):
+            for set_point in tqdm(np.linspace(start, stop, num_points)):
                 param_set.set(set_point)
                 i = 0
                 for parameter in param_meas:
@@ -154,13 +148,6 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
                                       *output)
 
                 points_taken += 1
-                current_time = time.time()
-                if current_time - last_time >= refresh_time:
-                    last_time = current_time
-                    if has_progressbar:
-                        progress_bar.update(points_taken)
-            if has_progressbar:
-                progress_bar.update(points_taken)
     except KeyboardInterrupt:
         interrupted = True
 
@@ -230,8 +217,6 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     param_set1.post_delay = delay2
     interrupted = False
 
-    if has_progressbar:
-        progress_bar = progressbar.ProgressBar(max_value=num_points1 * num_points2)
     points_taken = 0
     time.sleep(0.1)
 
@@ -254,10 +239,8 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
 
     try:
         with meas.run() as datasaver:
-            if has_progressbar:
-                progress_bar.update(points_taken)
             last_time = time.time()
-            for set_point1 in np.linspace(start1, stop1, num_points1):
+            for set_point1 in tqdm(np.linspace(start1, stop1, num_points1)):
                 param_set1.set(set_point1)
                 for action in before_inner_actions:
                     action()
@@ -273,18 +256,8 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
                     datasaver.add_result((param_set1, set_point1),
                                             (param_set2, set_point2),
                                             *output)
-
-                    points_taken += 1
-                    current_time = time.time()
-                    if current_time - last_time >= refresh_time:
-                        last_time = current_time
-                        if has_progressbar:
-                            progress_bar.update(points_taken)
-
                 for action in after_inner_actions:
                     action()
-            if has_progressbar:
-                progress_bar.update(points_taken)
     except KeyboardInterrupt:
         interrupted = True
 
