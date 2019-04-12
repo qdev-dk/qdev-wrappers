@@ -134,7 +134,6 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
 
     try:
         with meas.run() as datasaver:
-            last_time = time.time()
             for set_point in tqdm(np.linspace(start, stop, num_points)):
                 param_set.set(set_point)
                 i = 0
@@ -239,7 +238,6 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
 
     try:
         with meas.run() as datasaver:
-            last_time = time.time()
             for set_point1 in tqdm(np.linspace(start1, stop1, num_points1)):
                 param_set1.set(set_point1)
                 for action in before_inner_actions:
