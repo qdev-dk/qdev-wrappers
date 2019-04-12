@@ -1,15 +1,14 @@
 from typing import Callable, Sequence, Union, Tuple, List, Optional
-import os
 import time
 
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from qcodes.dataset.measurements import Measurement
-from qcodes.instrument.base import _BaseParameter
-from qcodes.dataset.plotting import plot_by_id
-from qcodes import config
+from qcodes.instrument.parameter import _BaseParameter, ArrayParameter, MultiParameter
+from qdev_wrappers.dataset.plotting_tools import save_image
 
 AxesTuple = Tuple[matplotlib.axes.Axes, matplotlib.colorbar.Colorbar]
 AxesTupleList = Tuple[List[matplotlib.axes.Axes],
@@ -23,7 +22,7 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
          do_plot: bool = True) -> AxesTupleListWithRunId:
     """
     Perform a measurement of a single parameter. This is probably most
-    useful for an ArrayParamter that already returns an array of data points
+    useful for an ArrayParameter that already returns an array of data points
 
     Args:
         *param_meas: Parameter(s) to measure at each step or functions that
@@ -40,21 +39,28 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
     output = []
 
     for parameter in param_meas:
-        meas.register_parameter(parameter)
-        output.append([parameter, None])
-
+        if isinstance(parameter, (ArrayParameter, MultiParameter)):
+            paramtype = 'array'
+        elif isinstance(parameter, _BaseParameter):
+            paramtype = 'numeric'
+        if isinstance(parameter, _BaseParameter):
+            meas.register_parameter(parameter, paramtype=paramtype)
+            output.append([parameter, None])
+        
     with meas.run() as datasaver:
 
-        for i, parameter in enumerate(param_meas):
+        i = 0
+        for parameter in param_meas:
             if isinstance(parameter, _BaseParameter):
                 output[i][1] = parameter.get()
+                i += 1
             elif callable(parameter):
                 parameter()
         datasaver.add_result(*output)
     dataid = datasaver.run_id
 
     if do_plot is True:
-        ax, cbs = _save_image(datasaver)
+        ax, cbs = save_image(dataid)
     else:
         ax = None,
         cbs = None
@@ -95,16 +101,17 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
         The run_id of the DataSet created
     """
     meas = Measurement()
+    refresh_time = 1 # 1 second refresh time for liveplotting and progressbar
+    meas.write_period = refresh_time
     meas.register_parameter(
         param_set)  # register the first independent parameter
-    output = []
     param_set.post_delay = delay
     interrupted = False
 
+    points_taken = 0
+    time.sleep(0.1)
+
     for action in enter_actions:
-        # this omits the posibility of passing
-        # argument to enter and exit actions.
-        # Do we want that?
         meas.add_before_run(action, ())
     for action in exit_actions:
         meas.add_after_run(action, ())
@@ -112,31 +119,41 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
     # do1D enforces a simple relationship between measured parameters
     # and set parameters. For anything more complicated this should be
     # reimplemented from scratch
+
+
+    output = []
     for parameter in param_meas:
+        if isinstance(parameter, (ArrayParameter, MultiParameter)):
+            paramtype = 'array'
+        elif isinstance(parameter, _BaseParameter):
+            paramtype = 'numeric'
         if isinstance(parameter, _BaseParameter):
-            meas.register_parameter(parameter, setpoints=(param_set,))
+            meas.register_parameter(parameter, setpoints=(param_set,),
+                                    paramtype=paramtype)
             output.append([parameter, None])
 
     try:
         with meas.run() as datasaver:
-
-            for set_point in np.linspace(start, stop, num_points):
+            for set_point in tqdm(np.linspace(start, stop, num_points)):
                 param_set.set(set_point)
-                output = []
+                i = 0
                 for parameter in param_meas:
                     if isinstance(parameter, _BaseParameter):
-                        output.append((parameter, parameter.get()))
+                        output[i][1] = parameter.get()
+                        i += 1
                     elif callable(parameter):
                         parameter()
                 datasaver.add_result((param_set, set_point),
                                       *output)
+
+                points_taken += 1
     except KeyboardInterrupt:
         interrupted = True
 
     dataid = datasaver.run_id  # convenient to have for plotting
 
     if do_plot is True:
-        ax, cbs = _save_image(datasaver)
+        ax, cbs = save_image(dataid)
     else:
         ax = None,
         cbs = None
@@ -191,42 +208,52 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     """
 
     meas = Measurement()
+    refresh_time = 1 # 1 second refresh time for liveplotting and progressbar
+    meas.write_period = refresh_time
     meas.register_parameter(param_set1)
     param_set1.post_delay = delay1
     meas.register_parameter(param_set2)
     param_set1.post_delay = delay2
     interrupted = False
-    for action in enter_actions:
-        # this omits the possibility of passing
-        # argument to enter and exit actions.
-        # Do we want that?
-        meas.add_before_run(action, ())
 
+    points_taken = 0
+    time.sleep(0.1)
+
+    for action in enter_actions:
+        meas.add_before_run(action, ())
     for action in exit_actions:
         meas.add_after_run(action, ())
 
+    output = []
     for parameter in param_meas:
+        if isinstance(parameter, (ArrayParameter, MultiParameter)):
+            paramtype = 'array'
+        elif isinstance(parameter, _BaseParameter):
+            paramtype = 'numeric'
         if isinstance(parameter, _BaseParameter):
             meas.register_parameter(parameter,
-                                    setpoints=(param_set1, param_set2))
+                                    setpoints=(param_set1, param_set2),
+                                    paramtype=paramtype)
+            output.append([parameter, None])
+
     try:
         with meas.run() as datasaver:
-
-            for set_point1 in np.linspace(start1, stop1, num_points1):
+            for set_point1 in tqdm(np.linspace(start1, stop1, num_points1)):
                 param_set1.set(set_point1)
                 for action in before_inner_actions:
                     action()
                 for set_point2 in np.linspace(start2, stop2, num_points2):
                     param_set2.set(set_point2)
-                    output = []
+                    i = 0
                     for parameter in param_meas:
                         if isinstance(parameter, _BaseParameter):
-                            output.append((parameter, parameter.get()))
+                            output[i][1] = parameter.get()
+                            i += 1
                         elif callable(parameter):
                             parameter()
                     datasaver.add_result((param_set1, set_point1),
-                                         (param_set2, set_point2),
-                                         *output)
+                                            (param_set2, set_point2),
+                                            *output)
                 for action in after_inner_actions:
                     action()
     except KeyboardInterrupt:
@@ -235,7 +262,7 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     dataid = datasaver.run_id
 
     if do_plot is True:
-        ax, cbs = _save_image(datasaver)
+        ax, cbs = save_image(dataid)
     else:
         ax = None,
         cbs = None
@@ -243,46 +270,3 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
         raise KeyboardInterrupt
 
     return dataid, ax, cbs
-
-
-def _save_image(datasaver) -> AxesTupleList:
-    """
-    Save the plots created by datasaver as pdf and png
-
-    Args:
-        datasaver: a measurement datasaver that contains a dataset to be saved
-            as plot.
-
-    """
-    plt.ioff()
-    dataid = datasaver.run_id
-    start = time.time()
-    axes, cbs = plot_by_id(dataid)
-    stop = time.time()
-    print(f"plot by id took {stop-start}")
-
-    mainfolder = config.user.mainfolder
-    experiment_name = datasaver._dataset.exp_name
-    sample_name = datasaver._dataset.sample_name
-
-    storage_dir = os.path.join(mainfolder, experiment_name, sample_name)
-    os.makedirs(storage_dir, exist_ok=True)
-
-    png_dir = os.path.join(storage_dir, 'png')
-    pdf_dif = os.path.join(storage_dir, 'pdf')
-
-    os.makedirs(png_dir, exist_ok=True)
-    os.makedirs(pdf_dif, exist_ok=True)
-
-    save_pdf = True
-    save_png = True
-
-    for i, ax in enumerate(axes):
-        if save_pdf:
-            full_path = os.path.join(pdf_dif, f'{dataid}_{i}.pdf')
-            ax.figure.savefig(full_path, dpi=500)
-        if save_png:
-            full_path = os.path.join(png_dir, f'{dataid}_{i}.png')
-            ax.figure.savefig(full_path, dpi=500)
-    plt.ion()
-    return axes, cbs
