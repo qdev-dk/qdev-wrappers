@@ -9,8 +9,8 @@ import warnings
 
 from qdev_wrappers.device_annotator.qcodes_device_annotator import DeviceImage
 from qdev_wrappers.configreader import Config
-from qdev_wrappers.logger import (
-    start_python_logger,
+from qcodes.logger import (
+    start_logger,
     start_command_history_logger)
 
 log = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def init_python_logger() -> None:
                   "as the first line of your script.\n" +
                   "For only python logging call:\n"
                   "start_python_logger")
-    start_python_logger()
+    start_logger()
 
 def close_station(station):
     for comp in station.components:
