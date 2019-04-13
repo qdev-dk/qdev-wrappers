@@ -3,7 +3,7 @@ import scipy.fftpack as fftpack
 
 
 def exp_decay(y, x):
-    """Guess for f(x) = a * e^(-x/b)  +  c"""
+    """Guess for f(x) = a * e^(-x / b)  +  c"""
     length = len(y)
     val_init = y[0:round(length / 20)].mean()
     val_fin = y[-round(length / 20):].mean()
@@ -20,7 +20,7 @@ def exp_decay(y, x):
 
 
 def exp_decay_sin(y, x):
-    """Guess for f(x) = a * e^(-x/b) sin(wx+p)  + c"""
+    """Guess for f(x) = a * e^(-x / b) sin(w*x + p)  + c"""
     a = y.max() - y.min()
 
     c = y.mean()
@@ -55,20 +55,6 @@ def power_decay(y, x):
     b = np.e ** (-1 / x[idx])
 
     return [a, b, c]
-
-
-def rabi_t1(y, x):
-    """Guess for f(x) = e^(-x/b) cos^2(wx/2 + p)"""
-    # guess b as point half way point in data
-    b = x[round(len(x) / 2)]
-
-    # Get initial guess for frequency from a fourier transform
-    yhat = fftpack.rfft(y - y.mean())
-    idx = (yhat ** 2).argmax()
-    freqs = fftpack.rfftfreq(len(x), d=(x[1] - x[0]) / (2 * np.pi))
-    w = freqs[idx] * 2
-
-    return [b, w]
 
 
 def cosine(y, x):

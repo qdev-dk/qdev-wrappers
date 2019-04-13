@@ -8,8 +8,6 @@ from qdev_wrappers.fitting.fitters import LeastSquaresFitter
 from qdev_wrappers.fitting.plotting import plot_fit_by_id
 from qdev_wrappers.fitting.helpers import organize_exp_data, make_json_metadata
 
-# TODO: docstrings
-
 
 def fit_by_id(data_run_id, fitter,
               dependent_parameter_name: str,
@@ -19,6 +17,31 @@ def fit_by_id(data_run_id, fitter,
               show_variance=True,
               show_initial_values=True,
               **kwargs):
+    """
+    Given the run_id of a dataset, a fitter and the parameters to fit to
+    performs a fit on the data and saves the fit results in a separate dataset.
+
+    Args:
+        data_run_id (int)
+        fitter (qdev_wrappers fitter)
+        dependent_parameter_name (str): name of the dependent parameter to fit
+        to in the data
+        independent_parameter_names (list of strings): name of the independent
+            parameters to fit to in the data
+        plot (bool) (default True): whether to generate plots of the fit
+        save_plots (bool) (default True): whether to save the plots
+        show_variance (bool) (default True): if plot then whether to show the
+            variance on the fit parameter values (if relevant)
+        show_initial_values (bool) (default True): if plot then whether to show
+            the initial values of the fit parameters (if relevant)
+        **kwargs: passed to the fitter.fit function
+
+    Returns:
+        fit_run_id (int): run id of the generated fit dataset
+        axes (list of matplotlib axes): list of plots generated
+        colorbar (matplotlib colorbar): colorbar of 2d heatmap plot if
+            generated, otherwise None
+    """
     exp_data = load_by_id(data_run_id)
     dependent, independent, setpoints = organize_exp_data(
         exp_data, dependent_parameter_name, *independent_parameter_names)
