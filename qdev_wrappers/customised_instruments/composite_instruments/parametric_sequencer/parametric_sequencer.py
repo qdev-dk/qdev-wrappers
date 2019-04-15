@@ -20,7 +20,7 @@ from qcodes.utils import validators
 
 from lomentum import Sequence, Element, in_context
 
-from qdev_wrappers.customised_instruments.interfaces.AWG_interface import _AWGInterface
+from qdev_wrappers.customised_instruments.interfaces.AWG_interface import AWGInterface
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 
 log = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class ParametricSequencer(Instrument):
 
     def __init__(self,
                  name: str,
-                 awg: _AWGInterface,
+                 awg: AWGInterface,
                  routes: Optional[RoutesDictType]=None,
                  units: Optional[Dict[Symbol, str]]=None,
                  labels: Optional[Dict[Symbol, str]]=None,
