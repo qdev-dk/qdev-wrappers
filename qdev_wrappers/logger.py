@@ -1,3 +1,4 @@
+import warnings
 import logging
 import logging.handlers
 
@@ -8,8 +9,12 @@ from qcodes import config
 log = logging.getLogger(__name__)
 
 logging_dir = "logs"
+logging_delimiter = ' ¦ '
 history_log_name = "history.log"
 python_log_name = 'pythonlog.log'
+
+warnings.warn('The logger.py of qdev-wrappers is deprecated and will be '
+              'removed soon. Please use the logger of QCoDeS instead.')
 
 
 def start_python_logger() -> None:
@@ -21,8 +26,10 @@ def start_python_logger() -> None:
     All logging messages on or above consolelogginglevel
     will be written to stderr.
     """
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    format_string_items = ['%(asctime)s', '%(name)s', '%(levelname)s',
+                           '%(funcName)s', '%(lineno)d', '%(message)s']
+    format_string = logging_delimiter.join(format_string_items)
+    formatter = logging.Formatter(format_string)
     try:
         filelogginglevel = config.core.file_loglevel
     except KeyError:
