@@ -1,12 +1,12 @@
 import logging
 from qcodes.instrument_drivers.AlazarTech.ATS import AcquisitionController
 import numpy as np
-import qdev_wrappers.alazar_controllers.acq_helpers as helpers
-from qdev_wrappers.alazar_controllers.demodulator import filter_ls, filter_win
-from .acquisition_parametersold import AcqVariablesParam, \
-                                       ExpandingAlazarArrayMultiParameter, \
-                                       NonSettableDerivedParameter, \
-                                       DemodFreqParameter
+from . import acq_helpers as helpers
+from .demodulator import filter_ls, filter_win
+from .acquisition_parameters import AcqVariablesParam, \
+                                    ExpandingAlazarArrayMultiParameter, \
+                                    NonSettableDerivedParameter, \
+                                    DemodFreqParameter
 
 log = logging.getLogger(__name__)
 class ATS9360Controller(AcquisitionController):

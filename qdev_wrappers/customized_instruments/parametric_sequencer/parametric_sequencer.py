@@ -20,7 +20,7 @@ from qcodes.utils import validators
 
 from lomentum import Sequence, Element, in_context
 
-from qdev_wrappers.customised_instruments.awg_interface import AWGInterface
+from qdev_wrappers.customized_instruments.awg_interface import AWGInterface
 
 log = logging.getLogger(__name__)
 
