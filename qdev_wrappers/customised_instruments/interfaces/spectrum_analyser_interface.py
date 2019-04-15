@@ -149,10 +149,8 @@ class SimulatedSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
         self.trace.get_fn = self._get_simulated_trace
         self.single.get_fn = self._get_simulated_single
         self.npts._latest['raw_value'] = 100
-        self.avg._latest['raw_value'] = 1
         self.span._latest['raw_value'] = 10e6
         self.bandwidth._latest['raw_value'] = 100e3
-        self.frequency._latest['raw_value'] = 5e9
 
     def _set_npts(self, val):
         self.bandwidth._latest['raw_value'] = self.span() / val
