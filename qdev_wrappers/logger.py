@@ -1,3 +1,4 @@
+import warnings
 import logging
 import logging.handlers
 
@@ -11,6 +12,9 @@ logging_dir = "logs"
 logging_delimiter = ' ¦ '
 history_log_name = "history.log"
 python_log_name = 'pythonlog.log'
+
+warnings.warn('The logger.py of qdev-wrappers is deprecated and will be '
+              'removed soon. Please use the logger of QCoDeS instead.')
 
 
 def start_python_logger() -> None:
