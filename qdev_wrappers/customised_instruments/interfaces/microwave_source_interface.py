@@ -4,7 +4,7 @@ from qcodes.utils.helpers import create_on_off_val_mapping
 import qcodes.utils.validators as vals
 
 
-class _MicrowaveSourceInterface(Instrument):
+class MicrowaveSourceInterface(Instrument):
     """
     Interface for a microwave source with basic set of parameters. This
     is probably too tied to the SGS100A and could be stripped down a bit,
@@ -53,7 +53,7 @@ class _MicrowaveSourceInterface(Instrument):
             self.IQ_state(0)
 
 
-class SGS100AMicrowaveSourceInterface(_MicrowaveSourceInterface):
+class SGS100AMicrowaveSourceInterface(MicrowaveSourceInterface):
     """
     Interface with real SGS100A microwave source.
     """
@@ -66,7 +66,7 @@ class SGS100AMicrowaveSourceInterface(_MicrowaveSourceInterface):
         self.IQ_state.source = self.microwave_source.IQ_state
 
 
-class SimulatedMicrowaveSourceInterface(_MicrowaveSourceInterface):
+class SimulatedMicrowaveSourceInterface(MicrowaveSourceInterface):
     """
     Simulated interface version of the microwave source. The val
     mapping and vals are set such that any status parameters
