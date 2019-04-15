@@ -9,7 +9,7 @@ DelegateArrayParameter)
 
 
 
-class _SpectrumAnalyserInterface(Instrument):
+class SpectrumAnalyserInterface(Instrument):
     """
     Interface base class for the spectrum analyser which by default
     has only manual parameters and no parameter for measurment.
@@ -61,7 +61,7 @@ class _SpectrumAnalyserInterface(Instrument):
         raise NotImplementedError
 
 
-class USB_SA124BSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
+class USB_SA124BSpectrumAnalyserInterface(SpectrumAnalyserInterface):
     """
     'Real' instrument implementation of the spectrum analyser interface.
     Main advantage over the instrument itself is that it updates the trace
@@ -133,7 +133,7 @@ class USB_SA124BSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
             self._spectrum_analyser.configure()
 
 
-class SimulatedSpectrumAnalyserInterface(_SpectrumAnalyserInterface):
+class SimulatedSpectrumAnalyserInterface(SpectrumAnalyserInterface):
     """
     Simulated instrument implementation of the spectrum analyser interface.
     The 'trace' and 'single' parameters return a random trace or point.
