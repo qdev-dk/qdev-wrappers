@@ -1,0 +1,22 @@
+duration: total_duration
+segments:
+    I:
+        - cosine: 
+            duration: total_duration
+            amplitude: base_amplitude
+            frequency: sideband_frequency
+            phase: 0
+            offset: I_offset
+    Q:
+        - sine: 
+            duration: total_duration
+            amplitude: Q_amplitude
+            frequency: sideband_frequency
+            phase: phase_offset
+            offset: Q_offset
+transformation:
+    type: linear_transformation
+    data:
+        - Q_amplitude:
+            - [1, base_amplitude]
+            - [1, gain_offset]
