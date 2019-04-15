@@ -2,9 +2,10 @@ from qcodes.instrument.base import Instrument
 from qcodes.utils import validators as vals
 import os
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
-from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface import _MicrowaveSourceInterface
+from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface import MicrowaveSourceInterface
 
-class _HeterodyneSource(Instrument):
+
+class HeterodyneSource(Instrument):
     """
     Virtual instrument that represents a heterodyne source outputting at
     two frequencies with one intended for mixing up and the other for mixing
@@ -17,7 +18,6 @@ class _HeterodyneSource(Instrument):
     might be sidebanded, modulated, switched off etc and options depend
     on the implementation.
     """
-
     def __init__(self, name: str):
         super().__init__(name)
         self.add_parameter(name='frequency',
@@ -42,7 +42,8 @@ class _HeterodyneSource(Instrument):
         self.add_parameter(name='mode',
                            label='Mode',
                            parameter_class=DelegateParameter,
-                           vals=vals.Enum('basic', 'sidebanded', 'sidebanded_modulated'))
+                           vals=vals.Enum('basic', 'sidebanded',
+                                          'sidebanded_modulated'))
 
     def to_default(self):
         """Sets the instrument to some relatively arbitrary but hopefully
@@ -63,7 +64,8 @@ class _HeterodyneSource(Instrument):
         self.status(0)
         self.mode('basic')
 
-class OneSourceHeterodyneSource(_HeterodyneSource):
+
+class OneSourceHeterodyneSource(HeterodyneSource):
     """
     Implementation using one microwave source which has two outputs
     at the same frequency. As a result the localos_power cannot be set
@@ -71,7 +73,7 @@ class OneSourceHeterodyneSource(_HeterodyneSource):
     Available modes are 'basic', 'sidebanded', and 'sideband_modulated'.
     """
 
-    def __init__(self, name: str, microwave_source_if: _MicrowaveSourceInterface,
+    def __init__(self, name: str, microwave_source_if: MicrowaveSourceInterface,
                  localos_power: float=10):
         self._microwave_source_if = microwave_source_if
         super().__init__(name)
@@ -113,15 +115,15 @@ class OneSourceHeterodyneSource(_HeterodyneSource):
             self._microwave_source_if.pulsemod_state(1)
 
 
-class TwoSourceHeterodyneSource(_HeterodyneSource):
+class TwoSourceHeterodyneSource(HeterodyneSource):
     """
     Implementation using two microwave sources.
     Available modes are 'basic', 'sidebanded_basic', 'sidebanded'
     and 'sideband_modulated'.
     """
 
-    def __init__(self, name: str, carrier_source_if: _MicrowaveSourceInterface,
-                 localos_source_if: _MicrowaveSourceInterface):
+    def __init__(self, name: str, carrier_source_if: MicrowaveSourceInterface,
+                 localos_source_if: MicrowaveSourceInterface):
         self._carrier_source_if = carrier_source_if
         self._localos_source_if = localos_source_if
         super().__init__(name)
@@ -199,4 +201,4 @@ class TwoSourceHeterodyneSource(_HeterodyneSource):
 """
 Simulated version.
 """
-SimulatedHeterodyneSource = _HeterodyneSource
+SimulatedHeterodyneSource = HeterodyneSource
