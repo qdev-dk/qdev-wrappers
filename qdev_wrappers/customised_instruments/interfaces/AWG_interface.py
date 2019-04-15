@@ -17,7 +17,7 @@ class AWGChannelInterface(InstrumentChannel):
                            parameter_class=DelegateParameter)
 
 
-class _AWGInterface(Instrument):
+class AWGInterface(Instrument):
     CHAN_NUM = 4
 
     def __init__(self, name):
@@ -103,7 +103,7 @@ class _AWGInterface(Instrument):
             ch.Vpp(1)
 
 
-class SimulatedAWGInterface(_AWGInterface):
+class SimulatedAWGInterface(AWGInterface):
     def __init__(self, name, chan_num=4):
         self.CHAN_NUM = chan_num
         super().__init__(name)
@@ -161,7 +161,7 @@ class SimulatedAWGInterface(_AWGInterface):
         print('stop')
 
 
-class AWG5014Interface(_AWGInterface):
+class AWG5014Interface(AWGInterface):
     CHAN_NUM = 4
 
     def __init__(self, name, awg):
