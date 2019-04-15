@@ -58,28 +58,6 @@ class RoundingWarning(Warning):
         self.rounded = rounded
 
 
-class SequenceChannel(InstrumentChannel):
-    """
-    This is a dummy InstrumentChannel in order to isolate the name scope
-    of the sequence symbols. All the logic is still contained in the
-    ParametricSequencer.
-    """
-
-    def __init__(self, parent: 'ParametricSequencer', name: str) -> None:
-        super().__init__(parent, name)
-
-
-class RepeatChannel(InstrumentChannel):
-    """
-    This is a dummy InstrumentChannel in order to isolate the name scope
-    of the sequence symbols assosicated with stepping. All the logic is still
-    contained in the ParametricSequencer.
-    """
-
-    def __init__(self, parent: 'ParametricSequencer', name: str) -> None:
-        super().__init__(parent, name)
-
-
 class ParametricSequencer(Instrument):
     """
     possibly extract everything that is not relevant for the instrument
@@ -123,9 +101,9 @@ class ParametricSequencer(Instrument):
 
         # all symbols are mapped to parameters that live on the SequenceChannel
         # and RepeatChannel respectively
-        sequence_channel = SequenceChannel(self, 'sequence_parameters')
+        sequence_channel = InstrumentChannel(self, 'sequence_parameters')
         self.add_submodule('sequence', sequence_channel)
-        repeat_channel = SequenceChannel(self, 'repeat_parameters')
+        repeat_channel = InstrumentChannel(self, 'repeat_parameters')
         self.add_submodule('repeat', repeat_channel)
 
         # this parameter has to be added at the end because setting it
