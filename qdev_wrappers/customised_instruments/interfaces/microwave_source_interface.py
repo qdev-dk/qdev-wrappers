@@ -27,10 +27,16 @@ class MicrowaveSourceInterface(Instrument):
                            parameter_class=DelegateParameter)
         self.add_parameter(name='pulsemod_state',
                            label='Pulse Modulation State',
-                           parameter_class=DelegateParameter)
+                           parameter_class=DelegateParameter,
+                           docstring='On/off status indicates whether output'
+                                     'status is modulated by another signal'
+                                     '(usually input to trigger channel)')
         self.add_parameter(name='IQ_state',
                            label='IQ State',
-                           parameter_class=DelegateParameter)
+                           parameter_class=DelegateParameter,
+                           docstring='On/off status indicates whether output'
+                                     'I and Q is modulated by another signal'
+                                     '(usually input to IQ channels)')
         if not IQ_option:
             self.IQ_state._latest['raw_value'] = 0
             self.IQ_state.set_allowed = False
