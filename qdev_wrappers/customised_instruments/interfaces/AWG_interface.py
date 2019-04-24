@@ -50,6 +50,7 @@ class AWGInterface(Instrument):
                                      "setting repeated_element")
         self.sequence_mode._save_val('sequence')
         self.repetition_mode._save_val('inf')
+        self.sample_rate()
 
     def upload(self, forged_sequence: ForgedSequenceType):
         """
@@ -171,6 +172,7 @@ class AWG5014Interface(AWGInterface):
         self.sample_rate.source = awg.clock_freq
         for ch in np.range(self.CHAN_NUM):
             self.submodules[f'ch{ch}'].Vpp.source = awg.parameters['ch{ch}_amp']
+            self.submodules[f'ch{ch}'].Vpp()
 
     def upload(self, forged_sequence: ForgedSequenceType):
         self.awg.make_send_and_load_awg_file_from_forged_sequence(
