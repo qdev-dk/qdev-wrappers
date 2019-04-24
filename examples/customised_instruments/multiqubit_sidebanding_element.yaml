@@ -1,0 +1,37 @@
+duration: 20.e-6
+segments:
+    I:
+        sidebanding_I: 
+            duration: 20.e-6
+            amplitudes: 
+                - Q0_I_amplitude
+                - Q1_I_amplitude
+            frequencies:
+                - Q0_sideband_frequency
+                - Q1_sideband_frequency
+            phase: 0
+            offset: Q0_I_offset
+    Q:
+        sidebanding_Q: 
+            duration: 20.e-6
+            amplitudes:
+                - Q0_Q_amplitude
+                - Q1_Q_amplitude
+            frequencies:
+                - Q0_sideband_frequency
+                - Q1_sideband_frequency
+            phase: Q0_phase_offset
+            offset: Q0_Q_offset
+transformation:
+    type: bilinear_transformation
+    data:
+        - Q0_I_amplitude:
+            - [Q0_status, Q0_amplitude]
+        - Q0_Q_amplitude:
+            - [Q0_status, Q0_amplitude]
+            - [Q0_status, Q0_gain_offset]
+        - Q1_I_amplitude:
+            - [Q1_status, Q1_amplitude]
+        - Q1_Q_amplitude:
+            - [Q1_status, Q1_amplitude]
+            - [Q1_status, Q0_gain_offset]
