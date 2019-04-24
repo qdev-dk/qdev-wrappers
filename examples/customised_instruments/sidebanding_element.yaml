@@ -1,0 +1,28 @@
+duration: 20.e-6
+segments:
+    I:
+        - cosine: 
+            duration: 20.e-6
+            amplitude: I_amplitude
+            frequency: sideband_frequency
+            phase: 0
+            offset: I_offs
+    Q:
+        - sine: 
+            duration: 20.e-6
+            amplitude: Q_amplitude
+            frequency: sideband_frequency
+            phase: phase_offset
+            offset: Q_offs
+transformation:
+    type: bilinear_transformation
+    data:
+        - I_amplitude:
+            - [status, amplitude]
+        - Q_amplitude:
+            - [status, amplitude]
+            - [status, gain_offset]
+        - I_offs:
+            - [status, I_offset]
+        - Q_offs:
+            - [status, Q_offset]
