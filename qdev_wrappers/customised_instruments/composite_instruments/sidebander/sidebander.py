@@ -9,8 +9,7 @@ from qdev_wrappers.customised_instruments.composite_instruments.parametric_seque
 from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface import MicrowaveSourceInterface
 from qdev_wrappers.customised_instruments.composite_instruments.heterodyne_source.heterodyne_source import HeterodyneSource
 
-# TODO: status instead to change AWG amplitude in case microwave source is
-#       being used for multiplexing (nataliejpg)
+# TODO: docstrings
 
 
 class Sidebander(Instrument):
