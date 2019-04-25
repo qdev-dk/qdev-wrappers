@@ -31,8 +31,8 @@ class PulseBuildingParameter(Parameter):
             try:
                 repeat_params[self.symbol_name](val)
             except RuntimeWarning as e:
-                # with sequencer.no_upload():
-                #     sequence_params[self.symbol_name](val)
+                with sequencer.no_upload():
+                    sequence_params[self.symbol_name](val)
                 raise RuntimeError(str(e) + '. Try changing the setpoints to '
                     'include this value or set them to None')
         else:
