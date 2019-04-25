@@ -105,7 +105,7 @@ class Sidebander(Instrument):
         s_context = self.generate_context()
         s_context.update(kwargs.pop('context', {}))
         self.sequencer.change_sequence(context=s_context, **kwargs)
-        self.sync_parameters(self)
+        self.sync_parameters()
         check_carrier_sidebanding_status(self.carrier)
 
     def sync_parameters(self):
@@ -123,7 +123,7 @@ class Sidebander(Instrument):
                         warn('Parameter {} could not be synced, value is now '
                              '{}'.format(setpoints.symbol, sequencer_param()))
 
-    def to_sidebanding_default(self):
+    def to_default(self):
         to_sidebanding_default(self.carrier, self.sequencer)
 
     # Parameter getters and setters
