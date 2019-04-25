@@ -14,6 +14,7 @@ class PulseBuildingParameter(Parameter):
             self.symbol_name = '_'.join([instrument.name, name])
         else:
             self.symbol_name = name
+        kwargs = {'label': self.symbol_name, **kwargs}
         super().__init__(name=name, instrument=instrument, **kwargs)
 
     def set_raw(self, val):
