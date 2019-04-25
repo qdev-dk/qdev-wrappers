@@ -64,7 +64,7 @@ class Sidebander(Instrument):
         self.add_parameter(
             name='status',
             parameter_class=PulseBuildingParameter,
-            vals=vals.Enum(0, 1))
+            val_mapping=create_on_off_val_mapping(on_val=1, off_val=0))
         self.I_offset._save_val(0)
         self.Q_offset._save_val(0)
         self.amplitude._save_val(0.8)
