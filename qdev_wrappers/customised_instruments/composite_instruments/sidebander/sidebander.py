@@ -12,6 +12,27 @@ from qdev_wrappers.customised_instruments.composite_instruments.heterodyne_sourc
 # TODO: docstrings
 
 
+def check_carrier_sidebanding_status(carrier):
+    if not carrier.status():
+        warn('Carrier status is off')
+    if isinstance(carrier, MicrowaveSourceInterface):
+        if not carrier.IQ_state():
+            warn('Sidebander carrier IQ state is off')
+    elif isinstance(carrier, HeterodyneSource):
+        if 'sidebanded' not in carrier.mode():
+            warn('Sidebander carrier mode indicates not sidebanded')
+
+
+def to_sidebanding_default(carrier, sequencer):
+    sequencer.sequence_mode('element')
+    sequencer.repetition_mode('inf')
+    carrier.status(1)
+    if isinstance(carrier, MicrowaveSourceInterface):
+        carrier.IQ_state(1)
+    else:
+        carrier.mode('sidebanded')
+
+
 class Sidebander(Instrument):
     """
     An instrument which represents a sequencer and microwave drive where the
@@ -71,72 +92,50 @@ class Sidebander(Instrument):
         self.phase_offset._save_val(0)
         self.gain_offset._save_val(0)
         self.status._save_val(1)
-        self.frequency._save_val(self._carrier.frequency())
+        self.frequency._save_val(self.carrier.frequency())
         self.sideband_frequency._save_val(0)
 
-
-    def check_carrier_status(self):
-        if not self.status():
-            warn('Sidebander carrier status is off')
-        if isinstance(self._carrier, MicrowaveSourceInterface):
-            if not self._carrier.IQ_state():
-                warn('Sidebander carrier IQ state is off')
-        elif 'sidebanded' not in self._carrier.mode():
-            warn('Sidebander carrier mode indicates not sidebanded')
+    @contextmanager
+    def single_upload(self):
+        with self.sequencer.no_upload():
+            yield
+        self.sequencer._upload_sequence()
 
     def change_sequence(self, **kwargs):
         s_context = self.generate_context()
         s_context.update(kwargs.pop('context', {}))
-        self._sequencer.change_sequence(context=s_context, **kwargs)
-        self.sync_parameters()
-        self.check_carrier_status()
-
-    @contextmanager
-    def single_upload(self):
-        with self._sequencer.no_upload():
-            yield
-        self._sequencer._upload_sequence()
-
+        self.sequencer.change_sequence(context=s_context, **kwargs)
+        self.sync_parameters(self)
+        check_carrier_sidebanding_status(self.carrier)
 
     def sync_parameters(self):
-        inner = self._sequencer.inner_setpoints
-        outer = self._sequencer.outer_setpoints
-        for setpoints in [inner, outer]:
-            try:
-                if setpoints.symbol in self.pulse_building_parameters:
-                    param = self.pulse_building_parameters[setpoints.symbol]
-                    self._sequencer.repeat.parameters[setpoints.symbol](param())
-            except AttributeError as e:
-                pass
+        inner = self.sequencer.inner_setpoints
+        outer = self.sequencer.outer_setpoints
+        for setpoints in [i for i in [inner, outer] if i is not None]:
+            if setpoints.symbol in self.pulse_building_parameters:
+                param = self.pulse_building_parameters[setpoints.symbol]
+                if setpoints.symbol in self.sequencer.repeat.parameters:
+                    sequencer_param = self.sequencer.repeat.parameters[setpoints.symbol]
+                    try:
+                        sequencer_param.set(param())
+                    except (RuntimeWarning, RuntimeError):
+                        param._save_val(sequencer_param())
+                        warn('Parameter {} could not be synced, value is now '
+                             '{}'.format(setpoints.symbol, sequencer_param()))
 
-    def to_default(self):
-        self._sequencer.sequence_mode('element')
-        self._sequencer.repetition_mode('inf')
-        self.status(1)
-        if isinstance(self._carrier, MicrowaveSourceInterface):
-            self._carrier.IQ_state(1)
-        else:
-            self._carrier.mode('sidebanded')
+    def to_sidebanding_default(self):
+        to_sidebanding_default(self.carrier, self.sequencer)
 
     # Parameter getters and setters
     def _set_frequency(self, val):
-        new_sideband = val - self._carrier.frequency()
+        new_sideband = val - self.carrier.frequency()
         self.sideband_frequency(new_sideband)
 
     def _get_frequency(self):
-        return self._carrier.frequency() + self.sideband_frequency()
-
-    def _set_status(self, val):
-        if str(val).upper() in ['1', 'TRUE', 'ON']:
-            self._sequencer.run()
-            self._carrier.status(0)
-            self.check_carrier_status()
-        else:
-            self._sequencer.stop()
-            self._carrier.status(0)
+        return self.carrier.frequency() + self.sideband_frequency()
 
     def _set_sideband(self, val):
-        self.frequency._save_val(self._carrier.frequency() + val)
+        self.frequency._save_val(self.carrier.frequency() + val)
 
     def _set_carrier_frequency(self, val):
         self.frequency._save_val(val + self.sideband_frequency())
@@ -144,11 +143,10 @@ class Sidebander(Instrument):
     # Properties
     @property
     def pulse_building_parameters(self):
-        param_dict = {n: p for n, p in self.parameters.items() if
+        param_dict = {p.symbol_name: p for p in self.parameters.values() if
                       isinstance(p, PulseBuildingParameter)}
         return param_dict
 
     # Private methods
     def generate_context(self):
-        return {param.symbol_name: param() for param in
-                self.pulse_building_parameters.values()}
+        return {p: v() for p, v in self.pulse_building_parameters.items()}

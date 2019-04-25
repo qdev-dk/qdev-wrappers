@@ -22,7 +22,7 @@ class PulseBuildingParameter(Parameter):
         symbol parameter on the repeat channel of the sequencer where possible.
         If not then attempts to set on the sequence channel.
         """
-        sequencer = self.instrument._sequencer
+        sequencer = self.instrument.sequencer
         repeat_params = sequencer.repeat.parameters
         sequence_params = sequencer.sequence.parameters
         if self.set_fn is not None:
