@@ -32,8 +32,8 @@ class MixingChannel(Instrument):
                  carrier,
                  **kwargs):
         super().__init__(name, **kwargs)
-        self._carrier = carrier
-        self._sequencer = sequencer
+        self.carrier = carrier
+        self.sequencer = sequencer
         self.add_parameter(
             name='carrier_power',
             source=carrier.power,
@@ -43,13 +43,11 @@ class MixingChannel(Instrument):
             set_fn=self._set_carrier_frequency,
             source=carrier.frequency,
             parameter_class=DelegateParameter)
+        self.add_parameter(
+            name='')
+        sidebanding_channel_list = 
 
-        if isinstance(self, ReadoutChannel):
-            self._str_type = 'readout'
-            self._microwave_source = self.root_instrument._heterodyne_source
-        elif isinstance(self, DriveChannel):
-            self._str_type = 'drive'
-            self._microwave_source = self.root_instrument._qubit_source
+
         self._sidebanding_channels = []
         type_title = self._str_type.title()
         self.add_parameter(
