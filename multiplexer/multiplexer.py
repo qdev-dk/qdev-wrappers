@@ -1,22 +1,24 @@
-from qcodes.instrument.channel import InstrumentChannel
-from qcodes.utils import validators as vals
-from qcodes.instrument.parameter import Parameter
-from contextlib import contextmanager
-from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter, DelegateMultiChannelParameter
-from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.pulse_building_parameter import PWAPulseBuildingParameter
-# from qdev_wrappers.customised_instruments.settings_instrument.settings_parameters import SettingsMultiChannelParameter
-from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.sidebanding_channels import SidebandedDriveChannel, SidebandedReadoutChannel
+from qcodes.instrument.base import Instrument
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_sequencer.parametric_sequencer import ParametricSequencer
 
 
-class CarrierFreqParam(Parameter):
-    def set_raw(self, val):
-        self.instrument._microwave_source.frequency(val)
-        self._save_val(val)
-        for demod_ch in self.instrument._sidebanding_channels:
-            demod_ch.update()
+# from qcodes.utils import validators as vals
+# from qcodes.instrument.parameter import Parameter
+# from contextlib import contextmanager
+# from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter, DelegateMultiChannelParameter
+# from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.pulse_building_parameter import PWAPulseBuildingParameter
+# from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.sidebanding_channels import SidebandedDriveChannel, SidebandedReadoutChannel
 
 
-class MixingChannel(InstrumentChannel):
+# class CarrierFreqParam(Parameter):
+#     def set_raw(self, val):
+#         self.instrument._microwave_source.frequency(val)
+#         self._save_val(val)
+#         for demod_ch in self.instrument._sidebanding_channels:
+#             demod_ch.update()
+
+
+class MixingChannel(Instrument):
     """
     An InstrumentChannel intended to belong to a ParametricWaveformAnalyser
     and which effectively groups the parameters related to readout including
@@ -25,8 +27,23 @@ class MixingChannel(InstrumentChannel):
     sidebanding tones which are added as SidebandingChannels.
     """
 
-    def __init__(self, parent, name: str):
-        super().__init__(parent, name)
+    def __init__(self, name: str,
+                 sequencer: ParametricSequencer,
+                 carrier,
+                 **kwargs):
+        super().__init__(name, **kwargs)
+        self._carrier = carrier
+        self._sequencer = sequencer
+        self.add_parameter(
+            name='carrier_power',
+            source=carrier.power,
+            parameter_class=DelegateParameter)
+        self.add_parameter(
+            name='carrier_frequency',
+            set_fn=self._set_carrier_frequency,
+            source=carrier.frequency,
+            parameter_class=DelegateParameter)
+
         if isinstance(self, ReadoutChannel):
             self._str_type = 'readout'
             self._microwave_source = self.root_instrument._heterodyne_source
