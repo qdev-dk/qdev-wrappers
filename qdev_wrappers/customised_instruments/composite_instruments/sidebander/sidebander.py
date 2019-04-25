@@ -24,8 +24,8 @@ class Sidebander(Instrument):
                  pulse_building_prepend: bool=False,
                  **kwargs):
         super().__init__(name, **kwargs)
-        self._carrier = carrier
-        self._sequencer = sequencer
+        self.carrier = carrier
+        self.sequencer = sequencer
         self._pulse_building_prepend = pulse_building_prepend
 
         self.add_parameter(
@@ -34,10 +34,6 @@ class Sidebander(Instrument):
             get_cmd=self._get_frequency,
             docstring='Setting updates sideband to generate required'
             ' frequency, getting calculates resultant sidebanded frequency')
-        self.add_parameter(
-            name='carrier_power',
-            source=carrier.power,
-            parameter_class=DelegateParameter)
         self.add_parameter(
             name='carrier_frequency',
             set_fn=self._set_carrier_frequency,
