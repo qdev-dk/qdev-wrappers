@@ -2,7 +2,8 @@ import logging
 import numpy as np
 from qcodes.instrument.base import Instrument
 import math
-from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.readout_drive_channel import ReadoutChannel, DriveChannel
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.readout import ReadoutChannel
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.readout import DriveChannel
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.sequence_channel import SequenceChannel
 
 logger = logging.getLogger(__name__)
@@ -34,26 +35,30 @@ class ParametricWaveformAnalyser(Instrument):
         self.alazar_controller = alazar_controller
         self.heterodyne_source = heterodyne_source
         self.qubit_source = qubit_source
-        sequence_channel = SequenceChannel(self, 'sequence')
+        self._sequencer_up_to_date = False
+        sequence_channel = SequenceChannel(self, 'sequence', sequencer)
         self.add_submodule('sequence', sequence_channel)
-        readout_channel = ReadoutChannel(self, 'readout')
+        readout_channel = ReadoutChannel(self, 'readout', sequencer,
+                                         carrier, alazar_controller)
         self.add_submodule('readout', readout_channel)
         drive_channel = DriveChannel(self, 'drive', sequencer, qubit_source)
         self.add_submodule('drive', drive_channel)
         self.sequence.reload_template_element_dict()
-        self.set_defaults()
+        self.off()
 
-
-    def set_defaults(self):
-        """
-        Sets defaults such that adD_qubit will not fail.
-        """
+    def off(self):
         self.readout.measurement_duration(1e-6)
         self.readout.measurement_delay(0)
         self.readout.demodulation_type('magphase')
         self.readout.num(1)
         self.readout.integrate_time(True)
         self.readout.single_shot(False)
+        self.readout.carrier_status(False)
+        self.sequencer.stop()
+        self.drive.carrier_status(False)
+
+    def stop(self):
+        self.sequencer.stop()
 
     def add_qubit(self, readout_frequency: float=7e9,
                   drive_frequency: float=5e9):
@@ -61,20 +66,20 @@ class ParametricWaveformAnalyser(Instrument):
         Adds a SidebandingChannel to each of the
         ReadoutChannel and DriveChannels.
         """
-        self.readout._add_sidebanding_channel(readout_frequency)
-        self.drive._add_sidebanding_channel(drive_frequency)
+        self.readout.add_sidebander(readout_frequency)
+        self.drive.add_sidebander(drive_frequency)
 
     def clear_qubits(self):
         """
         Clears the alazar channels and all SidebandingChannels
         (both from the ReadoutChannel and the DriveChannel)
         """
-        self._alazar_controller.alazar_channels.clear()
-        self.readout._sidebanding_channels.clear()
-        self.drive._sidebanding_channels.clear()
+        self.alazar_controller.alazar_channels.clear()
+        self.readout.sidebanders.clear()
+        self.drive.sidebanders.clear()
 
     @property
-    def _pulse_building_parameters(self):
+    def pulse_building_parameters(self):
         return {**self.readout._pulse_building_parameters,
                 **self.drive._pulse_building_parameters}
 
@@ -100,10 +105,14 @@ class ParametricWaveformAnalyser(Instrument):
         records_setpoint_label: str, None
         records_setpoint_unit: str, None
         """
-        seq_mode = self.sequence.mode()
+        if self.sequence.sequence_mode() == 'element':
+            seq_mode = False
+        else:
+            seq_mode = True
         num = self.readout.num() or 1
         single_shot = self.readout.single_shot()
-        settings = {}
+        integrate_time = self.readout.integrate_time()
+        settings = {'integrate_time': integrate_time}
         if not single_shot:
             settings['average_buffers'] = True
             if (seq_mode and self.sequence.inner_setpoints.symbol() is not None):
@@ -119,7 +128,6 @@ class ParametricWaveformAnalyser(Instrument):
                 settings['record_setpoint_name'] = record_symbol
                 settings['record_setpoint_label'] = record_symbol  # TODO
                 settings['record_setpoint_unit'] =  '' # TODO
-
             else:
                 settings['average_records'] = True
                 max_samples = self._alazar_controller.board_info['max_samples']

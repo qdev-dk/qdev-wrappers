@@ -2,20 +2,18 @@ from qcodes.instrument.parameter import Parameter
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_sequencer.parametric_sequencer import OutOfRangeException
 
 
-
 class PulseBuildingParameter(Parameter):
     def __init__(self, name, instrument,
-                 set_fn=None,
                  symbol_name=None,
                  **kwargs):
-        self.set_fn = set_fn
         if symbol_name is not None:
             self.symbol_name = symbol_name
         elif instrument._pulse_building_prepend:
             self.symbol_name = '_'.join([instrument.name, name])
         else:
             self.symbol_name = name
-        kwargs = {'label': self.symbol_name.replace('_', ' ').title(), **kwargs}
+        kwargs = {'label': self.symbol_name.replace('_', ' ').title(),
+                  **kwargs}
         super().__init__(name=name, instrument=instrument, **kwargs)
 
     def set_raw(self, val):
@@ -27,8 +25,6 @@ class PulseBuildingParameter(Parameter):
         sequencer = self.instrument.sequencer
         repeat_params = sequencer.repeat.parameters
         sequence_params = sequencer.sequence.parameters
-        if self.set_fn is not None:
-            self.set_fn(val)
         if self.symbol_name in repeat_params:
             try:
                 repeat_params[self.symbol_name](val)
@@ -36,9 +32,11 @@ class PulseBuildingParameter(Parameter):
                 with sequencer.no_upload():
                     sequence_params[self.symbol_name](val)
                 raise RuntimeError(str(e) + '. Try changing the setpoints to '
-                    'include this value or set them to None')
-        else:
+                                   'include this value or set them to None')
+        elif self.symbol_name in sequence_params:
             sequence_params[self.symbol_name](val)
+            if not sequencer._do_upload:
+                self.root_instrument._sequencer_up_to_date = False
 
         # TODO: what if the sequencer rounds the parameter in question...
 
