@@ -71,19 +71,17 @@ class ParametricSequencer(Instrument):
                  name: str,
                  awg: AWGInterface,
                  routes: Optional[RoutesDictType]=None,
-                 units: Optional[Dict[Symbol, str]]=None,
-                 labels: Optional[Dict[Symbol, str]]=None,
                  template_element: _Optional[Element]=NOT_GIVEN,
                  inner_setpoints: _Optional[Union[SetpointsType, str]]=NOT_GIVEN,
                  outer_setpoints: _Optional[SetpointsType]=NOT_GIVEN,
                  context: _Optional[ContextDict]=NOT_GIVEN,
+                 labels: _Optional[Dict[Symbol, str]]=NOT_GIVEN,
+                 units: _Optional[Dict[Symbol, str]]=NOT_GIVEN,
                  first_sequence_element: _Optional[Element]=NOT_GIVEN,
                  initial_element: _Optional[Element]=NOT_GIVEN):
         super().__init__(name)
         self.awg = awg
         self.routes = routes
-        self.units: Dict[Symbol, str] = units or {}
-        self.labels: Dict[Symbol, str] = labels or {}
 
         # we need to initialise these attributes with `None`. The actual value
         # gets set via the `change_sequence` call
@@ -91,6 +89,8 @@ class ParametricSequencer(Instrument):
         self._inner_setpoints: SetpointsType = None
         self._outer_setpoints: SetpointsType = None
         self._context: ContextDict = {}
+        self._units: Dict[Symbol, str] = {}
+        self._labels: Dict[Symbol, str] = {}
         self._first_sequence_element: Optional[Element] = None
         self._initial_element: Optional[Element] = None
 
@@ -125,6 +125,8 @@ class ParametricSequencer(Instrument):
             inner_setpoints=inner_setpoints,
             outer_setpoints=outer_setpoints,
             context=context,
+            labels=labels,
+            units=units,
             initial_element=initial_element,
             first_sequence_element=first_sequence_element)
         self._do_upload = True
@@ -134,6 +136,8 @@ class ParametricSequencer(Instrument):
                         inner_setpoints: _Optional[SetpointsType]=NOT_GIVEN,
                         outer_setpoints: _Optional[SetpointsType]=NOT_GIVEN,
                         context: _Optional[ContextDict]=NOT_GIVEN,
+                        labels: _Optional[Dict[Symbol, str]]=NOT_GIVEN,
+                        units: _Optional[Dict[Symbol, str]]=NOT_GIVEN,
                         first_sequence_element: _Optional[Element]=NOT_GIVEN,
                         initial_element: _Optional[Element]=NOT_GIVEN) -> None:
         if template_element is not NOT_GIVEN:
@@ -144,10 +148,20 @@ class ParametricSequencer(Instrument):
             self._initial_element = initial_element
         if context is not NOT_GIVEN:
             self._context = context
+        if labels is not NOT_GIVEN:
+            self._labels.update(labels)
+        if units is not NOT_GIVEN:
+            self._units.update(units)
         if inner_setpoints is not NOT_GIVEN:
             self._inner_setpoints = make_setpoints_tuple(inner_setpoints)
         if outer_setpoints is not NOT_GIVEN:
             self._outer_setpoints = make_setpoints_tuple(outer_setpoints)
+
+        # update units and labels to only contain things from the context
+        self._labels = {n: l for n, l in self._labels.items
+                        if n in self._context}
+        self._units = {n: l for n, l in self._units.items
+                       if n in self._context}
 
         # add metadata, that gets added to the snapshot automatically
         # add it before the upload so that if there is a crash, the

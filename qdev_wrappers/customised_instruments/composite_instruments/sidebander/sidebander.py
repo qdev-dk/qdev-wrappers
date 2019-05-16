@@ -39,6 +39,19 @@ def sync_repeat_parameters(sequencer, params_dict):
                         warn('Parameter {} could not be synced, value is now '
                              '{}'.format(setpoints.symbol, sequencer_param()))
 
+def change_sequence(context_dict, **kwargs):
+    context_dict = self.generate_context()
+    context_dict['context'].update(kwargs.pop('context', {}))
+    context_dict['labels'].update(kwargs.pop('labels', {}))
+    context_dict['units'].update(kwargs.pop('units', {}))
+    original_do_upload_setting = self.sequencer._do_upload
+    self.sequencer._do_upload = True
+    self.sequencer.change_sequence(**context_dict, **kwargs)
+    self._sequencer_up_to_date = True
+    self.sequencer._do_upload = original_setting
+    sync_repeat_parameters(self.sequencer, self.pulse_building_parameters)
+    check_carrier_sidebanding_status(self.carrier)
+
 
 class SidebandParam(PulseBuildingParameter):
     def set_raw(self, val):
@@ -118,36 +131,6 @@ class Sidebander(Instrument):
     def _set_carrier_frequency(self, val):
         self.frequency._save_val(val + self.sideband_frequency())
 
-    # @contextmanager
-    # def single_upload(self):
-    #     with self.sequencer.no_upload():
-    #         yield
-    #     self.sequencer._upload_sequence()
-
-    def change_sequence(self, **kwargs):
-        context = self.generate_context()
-        context.update(kwargs.pop('context', {}))
-        original_do_upload_setting = self.sequencer._do_upload
-        self.sequencer._do_upload = True
-        self.sequencer.change_sequence(context=context, **kwargs)
-        self._sequencer_up_to_date = True
-        self.sequencer._do_upload = original_setting
-        sync_repeat_parameters(self.sequencer, self.pulse_building_parameters)
-        check_carrier_sidebanding_status(self.carrier)
-
-    def update_sequence(self):
-        if not self._sequencer_up_to_date:
-                self.change_sequence()
-
-    # Parameter getters and setters
-
-    # Properties
-    @property
-    def pulse_building_parameters(self):
-        param_dict = {p.symbol_name: p for p in self.parameters.values() if
-                      isinstance(p, PulseBuildingParameter)}
-        return param_dict
-
     def generate_context(self):
         context = {}
         labels = {}
@@ -157,3 +140,13 @@ class Sidebander(Instrument):
             labels[p.symbol_name] = p.label
             units[p.symbol_name] = p.unit
         return {'context': context, 'labels': labels, 'units': units}
+
+    def update_sequence(self):
+        if not self._sequencer_up_to_date:
+                self.change_sequence()
+
+    @property
+    def pulse_building_parameters(self):
+        param_dict = {p.symbol_name: p for p in self.parameters.values() if
+                      isinstance(p, PulseBuildingParameter)}
+        return param_dict

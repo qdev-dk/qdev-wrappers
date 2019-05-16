@@ -19,6 +19,7 @@ class SidebanderChannel(Sidebander, InstrumentChannel):
                          carrier=carrier, pulse_building_prepend=True,
                          **kwargs)
 
+
 class Multiplexer(Instrument):
     SIDEBANDER_CLASS = SidebanderChannel
 
@@ -52,6 +53,19 @@ class Multiplexer(Instrument):
         for s in self.sidebanders:
             s.frequency._save_val(val + s.sideband_frequency())
 
+    def change_sequence(self, **kwargs):
+        context_dict = self.generate_context()
+        context_dict['context'].update(kwargs.pop('context', {}))
+        context_dict['labels'].update(kwargs.pop('labels', {}))
+        context_dict['units'].update(kwargs.pop('units', {}))
+        original_do_upload_setting = self.sequencer._do_upload
+        self.sequencer._do_upload = True
+        self.sequencer.change_sequence(**context_dict, **kwargs)
+        self._sequencer_up_to_date = True
+        self.sequencer._do_upload = original_setting
+        sync_repeat_parameters(self.sequencer, self.pulse_building_parameters)
+        check_carrier_sidebanding_status(self.carrier)
+
     def generate_context(self):
         context = {}
         labels = {}
@@ -63,6 +77,10 @@ class Multiplexer(Instrument):
             units.update(full_context['units'])
         return {'context': context, 'labels': labels, 'units': units}
 
+    def update_sequence(self):
+        if not self._sequencer_up_to_date:
+                self.change_sequence()
+
     def add_sidebander(self):
         ch_num = len(self.sidebanders)
         name = '{}{}'.format(self.name, ch_num)
@@ -71,18 +89,7 @@ class Multiplexer(Instrument):
         sidebander.carrier_frequency.set_allowed = False
         self.add_submodule(name, sidebander)
         self.sidebanders.append(sidebander)
-        return sidebander
-
-    def change_sequence(self, **kwargs):
-        context = self.generate_context()
-        context.update(kwargs.pop('context', {}))
-        original_do_upload_setting = self.sequencer._do_upload
-        self.sequencer._do_upload = True
-        self.sequencer.change_sequence(context=context, **kwargs)
-        self._sequencer_up_to_date = True
-        self.sequencer._do_upload = original_setting
-        sync_repeat_parameters(self.sequencer, self.pulse_building_parameters)
-        check_carrier_sidebanding_status(self.carrier)
+        return sidebande
 
     @property
     def pulse_building_parameters(self):
