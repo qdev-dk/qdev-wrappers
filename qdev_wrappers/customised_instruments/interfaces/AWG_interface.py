@@ -50,7 +50,6 @@ class AWGInterface(Instrument):
                                      "setting repeated_element")
         self.sequence_mode._save_val('sequence')
         self.repetition_mode._save_val('inf')
-        self.sample_rate()
 
     def upload(self, forged_sequence: ForgedSequenceType):
         """
@@ -94,23 +93,14 @@ class AWGInterface(Instrument):
         """
         raise NotImplementedError
 
-    def to_default(self):
-        """
-        Convenience function which sets up some defaults for sample_rate and
-        Vpp.
-        """
-        self.sample_rate(1e9)
-        for ch in self.channels:
-            ch.Vpp(1)
-
 
 class SimulatedAWGInterface(AWGInterface):
     def __init__(self, name, chan_num=4):
         self.CHAN_NUM = chan_num
         super().__init__(name)
-        self.to_default()
-        self.sequence_mode._save_val('sequence')
-        self.repetition_mode._save_val('inf')
+        for ch in self.channels:
+            ch.Vpp(1)
+        self.sample_rate(1e9)
         self.sleep_time(0)
 
     def upload(self, forged_sequence: ForgedSequenceType):
@@ -128,6 +118,9 @@ class SimulatedAWGInterface(AWGInterface):
 
     def set_sequence_mode(self, seq_mode):
         print(f'setting sequence_mode to {seq_mode}')
+        if self.forged_sequence is None:
+            self.sequence_mode._save_val(seq_mode)
+            return
         if seq_mode == 'element':
             self.set_element(self.index)
         else:
@@ -172,7 +165,6 @@ class AWG5014Interface(AWGInterface):
         self.sample_rate.source = awg.clock_freq
         for ch in np.range(self.CHAN_NUM):
             self.submodules[f'ch{ch}'].Vpp.source = awg.parameters['ch{ch}_amp']
-            self.submodules[f'ch{ch}'].Vpp()
 
     def upload(self, forged_sequence: ForgedSequenceType):
         self.awg.make_send_and_load_awg_file_from_forged_sequence(
@@ -190,9 +182,11 @@ class AWG5014Interface(AWGInterface):
             self.run()
 
     def set_sequence_mode(self, seq_mode):
+        if self.forged_sequence is None:
+            self.sequence_mode._save_val(seq_mode)
+            return
         if seq_mode == 'element':
             self.set_element(self.index)
-            return
         elif seq_mode == 'sequence':
             rep_mode = self.repetition_mode()
             index = self.index + 1
@@ -203,11 +197,14 @@ class AWG5014Interface(AWGInterface):
             elif rep_mode == 'inf':
                 self.awg.set_sqel_loopcnt_to_inf(index, state=0)
                 self.awg.set_sqel_goto_target_index(last_index, 1)
-        sleep(self.sleep_time())
-        if rep_mode == 'inf':
-            self.run()
+            sleep(self.sleep_time())
+            if rep_mode == 'inf':
+                self.run()
 
     def set_repetition_mode(self, rep_mode):
+        if self.forged_sequence is None:
+            self.repetition_mode._save_val(rep_mode)
+            return
         seq_mode = self.sequence_mode()
         if seq_mode == 'element':
             index = self.index + 1

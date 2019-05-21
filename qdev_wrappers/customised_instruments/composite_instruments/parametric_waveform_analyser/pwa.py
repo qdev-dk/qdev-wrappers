@@ -3,7 +3,7 @@ import numpy as np
 from qcodes.instrument.base import Instrument
 import math
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.readout import ReadoutChannel
-from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.readout import DriveChannel
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.drive import DriveChannel
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.sequence_channel import SequenceChannel
 
 logger = logging.getLogger(__name__)
@@ -28,20 +28,20 @@ class ParametricWaveformAnalyser(Instrument):
                  alazar,
                  alazar_controller,
                  heterodyne_source,
-                 qubit_source) -> None:
+                 drive_source) -> None:
         super().__init__(name)
         self.sequencer = sequencer
         self.alazar = alazar
         self.alazar_controller = alazar_controller
         self.heterodyne_source = heterodyne_source
-        self.qubit_source = qubit_source
+        self.drive_source = drive_source
         self._sequencer_up_to_date = False
         sequence_channel = SequenceChannel(self, 'sequence', sequencer)
         self.add_submodule('sequence', sequence_channel)
         readout_channel = ReadoutChannel(self, 'readout', sequencer,
                                          carrier, alazar_controller)
         self.add_submodule('readout', readout_channel)
-        drive_channel = DriveChannel(self, 'drive', sequencer, qubit_source)
+        drive_channel = DriveChannel(self, 'drive', sequencer, drive_source)
         self.add_submodule('drive', drive_channel)
         self.sequence.reload_template_element_dict()
         self.off()
@@ -77,6 +77,11 @@ class ParametricWaveformAnalyser(Instrument):
         self.alazar_controller.alazar_channels.clear()
         self.readout.sidebanders.clear()
         self.drive.sidebanders.clear()
+
+    def _set_sequencer_up_to_date_flag(self, value):
+        self.sequence._sequencer_up_to_date = value
+
+    _sequencer_up_to_date = property(None, _set_sequencer_up_to_date_flag)
 
     @property
     def pulse_building_parameters(self):

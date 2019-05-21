@@ -1,16 +1,18 @@
 from typing import Union, Optional
 from contextlib import contextmanager
 from qcodes.instrument.base import Instrument
+from qcodes.instrument.channel import InstrumentChannel, ChannelList
 import qcodes.utils.validators as vals
 from qcodes.utils.helpers import create_on_off_val_mapping
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
-from qdev_wrappers.customised_instruments.composite_instruments.sidebander.sidebander import check_carrier_sidebanding_status, Sidebander, sync_repeat_parameters
+from qdev_wrappers.customised_instruments.composite_instruments.sidebander.sidebander import check_carrier_sidebanding_status, Sidebander,SequenceManager
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_sequencer.parametric_sequencer import ParametricSequencer
 from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface import MicrowaveSourceInterface
 from qdev_wrappers.customised_instruments.composite_instruments.heterodyne_source.heterodyne_source import HeterodyneSource
 
+# TODO: does carrier_power and carrier_status as delegate params actually add anything?
 
-class SidebanderChannel(Sidebander, InstrumentChannel):
+class SidebanderChannel(InstrumentChannel, Sidebander):
     def __init__(self, parent: Instrument, name: str,
                  sequencer: ParametricSequencer,
                  carrier: Union[MicrowaveSourceInterface, HeterodyneSource],
@@ -20,7 +22,7 @@ class SidebanderChannel(Sidebander, InstrumentChannel):
                          **kwargs)
 
 
-class Multiplexer(Instrument):
+class Multiplexer(Instrument, SequenceManager):
     SIDEBANDER_CLASS = SidebanderChannel
 
     def __init__(self, name: str,
@@ -53,48 +55,13 @@ class Multiplexer(Instrument):
         for s in self.sidebanders:
             s.frequency._save_val(val + s.sideband_frequency())
 
-    def change_sequence(self, **kwargs):
-        context_dict = self.generate_context()
-        context_dict['context'].update(kwargs.pop('context', {}))
-        context_dict['labels'].update(kwargs.pop('labels', {}))
-        context_dict['units'].update(kwargs.pop('units', {}))
-        original_do_upload_setting = self.sequencer._do_upload
-        self.sequencer._do_upload = True
-        self.sequencer.change_sequence(**context_dict, **kwargs)
-        self._sequencer_up_to_date = True
-        self.sequencer._do_upload = original_setting
-        sync_repeat_parameters(self.sequencer, self.pulse_building_parameters)
-        check_carrier_sidebanding_status(self.carrier)
-
-    def generate_context(self):
-        context = {}
-        labels = {}
-        units = {}
-        for s in self.sidebanders:
-            full_context = s.generate_context()
-            context.update(full_context['context'])
-            labels.update(full_context['labels'])
-            units.update(full_context['units'])
-        return {'context': context, 'labels': labels, 'units': units}
-
-    def update_sequence(self):
-        if not self._sequencer_up_to_date:
-                self.change_sequence()
-
-    def add_sidebander(self):
-        ch_num = len(self.sidebanders)
-        name = '{}{}'.format(self.name, ch_num)
+    def add_sidebander(self, name=None):
+        if name is None:
+            ch_num = len(self.sidebanders)
+            name = '{}{}'.format(self.name, ch_num)
         sidebander = self.SIDEBANDER_CLASS(
-            name, self.sequencer, self.carrier)
+            self, name, self.sequencer, self.carrier)
         sidebander.carrier_frequency.set_allowed = False
         self.add_submodule(name, sidebander)
         self.sidebanders.append(sidebander)
-        return sidebande
-
-    @property
-    def pulse_building_parameters(self):
-        param_dict = {p.symbol_name: p for p in self.parameters.values() if
-                      isinstance(p, PulseBuildingParameter)}
-        for s in self.sidebanders:
-            param_dict.update(s.pulse_building_parameters)
-        return param_dict
+        return sidebander

@@ -1,5 +1,6 @@
 from qcodes.utils import validators as vals
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.setpoints_channel import SetpointsChannel
+from qdev_wrappers.customised_instruments.composite_instruments.sidebander.sidebander import SequenceManager
 from qcodes.instrument.channel import InstrumentChannel
 import importlib
 import qcodes as qc
@@ -12,7 +13,7 @@ from lomentum.loader import read_element
 logger = logging.getLogger(__name__)
 
 
-class SequenceChannel(InstrumentChannel):
+class SequenceChannel(InstrumentChannel, SequenceManager):
     def __init__(self, parent, name, sequencer, **kwargs):
         super().__init__(parent, name, **kwargs)
         self.sequencer = sequencer
@@ -53,7 +54,7 @@ class SequenceChannel(InstrumentChannel):
         self.sequencer.stop()
 
     def update_sequencer(self):
-        if not self.parent._sequencer_up_to_date:
+        if not self._sequencer_up_to_date:
             self.sequencer._do_upload = True
             self.sequencer.change_sequence(
                 self.template_element_dict[self.template_element()],
@@ -66,16 +67,6 @@ class SequenceChannel(InstrumentChannel):
                                    self.parent.pulse_building_parameters)
             self.parent._sequencer_up_to_date = True
         self.parent.readout.set_alazar_not_up_to_date()
-
-    def generate_context(self):
-        context = {}
-        labels = {}
-        units = {}
-        for name, param in self.parent.pulse_building_parameters.items():
-            context[name] = param()
-            labels[name] = param.label
-            units[name] = param.unit
-        return {'context': context, 'labels': labels, 'units': units}
 
     def reload_template_element_dict(self, pulsebuildingfolder=None):
         if pulsebuildingfolder is None:
@@ -102,6 +93,10 @@ class SequenceChannel(InstrumentChannel):
         self.template_element_dict = elem_dict
         self.template_element.vals = vals.Enum(*elem_dict.keys())
         self.set_sequencer_not_up_to_date()
+
+    @property
+    def pulse_building_parameters(self):
+        return self.parent.pulse_building_parameters
 
     def set_sequencer_not_up_to_date(self):
         self._sequencer_up_to_date = False

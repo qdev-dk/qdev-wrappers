@@ -1,4 +1,5 @@
 from functools import partial
+from qcodes.instrument.channel import InstrumentChannel, ChannelList
 from qdev_wrappers.customised_instruments.composite_instruments.sidebander.sidebander import Sidebander
 from qdev_wrappers.customised_instruments.composite_instruments.sidebander.pulse_building_parameter import PulseBuildingParameter
 from qdev_wrappers.customised_instruments.composite_instruments.multiplexer.multiplexer import Multiplexer
@@ -10,16 +11,14 @@ from qdev_wrappers.customised_instruments.parameters.delegate_parameters import 
 
 
 class ReadoutSidebander(InstrumentChannel, Sidebander):
-    def __init__(self, parent: ReadoutChannel, name: str,
+    def __init__(self, parent, name: str,
                  sequencer: ParametricSequencer,
-                 carrier: HeterodyneSource,
-                 **kwargs):
+                 carrier: HeterodyneSource):
         super().__init__(parent=parent,
                          name=name,
                          sequencer=sequencer,
                          carrier=carrier,
-                         pulse_building_prepend=True,
-                         **kwargs)
+                         pulse_building_prepend=True)
         self._alazar_up_to_date = False
         del self.parameters['I_offset']
         del self.parameters['Q_offset']
@@ -114,8 +113,7 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
     def __init__(self, parent, name: str,
                  sequencer: ParametricSequencer,
                  carrier: HeterodyneSource,
-                 alazar_controller,  # TODO
-                 **kwargs):
+                 alazar_controller):
         super().__init__(parent=parent, name=name, sequencer=sequencer,
                          carrier=carrier, **kwargs)
         self.alazar_controller = alazar_controller
@@ -180,16 +178,16 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
                            unit='s',
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='I_offset',
-                           symbol_name='readout_I_offset'
+                           symbol_name='readout_I_offset',
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='Q_offset',
-                           symbol_name='readout_Q_offset'
+                           symbol_name='readout_Q_offset',
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='gain_offset',
-                           symbol_name='readout_gain_offset'
+                           symbol_name='readout_gain_offset',
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='phase_offset',
-                           symbol_name='readout_phase_offset'
+                           symbol_name='readout_phase_offset',
                            parameter_class=PulseBuildingParameter)
 
     def _set_base_demod_frequency(self, val):

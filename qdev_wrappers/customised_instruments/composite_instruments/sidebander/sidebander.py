@@ -10,8 +10,6 @@ from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface 
 from qdev_wrappers.customised_instruments.composite_instruments.heterodyne_source.heterodyne_source import HeterodyneSource
 
 # TODO: docstrings
-
-
 def check_carrier_sidebanding_status(carrier):
     if not carrier.status():
         warn('Carrier status is off')
@@ -23,43 +21,73 @@ def check_carrier_sidebanding_status(carrier):
             warn('Sidebander carrier mode indicates not sidebanded')
 
 
-def sync_repeat_parameters(sequencer, params_dict):
-    if sequencer.sequence_mode() == 'element':
-        inner = sequencer.inner_setpoints
-        outer = sequencer.outer_setpoints
-        for setpoints in [i for i in [inner, outer] if i is not None]:
-            if setpoints.symbol in params_dict:
-                param = params_dict[setpoints.symbol]
-                if setpoints.symbol in sequencer.repeat.parameters:
-                    sequencer_param = sequencer.repeat.parameters[setpoints.symbol]
-                    try:
-                        sequencer_param.set(param())
-                    except (RuntimeWarning, RuntimeError):
-                        param._save_val(sequencer_param())
-                        warn('Parameter {} could not be synced, value is now '
-                             '{}'.format(setpoints.symbol, sequencer_param()))
+class SequenceManager:
 
-def change_sequence(context_dict, **kwargs):
-    context_dict = self.generate_context()
-    context_dict['context'].update(kwargs.pop('context', {}))
-    context_dict['labels'].update(kwargs.pop('labels', {}))
-    context_dict['units'].update(kwargs.pop('units', {}))
-    original_do_upload_setting = self.sequencer._do_upload
-    self.sequencer._do_upload = True
-    self.sequencer.change_sequence(**context_dict, **kwargs)
-    self._sequencer_up_to_date = True
-    self.sequencer._do_upload = original_setting
-    sync_repeat_parameters(self.sequencer, self.pulse_building_parameters)
-    check_carrier_sidebanding_status(self.carrier)
+    def change_sequence(self, **kwargs):
+        context_dict = self.generate_context()
+        context_dict['context'].update(kwargs.pop('context', {}))
+        context_dict['labels'].update(kwargs.pop('labels', {}))
+        context_dict['units'].update(kwargs.pop('units', {}))
+        self.sequencer.change_sequence(**context_dict, **kwargs)
+        if self.sequencer._do_upload:
+            self._sequencer_up_to_date = True
+            self.sync_repeat_parameters()
+        else:
+            self._sequencer_up_to_date = False
+        check_carrier_sidebanding_status(self.carrier)
+
+    def sync_repeat_parameters(self):
+        if self.sequencer.sequence_mode() == 'element':
+            inner = self.sequencer.inner_setpoints
+            outer = self.sequencer.outer_setpoints
+            for setpoints in [i for i in [inner, outer] if i is not None]:
+                if setpoints.symbol in self.pulse_building_parameters:
+                    param = self.pulse_building_parameters[setpoints.symbol]
+                    if setpoints.symbol in self.sequencer.repeat.parameters:
+                        sequencer_param = self.sequencer.repeat.parameters[setpoints.symbol]
+                        try:
+                            sequencer_param.set(param())
+                        except (RuntimeWarning, RuntimeError):
+                            param._save_val(sequencer_param())
+                            warn('Parameter {} could not be synced, value is now '
+                                 '{}'.format(setpoints.symbol, sequencer_param()))
+
+    def generate_context(self):
+        context = {}
+        labels = {}
+        units = {}
+        for p in self.pulse_building_parameters.values():
+            context[p.symbol_name] = p()
+            labels[p.symbol_name] = p.label
+            units[p.symbol_name] = p.unit
+        return {'context': context, 'labels': labels, 'units': units}
+
+    def update_sequencer(self):
+        original_do_upload_setting = self.sequencer._do_upload
+        self.sequencer._do_upload = True
+        if not self._sequencer_up_to_date:
+            self.change_sequence()
+        self.sequencer._do_upload = original_do_upload_setting
+
+    @property
+    def pulse_building_parameters(self):
+        param_dict = {p.symbol_name: p for p in self.parameters.values() if
+                      isinstance(p, PulseBuildingParameter)}
+        for s in self.submodules.values():
+            try:
+                param_dict.update(s.pulse_building_parameters)
+            except AttributeError:
+                pass
+        return param_dict
 
 
 class SidebandParam(PulseBuildingParameter):
     def set_raw(self, val):
-        self.parent.frequency._save_val(self.carrier.frequency() + val)
+        self.instrument.frequency._save_val(self.instrument.carrier.frequency() + val)
         super().set_raw(val)
 
 
-class Sidebander(Instrument):
+class Sidebander(Instrument, SequenceManager):
     """
     An instrument which represents a sequencer and microwave drive where the
     sequencer is used to sideband the microwave drive.
@@ -120,6 +148,7 @@ class Sidebander(Instrument):
         self.status._save_val(1)
         self.frequency._save_val(self.carrier.frequency())
         self.sideband_frequency._save_val(0)
+        self.check_settings()
 
     def _set_frequency(self, val):
         new_sideband = val - self.carrier.frequency()
@@ -131,22 +160,7 @@ class Sidebander(Instrument):
     def _set_carrier_frequency(self, val):
         self.frequency._save_val(val + self.sideband_frequency())
 
-    def generate_context(self):
-        context = {}
-        labels = {}
-        units = {}
-        for p in self.pulse_building_parameters.values():
-            context[p.symbol_name] = p()
-            labels[p.symbol_name] = p.label
-            units[p.symbol_name] = p.unit
-        return {'context': context, 'labels': labels, 'units': units}
-
-    def update_sequence(self):
-        if not self._sequencer_up_to_date:
-                self.change_sequence()
-
-    @property
-    def pulse_building_parameters(self):
-        param_dict = {p.symbol_name: p for p in self.parameters.values() if
-                      isinstance(p, PulseBuildingParameter)}
-        return param_dict
+    def check_settings(self):
+        check_carrier_sidebanding_status(self.carrier)
+        if self.sequencer._template_element is None:
+            warn("No template element uploaded to sequencer.")

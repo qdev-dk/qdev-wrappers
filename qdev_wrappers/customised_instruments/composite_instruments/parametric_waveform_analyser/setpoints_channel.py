@@ -3,7 +3,7 @@ import numpy as np
 from functools import partial
 from qcodes.utils import validators as vals
 import logging
-from qdev_wrappers.customised_instruments.customised_instruments.parametric_sequencer.parametric_sequencer import Setpoints
+from qdev_wrappers.customised_instruments.composite_instruments.parametric_sequencer.parametric_sequencer import Setpoints
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class SetpointsChannel(InstrumentChannel):
                            label=f'{name} Setpoints Step Size',
                            set_cmd=self._set_step,
                            vals=vals.MultiType(vals.Numbers(),
-                                               vals.Enum(None))
+                                               vals.Enum(None)),
                            docstring=f'Sets the number of {name} setpoint'
                            ' values; equivalent to setting the npts')
 
@@ -80,8 +80,8 @@ class SetpointsChannel(InstrumentChannel):
                 return Setpoints(symbol, self._custom_setpoints)
             else:
                 try:
-                    setpoints = np.linspace(
-                        self.start(), self.stop(), num=self.npts(), endpoint=True)
+                    setpoints = np.linspace(self.start(), self.stop(),
+                                            num=self.npts(), endpoint=True)
                     return Setpoints(symbol, setpoints)
                 except TypeError:
                     raise TypeError(

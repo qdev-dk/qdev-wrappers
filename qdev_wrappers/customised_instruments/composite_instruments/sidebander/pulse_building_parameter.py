@@ -32,7 +32,8 @@ class PulseBuildingParameter(Parameter):
                 with sequencer.no_upload():
                     sequence_params[self.symbol_name](val)
                 raise RuntimeError(str(e) + '. Try changing the setpoints to '
-                                   'include this value or set them to None')
+                                   'include this value or set them to None and then'
+                                   'set this parameter')
         elif self.symbol_name in sequence_params:
             sequence_params[self.symbol_name](val)
             if not sequencer._do_upload:

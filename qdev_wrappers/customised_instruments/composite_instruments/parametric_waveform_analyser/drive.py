@@ -1,4 +1,6 @@
 from functools import partial
+from typing import Union
+from qcodes.instrument.channel import InstrumentChannel, ChannelList
 from qdev_wrappers.customised_instruments.composite_instruments.sidebander.sidebander import Sidebander
 from qdev_wrappers.customised_instruments.composite_instruments.sidebander.pulse_building_parameter import PulseBuildingParameter
 from qdev_wrappers.customised_instruments.composite_instruments.multiplexer.multiplexer import Multiplexer
@@ -10,16 +12,14 @@ from qdev_wrappers.customised_instruments.parameters.delegate_parameters import 
 
 
 class DriveSidebander(InstrumentChannel, Sidebander):
-    def __init__(self, parent: DriveChannel, name: str,
+    def __init__(self, parent, name: str,
                  sequencer: ParametricSequencer,
-                 carrier: Union[MicrowaveSourceInterface, HeterodyneSource],
-                 **kwargs):
+                 carrier: Union[MicrowaveSourceInterface, HeterodyneSource]):
         super().__init__(parent=parent,
                          name=name,
                          sequencer=sequencer,
                          carrier=carrier,
-                         pulse_building_prepend=True,
-                         **kwargs)
+                         pulse_building_prepend=True)
         self.add_parameter(
             name='DRAG_amplitude',
             parameter_class=PulseBuildingParameter)

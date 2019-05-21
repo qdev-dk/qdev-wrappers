@@ -158,9 +158,9 @@ class ParametricSequencer(Instrument):
             self._outer_setpoints = make_setpoints_tuple(outer_setpoints)
 
         # update units and labels to only contain things from the context
-        self._labels = {n: l for n, l in self._labels.items
+        self._labels = {n: l for n, l in self._labels.items()
                         if n in self._context}
-        self._units = {n: l for n, l in self._units.items
+        self._units = {n: l for n, l in self._units.items()
                        if n in self._context}
 
         # add metadata, that gets added to the snapshot automatically
@@ -183,8 +183,8 @@ class ParametricSequencer(Instrument):
                 for name, value in self._context.items():
                     self.sequence.add_parameter(
                         name=name,
-                        unit=self.units.get(name, ''),
-                        label=self.labels.get(name, ''),
+                        unit=self._units.get(name, ''),
+                        label=self._labels.get(name, ''),
                         get_cmd=None,
                         set_cmd=partial(self._set_context_parameter, name),
                         initial_value=value)
@@ -307,8 +307,8 @@ class ParametricSequencer(Instrument):
                                       set_cmd=partial(
                                           self._set_element,
                                           set_inner=set_inner),
-                                      unit=self.units.get(symbol, ''),
-                                      label=self.labels.get(symbol, ''))
+                                      unit=self._units.get(symbol, ''),
+                                      label=self._labels.get(symbol, ''))
             self.repeat.parameters[symbol]._save_val(setpoints.values[0])
 
         # define shortcuts
