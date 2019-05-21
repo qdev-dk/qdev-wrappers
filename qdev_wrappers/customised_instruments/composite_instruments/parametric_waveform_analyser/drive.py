@@ -43,6 +43,7 @@ class DriveChannel(InstrumentChannel, Multiplexer):
 
         # pulse building parameters
         self.add_parameter(name='stage_duration',
+                           symbol_name='drive_stage_duration',
                            unit='s',
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='sigma_cutoff',
@@ -62,6 +63,9 @@ class DriveChannel(InstrumentChannel, Multiplexer):
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='pulse_duration',
                            symbol_name='drive_pulse_duration',
+                           unit='s',
+                           parameter_class=PulseBuildingParameter)
+        self.add_parameter(name='gate_separation',
                            unit='s',
                            parameter_class=PulseBuildingParameter)
 

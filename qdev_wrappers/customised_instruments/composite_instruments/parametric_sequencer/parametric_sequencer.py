@@ -69,7 +69,7 @@ class ParametricSequencer(Instrument):
 
     def __init__(self,
                  name: str,
-                 awg: AWGInterface,
+                 awg_if_name: str,
                  routes: Optional[RoutesDictType]=None,
                  template_element: _Optional[Element]=NOT_GIVEN,
                  inner_setpoints: _Optional[Union[SetpointsType, str]]=NOT_GIVEN,
@@ -80,7 +80,7 @@ class ParametricSequencer(Instrument):
                  first_sequence_element: _Optional[Element]=NOT_GIVEN,
                  initial_element: _Optional[Element]=NOT_GIVEN):
         super().__init__(name)
-        self.awg = awg
+        self.awg = Instrument.find_instrument(awg_if_name)
         self.routes = routes
 
         # we need to initialise these attributes with `None`. The actual value

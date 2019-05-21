@@ -26,10 +26,12 @@ class Multiplexer(Instrument, SequenceManager):
     SIDEBANDER_CLASS = SidebanderChannel
 
     def __init__(self, name: str,
-                 sequencer: ParametricSequencer,
-                 carrier: Union[MicrowaveSourceInterface, HeterodyneSource],
+                 sequencer_name: str,
+                 carrier_if_name: str,
                  **kwargs):
         super().__init__(name, **kwargs)
+        sequencer = Instrument.find_instrument(sequencer_name)
+        carrier = Instrument.find_instrument(carrier_if_name)
         self.carrier = carrier
         self.sequencer = sequencer
         self._pulse_building_prepend = False
@@ -58,7 +60,7 @@ class Multiplexer(Instrument, SequenceManager):
     def add_sidebander(self, name=None):
         if name is None:
             ch_num = len(self.sidebanders)
-            name = '{}{}'.format(self.name, ch_num)
+            name = 'ch{}'.format(ch_num)
         sidebander = self.SIDEBANDER_CLASS(
             self, name, self.sequencer, self.carrier)
         sidebander.carrier_frequency.set_allowed = False

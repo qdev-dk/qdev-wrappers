@@ -158,13 +158,14 @@ class SimulatedAWGInterface(AWGInterface):
 class AWG5014Interface(AWGInterface):
     CHAN_NUM = 4
 
-    def __init__(self, name, awg):
+    def __init__(self, name, awg_name: str):
+        awg = Instrument.find_instrument(awg_name)
         self.awg = awg
         self.awg.delete_all_waveforms_from_list()
         super().__init__(name)
         self.sample_rate.source = awg.clock_freq
-        for ch in np.range(self.CHAN_NUM):
-            self.submodules[f'ch{ch}'].Vpp.source = awg.parameters['ch{ch}_amp']
+        for ch in range(self.CHAN_NUM):
+            self.submodules[f'ch{ch}'].Vpp.source = awg.parameters[f'ch{ch+1}_amp']
 
     def upload(self, forged_sequence: ForgedSequenceType):
         self.awg.make_send_and_load_awg_file_from_forged_sequence(

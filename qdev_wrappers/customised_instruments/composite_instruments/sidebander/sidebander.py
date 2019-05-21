@@ -94,13 +94,13 @@ class Sidebander(Instrument, SequenceManager):
     """
 
     def __init__(self, name: str,
-                 sequencer: ParametricSequencer,
-                 carrier: Union[MicrowaveSourceInterface, HeterodyneSource],
+                 sequencer_name: str,
+                 carrier_if_name: str,
                  pulse_building_prepend: bool=False,
                  **kwargs):
         super().__init__(name, **kwargs)
-        self.carrier = carrier
-        self.sequencer = sequencer
+        self.carrier = Instrument.find_instrument(carrier_if_name)
+        self.sequencer = Instrument.find_instrument(sequencer_name)
         self._pulse_building_prepend = pulse_building_prepend
         self._sequencer_up_to_date = False
 

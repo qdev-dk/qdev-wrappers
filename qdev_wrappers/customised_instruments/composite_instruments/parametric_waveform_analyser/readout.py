@@ -74,19 +74,19 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
         """
         Create alazar channel pair based on the pwa settings dictionary to
         readout at this sidebanded frequency. Put channels alazar_channels
-        submodule and pwa._alazar_controller.channels.
+        submodule and pwa.alazar_controller.channels.
         """
         pwa = self.root_instrument
         settings = pwa.alazar_ch_settings
         chan1 = AlazarChannel_ext(
-            parent=pwa._alazar_controller,
+            parent=pwa.alazar_controller,
             name=self.full_name + '_realmag',
             demod=True,
             average_records=settings['average_records'],
             average_buffers=settings['average_buffers'],
             integrate_samples=settings['integrate_time'])
         chan2 = AlazarChannel_ext(
-            parent=pwa._alazar_controller,
+            parent=pwa.alazar_controller,
             name=self.full_name + '_imaginaryphase',
             demod=True,
             average_records=settings['average_records'],
@@ -103,7 +103,7 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
             chan2.demod_type('imag')
             chan2.data.label = f'{self.name} Imaginary'
         for ch in (chan1, chan2):
-            pwa._alazar_controller.channels.append(ch)
+            pwa.alazar_controller.channels.append(ch)
         return [chan1, chan2]
 
 
@@ -116,6 +116,7 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
                  alazar_controller):
         super().__init__(parent=parent, name=name, sequencer=sequencer,
                          carrier=carrier, **kwargs)
+        self._pulse_building_prepend = False
         self.alazar_controller = alazar_controller
         self.add_parameter(name='data',
                            channels=alazar_controller.channels,
@@ -169,12 +170,14 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
                            unit='s',
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='marker_duration',
+                           symbol_name='readout_marker_duration',
                            unit='s',
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='marker_readout_delay',
                            unit='s',
                            parameter_class=PulseBuildingParameter)
-        self.add_parameter(name='readout_pulse_duration',
+        self.add_parameter(name='pulse_duration',
+                           symbol_name='readout_pulse_duration',
                            unit='s',
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='I_offset',

@@ -24,27 +24,26 @@ class ParametricWaveformAnalyser(Instrument):
 
     def __init__(self,
                  name: str,
-                 sequencer,
-                 alazar,
-                 alazar_controller,
-                 heterodyne_source,
-                 drive_source) -> None:
+                 sequencer_name,
+                 # alazar_name,
+                 alazar_controller_name,
+                 heterodyne_source_name,
+                 drive_source_if_name) -> None:
         super().__init__(name)
-        self.sequencer = sequencer
-        self.alazar = alazar
-        self.alazar_controller = alazar_controller
-        self.heterodyne_source = heterodyne_source
-        self.drive_source = drive_source
+        self.sequencer = Instrument.find_instrument(sequencer_name)
+        # self.alazar = Instrument.find_instrument(alazar_name)
+        self.alazar_controller = Instrument.find_instrument(alazar_controller_name)
+        self.heterodyne_source = Instrument.find_instrument(heterodyne_source_name)
+        self.drive_source = Instrument.find_instrument(drive_source_if_name)
         self._sequencer_up_to_date = False
-        sequence_channel = SequenceChannel(self, 'sequence', sequencer)
+        sequence_channel = SequenceChannel(self, 'sequence', self.sequencer)
         self.add_submodule('sequence', sequence_channel)
-        readout_channel = ReadoutChannel(self, 'readout', sequencer,
-                                         carrier, alazar_controller)
+        readout_channel = ReadoutChannel(self, 'readout', self.sequencer,
+                                         self.heterodyne_source, self.alazar_controller)
         self.add_submodule('readout', readout_channel)
-        drive_channel = DriveChannel(self, 'drive', sequencer, drive_source)
+        drive_channel = DriveChannel(self, 'drive', self.sequencer, self.drive_source)
         self.add_submodule('drive', drive_channel)
         self.sequence.reload_template_element_dict()
-        self.off()
 
     def off(self):
         self.readout.measurement_duration(1e-6)
@@ -60,14 +59,14 @@ class ParametricWaveformAnalyser(Instrument):
     def stop(self):
         self.sequencer.stop()
 
-    def add_qubit(self, readout_frequency: float=7e9,
-                  drive_frequency: float=5e9):
+    def add_qubit(self):
         """
         Adds a SidebandingChannel to each of the
         ReadoutChannel and DriveChannels.
         """
-        self.readout.add_sidebander(readout_frequency)
-        self.drive.add_sidebander(drive_frequency)
+        qubit_num = len(self.readout.sidebanders)
+        self.readout.add_sidebander(readout_frequency, name=f'Q{qubit_num}_readout')
+        self.drive.add_sidebander(drive_frequency, name=f'Q{qubit_num}_drive')
 
     def clear_qubits(self):
         """
