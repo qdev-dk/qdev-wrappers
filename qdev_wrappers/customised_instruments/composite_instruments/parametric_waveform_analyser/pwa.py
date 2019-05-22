@@ -1,12 +1,10 @@
-import logging
+from warnings import warn
 import numpy as np
 from qcodes.instrument.base import Instrument
 import math
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.readout import ReadoutChannel
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.drive import DriveChannel
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.sequence_channel import SequenceChannel
-
-logger = logging.getLogger(__name__)
 
 
 class ParametricWaveformAnalyser(Instrument):
@@ -35,7 +33,6 @@ class ParametricWaveformAnalyser(Instrument):
         self.alazar_controller = Instrument.find_instrument(alazar_controller_name)
         self.heterodyne_source = Instrument.find_instrument(heterodyne_source_name)
         self.drive_source = Instrument.find_instrument(drive_source_if_name)
-        self._sequencer_up_to_date = False
         sequence_channel = SequenceChannel(self, 'sequence', self.sequencer)
         self.add_submodule('sequence', sequence_channel)
         readout_channel = ReadoutChannel(self, 'readout', self.sequencer,
@@ -43,6 +40,7 @@ class ParametricWaveformAnalyser(Instrument):
         self.add_submodule('readout', readout_channel)
         drive_channel = DriveChannel(self, 'drive', self.sequencer, self.drive_source)
         self.add_submodule('drive', drive_channel)
+        self._sequencer_up_to_date = False
         self.sequence.reload_template_element_dict()
 
     def off(self):
@@ -65,8 +63,8 @@ class ParametricWaveformAnalyser(Instrument):
         ReadoutChannel and DriveChannels.
         """
         qubit_num = len(self.readout.sidebanders)
-        self.readout.add_sidebander(readout_frequency, name=f'Q{qubit_num}_readout')
-        self.drive.add_sidebander(drive_frequency, name=f'Q{qubit_num}_drive')
+        self.readout.add_sidebander(name=f'Q{qubit_num}_R', symbol_prepend='Q{qubit_num}_readout')
+        self.drive.add_sidebander(name=f'Q{qubit_num}_D', symbol_prepend='Q{qubit_num}_drive')
 
     def clear_qubits(self):
         """
@@ -76,6 +74,9 @@ class ParametricWaveformAnalyser(Instrument):
         self.alazar_controller.alazar_channels.clear()
         self.readout.sidebanders.clear()
         self.drive.sidebanders.clear()
+
+    # def update(self):
+    #     self.sequence.update()
 
     def _set_sequencer_up_to_date_flag(self, value):
         self.sequence._sequencer_up_to_date = value
@@ -87,8 +88,7 @@ class ParametricWaveformAnalyser(Instrument):
         return {**self.readout._pulse_building_parameters,
                 **self.drive._pulse_building_parameters}
 
-    @property
-    def alazar_ch_settings(self):
+    def get_alazar_ch_settings(self):
         """
         Based on the current instrument settings calculates the settings
         configuration for an alazar channel as a dictionary with keys:
@@ -109,22 +109,24 @@ class ParametricWaveformAnalyser(Instrument):
         records_setpoint_label: str, None
         records_setpoint_unit: str, None
         """
+        if not self.sequence._sequencer_up_to_date:
+            return None
         if self.sequence.sequence_mode() == 'element':
             seq_mode = False
         else:
             seq_mode = True
         num = self.readout.num() or 1
         single_shot = self.readout.single_shot()
-        integrate_time = self.readout.integrate_time()
+        integrate_time = self.readout.average_time()
         settings = {'integrate_time': integrate_time}
         if not single_shot:
             settings['average_buffers'] = True
-            if (seq_mode and self.sequence.inner_setpoints.symbol() is not None):
+            if (seq_mode and self.sequence.inner.symbol() is not None):
                 if self.sequence.outer_setpoints.setpoints is not None:
-                    logger.warn('Averaging channel will average over '
+                    warn('Averaging channel will average over '
                                 'outer setpoints of sequencer sequence')
-                record_symbol = self.sequence.inner_setpoints.setpoints[0]
-                record_setpoints = self.sequence.inner_setpoints.setpoints[1]
+                record_symbol = self.sequence.inner.setpoints[0]
+                record_setpoints = self.sequence.inner.setpoints[1]
                 settings['records'] = len(record_setpoints)
                 settings['buffers'] = num
                 settings['average_records'] = False
@@ -149,20 +151,20 @@ class ParametricWaveformAnalyser(Instrument):
         else:
             settings['average_buffers'] = False
             settings['average_records'] = False
-            if seq_mode and self.sequence.inner_setpoints.symbol() is not None:
+            if seq_mode and self.sequence.inner.symbol() is not None:
                 if self.sequence.outer_setpoints is not None and num > 1:
                     raise RuntimeError(
                         'Cannot have outer setpoints and multiple nreps')
-                record_symbol = self.sequence.inner_setpoints.setpoints[0]
-                record_setpoints = self.sequence.inner_setpoints.setpoints[1]
+                record_symbol = self.sequence.inner.setpoints[0]
+                record_setpoints = self.sequence.inner.setpoints[1]
                 settings['records'] = len(record_setpoints)
                 settings['record_setpoints'] = record_setpoints
                 settings['record_setpoint_name'] = record_symbol
                 settings['record_setpoint_label'] = record_symbol  # TODO
                 settings['record_setpoint_unit'] = '' # TODO
                 if self.sequence.outer_setpoints.symbol() is not None:
-                    buffer_symbol = self.sequence.outer_setpoints.setpoints[0]
-                    buffer_setpoints = self.sequence.outer_setpoints.setpoints[1]
+                    buffer_symbol = self.sequence.outer.setpoints[0]
+                    buffer_setpoints = self.sequence.outer.setpoints[1]
                     settings['buffers'] = len(buffer_setpoints)
                     settings['buffer_setpoints'] = buffer_setpoints
                     settings['buffer_setpoint_name'] = buffer_symbol

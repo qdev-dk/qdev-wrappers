@@ -36,12 +36,14 @@ class MicrowaveSourceInterface(Instrument):
                                      '(usually input to trigger channel)')
         self.add_parameter(name='IQ_state',
                            label='IQ State',
+                           val_mapping=create_on_off_val_mapping(on_val=1, off_val=0),
                            parameter_class=DelegateParameter,
                            docstring='On/off status indicates whether output '
                                      'I and Q is modulated by another signal '
                                      '(usually input to IQ channels)')
         self.add_parameter(name='dual_output_state',
                            label='Dual Output State',
+                           val_mapping=create_on_off_val_mapping(on_val=1, off_val=0),
                            parameter_class=DelegateParameter,
                            docstring='On/off status indicates whether output '
                                      'from trig out port is on')
@@ -58,47 +60,27 @@ class SGS100AMicrowaveSourceInterface(MicrowaveSourceInterface):
     Interface with real SGS100A microwave source.
     """
     def __init__(self, name: str, microwave_source_name: str,
-                 IQ: bool=True, dual_output: bool=False):
+                 IQ: bool=True, dual_output: bool=False,
+                 external_mixer=False):
         super().__init__(name, IQ=IQ, dual_output=dual_output)
+        if IQ and external_mixer:
+            raise RuntimeError('IQ option AND external_mixer not valid')
         microwave_source = Instrument.find_instrument(microwave_source_name)
         self.microwave_source = microwave_source
         self.frequency.source = microwave_source.frequency
         self.power.source = microwave_source.power
         self.status.source = microwave_source.status
         self.pulsemod_state.source = microwave_source.pulsemod_state
-        self.IQ_state.source = microwave_source.IQ_state
         if dual_output:
-            valmappingdict = create_on_off_val_mapping(on_val=1, off_val=0)
-            self.dual_output_state.set_fn = self._set_dual_output
-            self.dual_output_state.get_fn = self._get_dual_output
-            self.dual_output_state.vals = vals.Enum(*valmappingdict.keys())
-
-    def _set_dual_output(self, val):
-        if str(val).upper() in ['ON', '1', 'TRUE']:
-            self.microwave_source.ref_LO_out('LO')
-        else:
-            self.microwave_source.ref_LO_out('OFF')
-
-    def _get_dual_output(self):
-        if self.microwave_source.ref_LO_out() == 'LO':
-            return True
-        else:
-            return True
-
-
-class SGS100AExternalMicrowaveSourceInterface(MicrowaveSourceInterface):
-    """
-    Interface with real CW SGS100A microwave source with external mixer
-    """
-    def __init__(self, name: str, microwave_source_name: str):
-        super().__init__(name, IQ=True, dual_output=False)
-        microwave_source = Instrument.find_instrument(microwave_source_name)
-        self.frequency.source = microwave_source.frequency
-        self.power.source = microwave_source.power
-        self.status.source = microwave_source.status
-        self.pulsemod_state.source = microwave_source.pulsemod_state
-        self.IQ_state.set_allowed = False
-        self.IQ_state._latest['raw_value'] = 1
+            valmappingdict = create_on_off_val_mapping(on_val='LO', off_val='OFF')
+            self.dual_output_state.source = microwave_source.ref_LO_out
+            self.dual_output.val_mapping = valmappingdict
+            inversevalmappingdict = {v: k for k, v in valmappingdict.items()}
+            self.dual_output_state.inverse_val_mapping = inversevalmappingdict
+        if IQ:
+            self.IQ_state.source = microwave_source.IQ_state
+        elif external_mixer:
+            self.IQ_state._latest['raw_value'] = 1
 
 
 class SimulatedMicrowaveSourceInterface(MicrowaveSourceInterface):

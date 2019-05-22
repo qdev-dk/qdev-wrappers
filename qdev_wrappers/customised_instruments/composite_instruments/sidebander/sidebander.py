@@ -96,13 +96,13 @@ class Sidebander(Instrument, SequenceManager):
     def __init__(self, name: str,
                  sequencer_name: str,
                  carrier_if_name: str,
-                 pulse_building_prepend: bool=False,
+                 symbol_prepend: Optional[str]= None,
                  **kwargs):
         super().__init__(name, **kwargs)
         self.carrier = Instrument.find_instrument(carrier_if_name)
         self.sequencer = Instrument.find_instrument(sequencer_name)
-        self._pulse_building_prepend = pulse_building_prepend
         self._sequencer_up_to_date = False
+        self._symbol_prepend = '{symbol_prepend}_' if symbol_prepend else ''
 
         self.add_parameter(
             name='frequency',
@@ -113,7 +113,7 @@ class Sidebander(Instrument, SequenceManager):
         self.add_parameter(
             name='carrier_frequency',
             set_fn=self._set_carrier_frequency,
-            source=carrier.frequency,
+            source=self.carrier.frequency,
             parameter_class=DelegateParameter)
 
         # pulse building parameters
@@ -123,21 +123,27 @@ class Sidebander(Instrument, SequenceManager):
             docstring='Setting this also updates the frequency parameter')
         self.add_parameter(
             name='I_offset',
+            symbol_name=self._symbol_prepend + 'I_offset',
             parameter_class=PulseBuildingParameter)
         self.add_parameter(
             name='Q_offset',
+            symbol_name=self._symbol_prepend + 'Q_offset',
             parameter_class=PulseBuildingParameter)
         self.add_parameter(
             name='gain_offset',
+            symbol_name=self._symbol_prepend + 'gain_offset',
             parameter_class=PulseBuildingParameter)
         self.add_parameter(
             name='phase_offset',
+            symbol_name=self._symbol_prepend + 'phase_offset',
             parameter_class=PulseBuildingParameter)
         self.add_parameter(
             name='amplitude',
+            symbol_name=self._symbol_prepend + 'amplitude',
             parameter_class=PulseBuildingParameter)
         self.add_parameter(
             name='status',
+            symbol_name=self._symbol_prepend + 'status',
             parameter_class=PulseBuildingParameter,
             vals=vals.Enum(0, 1))
         self.I_offset._save_val(0)

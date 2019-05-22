@@ -8,8 +8,6 @@ class PulseBuildingParameter(Parameter):
                  **kwargs):
         if symbol_name is not None:
             self.symbol_name = symbol_name
-        elif instrument._pulse_building_prepend:
-            self.symbol_name = '_'.join([instrument.name, name])
         else:
             self.symbol_name = name
         kwargs = {'label': self.symbol_name.replace('_', ' ').title(),

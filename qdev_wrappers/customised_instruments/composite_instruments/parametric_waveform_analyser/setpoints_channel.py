@@ -2,10 +2,7 @@ from qcodes.instrument.channel import InstrumentChannel
 import numpy as np
 from functools import partial
 from qcodes.utils import validators as vals
-import logging
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_sequencer.parametric_sequencer import Setpoints
-
-logger = logging.getLogger(__name__)
 
 
 class SetpointsChannel(InstrumentChannel):
@@ -21,8 +18,7 @@ class SetpointsChannel(InstrumentChannel):
                            label=f'{name} Setpoint Symbol',
                            set_cmd=parent.set_sequencer_not_up_to_date,
                            initial_value=None,
-                           vals=vals.MultiType(vals.Strings(),
-                                               vals.Enum(None)))
+                           vals=vals.MultiType(vals.Strings(), vals.Enum(None)))
         self.add_parameter(name='start',
                            label=f'{name} Setpoints Start',
                            set_cmd=partial(self._set_start_stop, 'start'),

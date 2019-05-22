@@ -6,11 +6,12 @@ import importlib
 import qcodes as qc
 import os
 import sys
-import logging
+from warnings import warn
 import yaml
-from lomentum.loader import read_element
+from lomentum.loader import read_element, register_user_module
+from qdev_wrappers.pulse_building import atoms_ext 
 
-logger = logging.getLogger(__name__)
+register_user_module(atoms_ext)
 
 
 class SequenceChannel(InstrumentChannel, SequenceManager):
@@ -20,6 +21,7 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
         self.template_element_dict = None
         self.first_element = None
         self.sequencer._do_upload = False
+        self._sequencer_up_to_date = False
         inner = SetpointsChannel(self, 'inner')
         outer = SetpointsChannel(self, 'outer')
         self.add_submodule('inner', inner)
@@ -38,14 +40,16 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
             self.parent.alazar.seq_mode(True)
         elif val == 'element':
             self.parent.alazar.seq_mode(False)
-        self.parent.readout.set_alazar_not_up_to_date()
+        # self.parent.readout.set_alazar_not_up_to_date()
+        self.parent.readout.update_all_alazar()
 
     def _set_rep_mode(self, val):
         if self.parent.readout.num() > 1:
-            logger.warning('Repetition mode set to single but readout num > 1'
+            warn('Repetition mode set to single but readout num > 1'
                            ': necessary that awg is triggered so that '
                            'sequence/element plays num times')
-        self.parent.readout.set_alazar_not_up_to_date()
+        # self.parent.readout.set_alazar_not_up_to_date()
+        self.parent.readout.update_all_alazar()
 
     def run(self):
         self.sequencer.run()
@@ -53,7 +57,7 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
     def stop(self):
         self.sequencer.stop()
 
-    def update_sequencer(self):
+    def update(self):
         if not self._sequencer_up_to_date:
             self.sequencer._do_upload = True
             self.sequencer.change_sequence(
@@ -64,9 +68,10 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
                 **self.generate_context())
             self.sequencer._do_upload = False
             sync_repeat_parameters(self.sequencer,
-                                   self.parent.pulse_building_parameters)
-            self.parent._sequencer_up_to_date = True
-        self.parent.readout.set_alazar_not_up_to_date()
+                                   self.pulse_building_parameters)
+            self._sequencer_up_to_date = True
+        # self.parent.readout.set_alazar_not_up_to_date()
+        self.parent.readout.update_all_alazar()
 
     def reload_template_element_dict(self, pulsebuildingfolder=None):
         if pulsebuildingfolder is None:
@@ -87,17 +92,19 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
                 try:
                     elem_dict[element_name] = importlib.import_module(
                         element_name).create_template_element()
-                except AttributeError:
+                except Exception as e:
+                    warn('Error importing {}: {}'.format(element_name, str(e)))
                     continue
         self.first_element = elem_dict.pop('first_element', None)
         self.template_element_dict = elem_dict
         self.template_element.vals = vals.Enum(*elem_dict.keys())
-        self.set_sequencer_not_up_to_date()
+        self._sequencer_up_to_date = False
 
     @property
     def pulse_building_parameters(self):
         return self.parent.pulse_building_parameters
 
-    def set_sequencer_not_up_to_date(self):
+    def set_sequencer_not_up_to_date(self, *args):
         self._sequencer_up_to_date = False
-        self.parent.readout.set_alazar_not_up_to_date()
+        # self.parent.readout.set_alazar_not_up_to_date()
+        # self.parent.readout.update_all_alazar()

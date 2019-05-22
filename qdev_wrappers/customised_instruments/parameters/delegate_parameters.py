@@ -217,27 +217,40 @@ class DelegateMultiChannelParameter(MultiParameter):
         self._param_name = param_name
         self._full_name = channels._parent.name + '_Multi_' + param_name
         parameters = [chan.parameters[param_name] for chan in channels]
-        self._is_array_param = isinstance(parameters[0], ArrayParameter)
-        names = self._get_names()
-        shapes = self._get_shapes(parameters)
-        super().__init__(name=name, names=names, shapes=shapes)
-        self.labels = self._get_labels(parameters)
-        self.units = self._get_units(parameters)
-        if self._is_array_param:
-            self._set_setpoints_info(parameters)
+        if parameters:
+            names = self._get_names()
+            shapes = self._get_shapes(parameters)
+            labels = self._get_labels(parameters)
+            units = self._get_units(parameters)
+        else:
+            names = ('TempName',)
+            shapes = ((5,),)
+            labels = None
+            units = None
+        super().__init__(name=name, names=names, shapes=shapes, labels=labels, units=units)
+        self._set_setpoints_info(parameters)
         self.get_allowed = get_allowed
         self.set_allowed = set_allowed
         self.set_fn = set_fn
         self.get_fn = get_fn
+    
+    def update(self):
+        parameters = [chan.parameters[self._param_name] for
+                      chan in self._channels]
+        self.names = self._get_names()
+        self.shapes = self._get_shapes(parameters)
+        self.labels = self._get_labels(parameters)
+        self.units = self._get_units(parameters)
+        self._set_setpoints_info(parameters)
 
     def _get_names(self):
         return tuple("{}_{}".format(chan.name, self._param_name) for
                      chan in self._channels)
 
     def _get_shapes(self, parameters):
-        if self._is_array_param:
+        try:
             return tuple(parameter.shape for parameter in parameters)
-        else:
+        except AttributeError:
             return tuple(() for _ in parameters)
 
     def _get_labels(self, parameters):
@@ -247,24 +260,20 @@ class DelegateMultiChannelParameter(MultiParameter):
         return tuple(parameter.unit for parameter in parameters)
 
     def _set_setpoints_info(self, parameters):
-        self.setpoints = tuple(p.setpoints for p in parameters)
-        self.setpoint_names = tuple(p.setpoint_names for p in parameters)
-        self.setpoint_labels = tuple(p.setpoint_labels for p in parameters)
-        self.setpoint_units = tuple(p.setpoint_units for p in parameters)
+        try:
+            self.setpoints = tuple(p.setpoints for p in parameters)
+            self.setpoint_names = tuple(p.setpoint_names for p in parameters)
+            self.setpoint_labels = tuple(p.setpoint_labels for p in parameters)
+            self.setpoint_units = tuple(p.setpoint_units for p in parameters)
+        except AttributeError:
+            pass
+            
 
     def get_raw(self, **kwargs):
         if self.get_allowed is False:
             raise RuntimeError(f'Parmeter {self.name} not gettable')
         if self.get_fn is not None:
             self.get_fn()
-        parameters = [chan.parameters[self._param_name] for
-                      chan in self._channels]
-        self.names = self._get_names()
-        self.shapes = self._get_shapes(parameters)
-        self.labels = self._get_labels(parameters)
-        self.units = self._get_units(parameters)
-        if self._is_array_param:
-            self._set_setpoints_info(parameters)
         return tuple(chan.parameters[self._param_name].get(**kwargs) for chan
                      in self._channels)
 
