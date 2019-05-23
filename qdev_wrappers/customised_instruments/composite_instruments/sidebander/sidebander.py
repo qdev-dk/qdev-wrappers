@@ -10,15 +10,11 @@ from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface 
 from qdev_wrappers.customised_instruments.composite_instruments.heterodyne_source.heterodyne_source import HeterodyneSource
 
 # TODO: docstrings
-def check_carrier_sidebanding_status(carrier):
-    if not carrier.status():
-        warn('Carrier status is off')
-    if isinstance(carrier, MicrowaveSourceInterface):
-        if not carrier.IQ_state():
-            warn('Sidebander carrier IQ state is off')
-    elif isinstance(carrier, HeterodyneSource):
-        if 'sidebanded' not in carrier.mode():
-            warn('Sidebander carrier mode indicates not sidebanded')
+def check_carrier_sidebanding_state(carrier):
+    if not carrier.state():
+        warn('Carrier state is off')
+    if not carrier.IQ_modulation_state():
+        warn('Carrier IQ_modulation_state off')
 
 
 class SequenceManager:
@@ -34,7 +30,7 @@ class SequenceManager:
             self.sync_repeat_parameters()
         else:
             self._sequencer_up_to_date = False
-        check_carrier_sidebanding_status(self.carrier)
+        check_carrier_sidebanding_state(self.carrier)
 
     def sync_repeat_parameters(self):
         if self.sequencer.sequence_mode() == 'element':
@@ -102,7 +98,7 @@ class Sidebander(Instrument, SequenceManager):
         self.carrier = Instrument.find_instrument(carrier_if_name)
         self.sequencer = Instrument.find_instrument(sequencer_name)
         self._sequencer_up_to_date = False
-        self._symbol_prepend = '{symbol_prepend}_' if symbol_prepend else ''
+        self._symbol_prepend = f'{symbol_prepend}_' if symbol_prepend else ''
 
         self.add_parameter(
             name='frequency',
@@ -119,6 +115,7 @@ class Sidebander(Instrument, SequenceManager):
         # pulse building parameters
         self.add_parameter(
             name='sideband_frequency',
+            symbol_name=self._symbol_prepend + 'sideband_frequency',
             parameter_class=SidebandParam,
             docstring='Setting this also updates the frequency parameter')
         self.add_parameter(
@@ -142,8 +139,8 @@ class Sidebander(Instrument, SequenceManager):
             symbol_name=self._symbol_prepend + 'amplitude',
             parameter_class=PulseBuildingParameter)
         self.add_parameter(
-            name='status',
-            symbol_name=self._symbol_prepend + 'status',
+            name='state',
+            symbol_name=self._symbol_prepend + 'state',
             parameter_class=PulseBuildingParameter,
             vals=vals.Enum(0, 1))
         self.I_offset._save_val(0)
@@ -151,7 +148,7 @@ class Sidebander(Instrument, SequenceManager):
         self.amplitude._save_val(0.8)
         self.phase_offset._save_val(0)
         self.gain_offset._save_val(0)
-        self.status._save_val(1)
+        self.state._save_val(1)
         self.frequency._save_val(self.carrier.frequency())
         self.sideband_frequency._save_val(0)
         self.check_settings()
@@ -167,6 +164,6 @@ class Sidebander(Instrument, SequenceManager):
         self.frequency._save_val(val + self.sideband_frequency())
 
     def check_settings(self):
-        check_carrier_sidebanding_status(self.carrier)
+        check_carrier_sidebanding_state(self.carrier)
         if self.sequencer._template_element is None:
             warn("No template element uploaded to sequencer.")

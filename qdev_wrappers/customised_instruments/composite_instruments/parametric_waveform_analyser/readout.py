@@ -2,12 +2,12 @@ from functools import partial
 from qcodes.instrument.channel import InstrumentChannel, ChannelList
 from qcodes.utils import validators as vals
 from typing import Optional
+from warnings import warn
 from qdev_wrappers.customised_instruments.composite_instruments.sidebander.sidebander import Sidebander
 from qdev_wrappers.customised_instruments.composite_instruments.sidebander.pulse_building_parameter import PulseBuildingParameter
 from qdev_wrappers.customised_instruments.composite_instruments.multiplexer.multiplexer import Multiplexer
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_sequencer.parametric_sequencer import ParametricSequencer
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.alazar_channel_ext import AlazarChannel_ext
-from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface import MicrowaveSourceInterface
 from qdev_wrappers.customised_instruments.composite_instruments.heterodyne_source.heterodyne_source import HeterodyneSource
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateMultiChannelParameter
@@ -23,17 +23,15 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
                          sequencer_name=sequencer.name,
                          carrier_if_name=carrier.name,
                          symbol_prepend=symbol_prepend)
-        # self._alazar_up_to_date = False
         del self.parameters['I_offset']
         del self.parameters['Q_offset']
         del self.parameters['gain_offset']
         del self.parameters['phase_offset']
 
-        alazar_channels = self._create_alazar_channels()
         alazar_chan_list = ChannelList(
-            self, 'alazar_channels', AlazarChannel_ext,
-            chan_list=alazar_channels)
+            self, 'alazar_channels', AlazarChannel_ext)
         self._alazar_channels = alazar_chan_list
+        self._create_alazar_channels()
         self.add_parameter(name='data',
                            channels=alazar_chan_list,
                            param_name='data',
@@ -42,39 +40,44 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
                            parameter_class=DelegateMultiChannelParameter)
         self.add_parameter(name='demodulation_frequency',
                            set_fn=False)
+        self.sideband_frequency._save_val(0)
+        self.amplitude._save_val(1)
+        self.state._save_val(1)
+        demod_freq = self.parent.carrier_frequency() + \
+            self.parent.base_demodulation_frequency()
+        self._set_demod_frequency(demod_freq)
+
 
     def _set_frequency(self, val):
         super()._set_frequency(val)
         new_demod = val - self.parent.carrier_frequency() + \
             self.parent.base_demodulation_frequency()
-        self._set_demod_frequency(val)
+        self._set_demod_frequency(new_demod)
 
     def _set_demod_frequency(self, val):
         self._alazar_channels.demod_freq(val)
-        self._demodulation_frequency._save_val(val)
+        self.demodulation_frequency._save_val(val)
 
     def _check_seq_updated(self):
         if not self.root_instrument.sequence._sequencer_up_to_date:
             raise RuntimeError('Sequence not up to date')
-        # if not self._alazar_up_to_date:
-            # self.update_alazar()
 
     def update_alazar(self):
         pwa = self.root_instrument
         settings = pwa.get_alazar_ch_settings()
         if settings is None:
             warn('Alazar will not be updated until sequencer is updated.')
-        reinstate_needed = False
-        for ch in self._alazar_channels:
-            try:
-                ch.update(settings)
-            except RuntimeError:
-                reinstate_needed = True
-        if reinstate_needed:
-            self._alazar_channels.clear()
-            self._create_alazar_channel_pair(settings)
-        self.data.update()
-        # self._alazar_up_to_date = True
+        else:
+            reinstate_needed = False
+            for ch in self._alazar_channels:
+                try:
+                    ch.update(settings)
+                except RuntimeError:
+                    reinstate_needed = True
+            if reinstate_needed:
+                self._alazar_channels.clear()
+                self._create_alazar_channels()
+            self.data.update()
 
     def _create_alazar_channels(self):
         """
@@ -114,7 +117,8 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
             chan2.data.label = f'{self.name} Imaginary'
         for ch in (chan1, chan2):
             pwa.alazar_controller.channels.append(ch)
-        return [chan1, chan2]
+        for ch in [chan1, chan2]:
+            self._alazar_channels.append(ch) 
 
 
 class ReadoutChannel(InstrumentChannel, Multiplexer):
@@ -138,20 +142,20 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
         self.add_parameter(name='carrier_power',
                            source=carrier.power,
                            parameter_class=DelegateParameter)
-        self.add_parameter(name='carrier_status',
-                           source=carrier.status,
-                           parameter_class=DelegateParameter)
-        self.add_parameter(name='carrier_mode',
-                           source=carrier.mode,
+        self.add_parameter(name='state',
+                           source=carrier.state,
                            parameter_class=DelegateParameter)
         self.add_parameter(name='base_demodulation_frequency',
                            set_fn=self._set_base_demod_frequency,
                            source=carrier.demodulation_frequency,
                            label='Base Demodulation Frequency',
                            parameter_class=DelegateParameter)
-        self.base_demodulation_frequency()
-        self.carrier_frequency()
-        self.carrier_status()
+        self.add_parameter(name='carrier_pulse_modulation_state',
+                           source=carrier.pulse_modulation_state,
+                           parameter_class=DelegateParameter)
+        self.add_parameter(name='carrier_IQ_modulation_state',
+                           source=carrier.IQ_modulation_state,
+                           parameter_class=DelegateParameter)
 
         # alazar controller parameters
         self.add_parameter(name='measurement_duration',
@@ -220,12 +224,12 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
         super()._set_carrier_frequency(val)
         for s in self.sidebanders:
             demod = s.frequency() - val + self.base_demodulation_frequency()
-            s._set_demod_frequency(val)
+            s._set_demod_frequency(demod)
 
     def _set_alazar_parm(self, paramname, val):
         if paramname == 'demod_type':
             for s in self.sidebanders:
-                if demod_type == 'magphase':
+                if val == 'magphase':
                     s._alazar_channels[0].demod_type('magnitude')
                     s._alazar_channels[0].data.label = f'{s.name} Magnitude'
                     s._alazar_channels[1].demod_type('phase')
@@ -237,24 +241,17 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
                     s._alazar_channels[1].data.label = f'{s.name} Imaginary'
         elif paramname in ['single_shot', 'num', 'average_time']:
             self.update_all_alazar()
-            # self.set_alazar_not_up_to_date()
         elif paramname in ['int_time', 'int_delay']:
             self.alazar_controller.parameters[paramname](val)
             if not self.average_time():
                 self.update_all_alazar()
-                # self.set_alazar_not_up_to_date()
 
     def _check_seq_updated(self):
         if not self.parent.sequence._sequencer_up_to_date:
             raise RuntimeError('Sequence not up to date')
-    #     self.update_all_alazar()
 
     def update_all_alazar(self):
         for s in self.sidebanders:
-            # if not s._alazar_up_to_date:
             s.update_alazar()
         self.data.update()
 
-    # def set_alazar_not_up_to_date(self):
-    #     for s in self.sidebanders:
-    #         self._alazar_up_to_date = False

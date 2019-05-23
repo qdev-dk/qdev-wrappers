@@ -2,6 +2,7 @@ from qcodes.utils import validators as vals
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.setpoints_channel import SetpointsChannel
 from qdev_wrappers.customised_instruments.composite_instruments.sidebander.sidebander import SequenceManager
 from qcodes.instrument.channel import InstrumentChannel
+from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 import importlib
 import qcodes as qc
 import os
@@ -28,10 +29,12 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
         self.add_submodule('outer', outer)
         self.add_parameter(name='sequence_mode',
                            source=sequencer.sequence_mode,
-                           set_fn=self._set_seq_mode)
+                           set_fn=self._set_seq_mode,
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='repetition_mode',
                            source=sequencer.repetition_mode,
-                           set_fn=self._set_rep_mode)
+                           set_fn=self._set_rep_mode,
+                           parameter_class=DelegateParameter)
         self.add_parameter(name='template_element',
                            set_cmd=self.set_sequencer_not_up_to_date)
 
@@ -40,7 +43,7 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
             self.parent.alazar.seq_mode(True)
         elif val == 'element':
             self.parent.alazar.seq_mode(False)
-        # self.parent.readout.set_alazar_not_up_to_date()
+        self.sequence_mode._save_val(val)
         self.parent.readout.update_all_alazar()
 
     def _set_rep_mode(self, val):
@@ -48,7 +51,7 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
             warn('Repetition mode set to single but readout num > 1'
                            ': necessary that awg is triggered so that '
                            'sequence/element plays num times')
-        # self.parent.readout.set_alazar_not_up_to_date()
+        self.repetition_mode._save_val(val)
         self.parent.readout.update_all_alazar()
 
     def run(self):
@@ -67,10 +70,8 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
                 outer_setpoints=self.outer.setpoints,
                 **self.generate_context())
             self.sequencer._do_upload = False
-            sync_repeat_parameters(self.sequencer,
-                                   self.pulse_building_parameters)
+            self.sync_repeat_parameters()
             self._sequencer_up_to_date = True
-        # self.parent.readout.set_alazar_not_up_to_date()
         self.parent.readout.update_all_alazar()
 
     def reload_template_element_dict(self, pulsebuildingfolder=None):
@@ -106,5 +107,3 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
 
     def set_sequencer_not_up_to_date(self, *args):
         self._sequencer_up_to_date = False
-        # self.parent.readout.set_alazar_not_up_to_date()
-        # self.parent.readout.update_all_alazar()

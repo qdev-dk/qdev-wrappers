@@ -161,7 +161,7 @@ class Alazar1DParameter(AlazarNDParameter):
                  average_buffers: bool=True,
                  average_records: bool=True,
                  integrate_samples: bool=True,
-                 shape: Optional[Sequence[int]] = None):
+                 shape: Optional[Sequence[int]] = Nones):
 
         shape = (1,) if shape is None else shape
 
@@ -194,7 +194,8 @@ class Alazar1DParameter(AlazarNDParameter):
             setpoints: Optional[Sequence[float]]=None,
             setpoint_name: Optional[str]=None,
             setpoint_label: Optional[str]=None,
-            setpoint_unit: Optional[str]=None) -> None:
+            setpoint_unit: Optional[str]=None,
+            **kwargs) -> None:
 
         if not self._integrate_samples:
             samples = self._instrument._parent.samples_per_record.get()
@@ -277,7 +278,8 @@ class Alazar2DParameter(AlazarNDParameter):
             record_setpoint_label: Optional[str]=None,
             buffer_setpoint_label: Optional[str]=None,
             record_setpoint_unit: Optional[str]=None,
-            buffer_setpoint_unit: Optional[str]=None):
+            buffer_setpoint_unit: Optional[str]=None,
+            **kwargs):
         records = self._instrument.records_per_buffer()
         buffers = self._instrument.buffers_per_acquisition()
         samples = self._instrument._parent.samples_per_record.get()

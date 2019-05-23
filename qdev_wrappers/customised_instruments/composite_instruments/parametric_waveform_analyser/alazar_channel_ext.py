@@ -20,6 +20,7 @@ class AlazarChannel_ext(AlazarChannel):
                          average_buffers=average_buffers,
                          average_records=average_records,
                          integrate_samples=integrate_samples)
+        self.demod_freq.vals = None
 
     def update(self,
                settings: Dict[str, Union[int, float, str, bool]]):
@@ -34,6 +35,8 @@ class AlazarChannel_ext(AlazarChannel):
         if settings['average_records'] != self._average_records:
             fail = True
         elif settings['average_buffers'] != self._average_buffers:
+            fail = True
+        elif settings['integrate_time'] != self._integrate_samples:
             fail = True
         if fail:
             raise RuntimeError(

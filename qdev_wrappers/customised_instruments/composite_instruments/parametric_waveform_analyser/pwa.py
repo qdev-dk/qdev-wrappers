@@ -23,13 +23,13 @@ class ParametricWaveformAnalyser(Instrument):
     def __init__(self,
                  name: str,
                  sequencer_name,
-                 # alazar_name,
+                 alazar_name,
                  alazar_controller_name,
                  heterodyne_source_name,
                  drive_source_if_name) -> None:
         super().__init__(name)
         self.sequencer = Instrument.find_instrument(sequencer_name)
-        # self.alazar = Instrument.find_instrument(alazar_name)
+        self.alazar = Instrument.find_instrument(alazar_name)
         self.alazar_controller = Instrument.find_instrument(alazar_controller_name)
         self.heterodyne_source = Instrument.find_instrument(heterodyne_source_name)
         self.drive_source = Instrument.find_instrument(drive_source_if_name)
@@ -43,19 +43,22 @@ class ParametricWaveformAnalyser(Instrument):
         self._sequencer_up_to_date = False
         self.sequence.reload_template_element_dict()
 
-    def off(self):
-        self.readout.measurement_duration(1e-6)
-        self.readout.measurement_delay(0)
-        self.readout.demodulation_type('magphase')
-        self.readout.num(1)
-        self.readout.integrate_time(True)
-        self.readout.single_shot(False)
-        self.readout.carrier_status(False)
-        self.sequencer.stop()
-        self.drive.carrier_status(False)
+    # def off(self):
+    #     self.readout.measurement_duration(1e-6)
+    #     self.readout.measurement_delay(0)
+    #     self.readout.demodulation_type('magphase')
+    #     self.readout.num(1)
+    #     self.readout.integrate_time(True)
+    #     self.readout.single_shot(False)
+    #     self.readout.carrier_status(False)
+    #     self.sequencer.stop()
+    #     self.drive.carrier_status(False)
 
-    def stop(self):
-        self.sequencer.stop()
+    # def stop(self):
+    #     self.sequencer.stop()
+
+    def update(self):
+        self.sequence.update()
 
     def add_qubit(self):
         """
@@ -63,8 +66,8 @@ class ParametricWaveformAnalyser(Instrument):
         ReadoutChannel and DriveChannels.
         """
         qubit_num = len(self.readout.sidebanders)
-        self.readout.add_sidebander(name=f'Q{qubit_num}_R', symbol_prepend='Q{qubit_num}_readout')
-        self.drive.add_sidebander(name=f'Q{qubit_num}_D', symbol_prepend='Q{qubit_num}_drive')
+        self.readout.add_sidebander(name=f'Q{qubit_num}_R', symbol_prepend=f'Q{qubit_num}_readout')
+        self.drive.add_sidebander(name=f'Q{qubit_num}_D', symbol_prepend=f'Q{qubit_num}_drive')
 
     def clear_qubits(self):
         """
@@ -85,8 +88,8 @@ class ParametricWaveformAnalyser(Instrument):
 
     @property
     def pulse_building_parameters(self):
-        return {**self.readout._pulse_building_parameters,
-                **self.drive._pulse_building_parameters}
+        return {**self.readout.pulse_building_parameters,
+                **self.drive.pulse_building_parameters}
 
     def get_alazar_ch_settings(self):
         """
@@ -136,8 +139,8 @@ class ParametricWaveformAnalyser(Instrument):
                 settings['record_setpoint_unit'] =  '' # TODO
             else:
                 settings['average_records'] = True
-                max_samples = self._alazar_controller.board_info['max_samples']
-                samples_per_rec = self._alazar_controller.samples_per_record()
+                max_samples = self.alazar_controller.board_info['max_samples']
+                samples_per_rec = self.alazar_controller.samples_per_record()
                 max_records_per_buffer = math.floor(
                     max_samples / samples_per_rec)
                 tot_samples = num * samples_per_rec
@@ -177,8 +180,8 @@ class ParametricWaveformAnalyser(Instrument):
                     settings['buffer_setpoint_label'] = 'Repetitions'
                     settings['buffer_setpoint_unit'] = None
             else:
-                max_samples = self._alazar_controller.board_info['max_samples']
-                samples_per_rec = self._alazar_controller.samples_per_record()
+                max_samples = self.alazar_controller.board_info['max_samples']
+                samples_per_rec = self.alazar_controller.samples_per_record()
                 tot_samples = num * samples_per_rec
                 if tot_samples > max_samples:
                     records = math.floor(max_samples / samples_per_rec)

@@ -5,7 +5,7 @@ from qcodes.instrument.channel import InstrumentChannel, ChannelList
 import qcodes.utils.validators as vals
 from qcodes.utils.helpers import create_on_off_val_mapping
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
-from qdev_wrappers.customised_instruments.composite_instruments.sidebander.sidebander import check_carrier_sidebanding_status, Sidebander,SequenceManager
+from qdev_wrappers.customised_instruments.composite_instruments.sidebander.sidebander import check_carrier_sidebanding_state, Sidebander,SequenceManager
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_sequencer.parametric_sequencer import ParametricSequencer
 from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface import MicrowaveSourceInterface
 from qdev_wrappers.customised_instruments.composite_instruments.heterodyne_source.heterodyne_source import HeterodyneSource
@@ -33,15 +33,17 @@ class Multiplexer(Instrument, SequenceManager):
         self.carrier = carrier
         self.sequencer = sequencer
         self._sequencer_up_to_date = False
+
         self.add_parameter(
             name='carrier_frequency',
             set_fn=self._set_carrier_frequency,
             source=carrier.frequency,
             parameter_class=DelegateParameter)
+        check_carrier_sidebanding_state(carrier)
+
         sidebanders = ChannelList(
             self, 'sidebanders', self.SIDEBANDER_CLASS)
         self.add_submodule('sidebanders', sidebanders)
-        check_carrier_sidebanding_status(carrier)
 
     def _set_carrier_frequency(self, val):
         for s in self.sidebanders:
