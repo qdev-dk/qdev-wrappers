@@ -373,6 +373,8 @@ class ParametricSequencer(Instrument):
             self._sequence_object.forge(SR=self.awg.sample_rate(),
                                         routes=self.routes,
                                         context=self._sequence_context))
+        if self.sequence_mode() == 'element':
+            self.awg.set_element(self.index)
 
     def _update_sequence(self):
         if self._sequence_up_to_date:

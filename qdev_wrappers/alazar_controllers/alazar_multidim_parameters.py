@@ -161,7 +161,7 @@ class Alazar1DParameter(AlazarNDParameter):
                  average_buffers: bool=True,
                  average_records: bool=True,
                  integrate_samples: bool=True,
-                 shape: Optional[Sequence[int]] = Nones):
+                 shape: Optional[Sequence[int]] = None):
 
         shape = (1,) if shape is None else shape
 

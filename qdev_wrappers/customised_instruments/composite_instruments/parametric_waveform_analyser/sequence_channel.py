@@ -72,7 +72,6 @@ class SequenceChannel(InstrumentChannel, SequenceManager):
             self.sequencer._do_upload = False
             self.sync_repeat_parameters()
             self._sequencer_up_to_date = True
-        self.parent.readout.update_all_alazar()
 
     def reload_template_element_dict(self, pulsebuildingfolder=None):
         if pulsebuildingfolder is None:

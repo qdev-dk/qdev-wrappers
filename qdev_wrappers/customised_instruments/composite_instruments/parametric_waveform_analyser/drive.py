@@ -8,6 +8,7 @@ from qdev_wrappers.customised_instruments.interfaces.microwave_source_interface 
 from qdev_wrappers.customised_instruments.composite_instruments.heterodyne_source.heterodyne_source import HeterodyneSource
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 
+# TODO: clean up overlap/delay situation (nataliejpg)
 
 class DriveSidebander(InstrumentChannel, Sidebander):
     def __init__(self, parent, name: str,
@@ -39,6 +40,14 @@ class DriveSidebander(InstrumentChannel, Sidebander):
         self.spectroscopy_amplitude._save_val(1)
         self.gate_amplitude._save_val(1)
 
+class DelayParameter(PulseBuildingParameter):
+    def set_raw(self, val):
+        if val >= 0:
+            self.instrument._drive_readout_overlap(0)
+            super().set_raw(val)
+        else:
+            self.set_raw(0)
+            self.instrument._drive_readout_overlap(-val)
 
 class DriveChannel(InstrumentChannel, Multiplexer):
     SIDEBANDER_CLASS = DriveSidebander
@@ -73,6 +82,10 @@ class DriveChannel(InstrumentChannel, Multiplexer):
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='drive_readout_delay',
                            unit='s',
+                           parameter_class=DelayParameter)
+        self.add_parameter(name='_drive_readout_overlap',
+                           symbol_name='drive_readout_overlap',
+                           unit='s',
                            parameter_class=PulseBuildingParameter)
         self.add_parameter(name='modulation_marker_duration',
                            unit='s',
@@ -87,7 +100,6 @@ class DriveChannel(InstrumentChannel, Multiplexer):
                            symbol_name='gate_pulse_duration',
                            unit='s',
                            parameter_class=PulseBuildingParameter)
-
 
     def _set_carrier_frequency(self, val):
         super()._set_carrier_frequency(val)

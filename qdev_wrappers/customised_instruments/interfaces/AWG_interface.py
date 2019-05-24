@@ -234,7 +234,6 @@ class AWG5014Interface(AWGInterface):
             raise RuntimeError(
                 f'Cannot set element to {index} as this is '
                 'longer than the last sequence index {self.last_index}')
-
         # configure rest of sequence to defaults
         seq_mode = self.sequence_mode()
         rep_mode = self.repetition_mode()

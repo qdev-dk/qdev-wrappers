@@ -11,6 +11,7 @@ from qdev_wrappers.customised_instruments.composite_instruments.parametric_wavef
 from qdev_wrappers.customised_instruments.composite_instruments.heterodyne_source.heterodyne_source import HeterodyneSource
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateParameter
 from qdev_wrappers.customised_instruments.parameters.delegate_parameters import DelegateMultiChannelParameter
+from qcodes.utils.helpers import create_on_off_val_mapping
 
 
 class ReadoutSidebander(InstrumentChannel, Sidebander):
@@ -31,7 +32,8 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
         alazar_chan_list = ChannelList(
             self, 'alazar_channels', AlazarChannel_ext)
         self._alazar_channels = alazar_chan_list
-        self._create_alazar_channels()
+        settings = self.root_instrument.get_alazar_ch_settings()
+        self._create_alazar_channels(settings)
         self.add_parameter(name='data',
                            channels=alazar_chan_list,
                            param_name='data',
@@ -55,7 +57,10 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
         self._set_demod_frequency(new_demod)
 
     def _set_demod_frequency(self, val):
-        self._alazar_channels.demod_freq(val)
+        try: 
+            self._alazar_channels.demod_freq(val)
+        except IndexError:
+            pass
         self.demodulation_frequency._save_val(val)
 
     def _check_seq_updated(self):
@@ -74,23 +79,27 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
                     ch.update(settings)
                 except RuntimeError:
                     reinstate_needed = True
+                    pwa.alazar_controller.channels.remove(ch)
             if reinstate_needed:
                 self._alazar_channels.clear()
-                self._create_alazar_channels()
+                self._create_alazar_channels(settings=settings)
+                for ch in self._alazar_channels:
+                    ch.update(settings)
             self.data.update()
 
-    def _create_alazar_channels(self):
+    def _create_alazar_channels(self, settings):
         """
         Create alazar channel pair based on the pwa settings dictionary to
         readout at this sidebanded frequency. Put channels alazar_channels
         submodule and pwa.alazar_controller.channels.
         """
         pwa = self.root_instrument
-        settings = pwa.get_alazar_ch_settings()
         if settings is None:
             settings = {'average_records': True,
                         'average_buffers': True,
-                        'integrate_time': True}
+                        'integrate_time': True,
+                        'records': 1,
+                        'buffers': 1}
         chan1 = AlazarChannel_ext(
             parent=pwa.alazar_controller,
             name=self.full_name + '_realmag',
@@ -115,10 +124,9 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
             chan1.data.label = f'{self.name} Real'
             chan2.demod_type('imag')
             chan2.data.label = f'{self.name} Imaginary'
-        for ch in (chan1, chan2):
-            pwa.alazar_controller.channels.append(ch)
         for ch in [chan1, chan2]:
             self._alazar_channels.append(ch) 
+            pwa.alazar_controller.channels.append(ch)
 
 
 class ReadoutChannel(InstrumentChannel, Multiplexer):
@@ -157,6 +165,26 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
                            source=carrier.IQ_modulation_state,
                            parameter_class=DelegateParameter)
 
+        # alazar channel parameters
+        self.add_parameter(name='demodulation_type',
+                           set_cmd=partial(self._set_alazar_parm,
+                                           'demod_type'),
+                           vals=vals.Enum('magphase', 'realimag'))
+        self.add_parameter(name='single_shot',
+                           set_cmd=partial(self._set_alazar_parm,
+                                           'single_shot'),
+                           val_mapping=create_on_off_val_mapping())
+        self.add_parameter(name='num',
+                           set_cmd=partial(self._set_alazar_parm,
+                                           'num'),
+                           vals=vals.Ints())
+        self.add_parameter(name='average_time',
+                           set_cmd=partial(self._set_alazar_parm,
+                                           'average_time'),
+                           val_mapping=create_on_off_val_mapping())
+        self.average_time._latest['raw_value'] = True
+        self.single_shot._latest['raw_value'] = False
+
         # alazar controller parameters
         self.add_parameter(name='measurement_duration',
                            label='Measurement Duration',
@@ -168,24 +196,6 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
                            unit='s',
                            set_cmd=partial(self._set_alazar_parm,
                                            'int_delay'))
-
-        # alazar channel parameters
-        self.add_parameter(name='demodulation_type',
-                           set_cmd=partial(self._set_alazar_parm,
-                                           'demod_type'),
-                           vals=vals.Enum('magphase', 'realimag'))
-        self.add_parameter(name='single_shot',
-                           set_cmd=partial(self._set_alazar_parm,
-                                           'single_shot'),
-                           vals=vals.Bool())
-        self.add_parameter(name='num',
-                           set_cmd=partial(self._set_alazar_parm,
-                                           'num'),
-                           vals=vals.Ints(),)
-        self.add_parameter(name='average_time',
-                           set_cmd=partial(self._set_alazar_parm,
-                                           'average_time'),
-                           vals=vals.Bool(),)
 
         # pulse building parameters
         self.add_parameter(name='cycle_duration',

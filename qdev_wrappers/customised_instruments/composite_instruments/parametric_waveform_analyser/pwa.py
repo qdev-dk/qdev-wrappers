@@ -1,11 +1,20 @@
 from warnings import warn
 import numpy as np
 from qcodes.instrument.base import Instrument
+from qcodes.instrument.channel import InstrumentChannel, ChannelList
 import math
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.readout import ReadoutChannel
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.drive import DriveChannel
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_waveform_analyser.sequence_channel import SequenceChannel
 
+# TODO: make instruments private
+
+class QubitChannel(InstrumentChannel):
+    def __init__(self, parent, name, readout_sidebander, drive_sidebander):
+        super().__init__(parent, name)
+        self.add_submodule('readout', readout_sidebander)
+        self.add_submodule('drive', drive_sidebander)
+        self.data = self.readout.data
 
 class ParametricWaveformAnalyser(Instrument):
     """
@@ -40,46 +49,42 @@ class ParametricWaveformAnalyser(Instrument):
         self.add_submodule('readout', readout_channel)
         drive_channel = DriveChannel(self, 'drive', self.sequencer, self.drive_source)
         self.add_submodule('drive', drive_channel)
+        qubits = ChannelList(self, 'qubits', QubitChannel)
+        self.add_submodule('qubits', qubits)
         self._sequencer_up_to_date = False
         self.sequence.reload_template_element_dict()
 
-    # def off(self):
-    #     self.readout.measurement_duration(1e-6)
-    #     self.readout.measurement_delay(0)
-    #     self.readout.demodulation_type('magphase')
-    #     self.readout.num(1)
-    #     self.readout.integrate_time(True)
-    #     self.readout.single_shot(False)
-    #     self.readout.carrier_status(False)
-    #     self.sequencer.stop()
-    #     self.drive.carrier_status(False)
-
-    # def stop(self):
-    #     self.sequencer.stop()
-
     def update(self):
         self.sequence.update()
+        self.readout.update_all_alazar()
 
-    def add_qubit(self):
+    def add_qubit(self, readout_frequency=None, drive_frequency=None):
         """
         Adds a SidebandingChannel to each of the
         ReadoutChannel and DriveChannels.
         """
+        self._set_sequencer_up_to_date_flag(False)
         qubit_num = len(self.readout.sidebanders)
-        self.readout.add_sidebander(name=f'Q{qubit_num}_R', symbol_prepend=f'Q{qubit_num}_readout')
-        self.drive.add_sidebander(name=f'Q{qubit_num}_D', symbol_prepend=f'Q{qubit_num}_drive')
+        readout = self.readout.add_sidebander(name=f'Q{qubit_num}_R', symbol_prepend=f'Q{qubit_num}_readout')
+        drive = self.drive.add_sidebander(name=f'Q{qubit_num}_D', symbol_prepend=f'Q{qubit_num}_drive')
+        if readout_frequency is not None:
+            readout.frequency(readout_frequency)
+        if drive_frequency is not None:
+            drive.frequency(drive_frequency)
+        qubit = QubitChannel(self, f'Q{qubit_num}', readout, drive)
+        self.qubits.append(qubit)
+        self.add_submodule(f'Q{qubit_num}', qubit)
 
     def clear_qubits(self):
         """
         Clears the alazar channels and all SidebandingChannels
         (both from the ReadoutChannel and the DriveChannel)
         """
-        self.alazar_controller.alazar_channels.clear()
+        self._set_sequencer_up_to_date_flag(False)
+        self.alazar_controller.channels.clear()
         self.readout.sidebanders.clear()
         self.drive.sidebanders.clear()
-
-    # def update(self):
-    #     self.sequence.update()
+        self.qubits.clear()
 
     def _set_sequencer_up_to_date_flag(self, value):
         self.sequence._sequencer_up_to_date = value

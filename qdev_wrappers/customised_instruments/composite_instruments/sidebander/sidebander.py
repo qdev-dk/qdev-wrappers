@@ -155,7 +155,7 @@ class Sidebander(Instrument, SequenceManager):
 
     def _set_frequency(self, val):
         new_sideband = val - self.carrier.frequency()
-        self.sideband_frequency(new_sideband)
+        self.sideband_frequency._save_val(new_sideband)
 
     def _get_frequency(self):
         return self.carrier.frequency() + self.sideband_frequency()
