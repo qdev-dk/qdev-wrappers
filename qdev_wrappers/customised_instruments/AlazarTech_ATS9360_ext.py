@@ -3,8 +3,8 @@ from qcodes.utils import validators as vals
 
 
 class AlazarTech_ATS9360_ext(AlazarTech_ATS9360):
-    def __init__(self, name):
-        super().__init__(name=name)
+    def __init__(self, name, **kwargs):
+        super().__init__(name=name, **kwargs)
         self.add_parameter(name='seq_mode',
                            get_cmd=self._get_seq_mod,
                            set_cmd=self._set_seq_mode,

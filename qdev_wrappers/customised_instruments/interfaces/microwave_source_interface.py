@@ -97,7 +97,7 @@ class SimulatedMicrowaveSourceInterface(MicrowaveSourceInterface):
     Simulated interface version of the microwave source which initialises
     with defaults.
     """
-    def __init__(self, name: str, microwave_source_name: str,
+    def __init__(self, name: str,
                  IQ_modulation: Optional[bool]=None,
                  pulse_modulation: Optional[bool]=None,
                  LO_output: Optional[bool]=None):
