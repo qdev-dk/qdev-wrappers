@@ -95,8 +95,9 @@ class AWGInterface(Instrument):
 
 
 class SimulatedAWGInterface(AWGInterface):
-    def __init__(self, name, chan_num=4):
+    def __init__(self, name, chan_num=4, show_plot=True):
         self.CHAN_NUM = chan_num
+        self.show_plot = show_plot
         super().__init__(name)
         for ch in self.channels:
             ch.Vpp(1)
@@ -112,7 +113,8 @@ class SimulatedAWGInterface(AWGInterface):
             self.set_element(0)
         else:
             sleep(self.sleep_time())
-            plotter(forged_sequence, SR=self.sample_rate())
+            if not self.show_plot:
+                plotter(forged_sequence, SR=self.sample_rate())
             if self.repetition_mode() == 'inf':
                 self.run()
 
@@ -125,7 +127,8 @@ class SimulatedAWGInterface(AWGInterface):
             self.set_element(self.index)
         else:
             sleep(self.sleep_time())
-            plotter(self.forged_sequence, SR=self.sample_rate())
+            if not self.show_plot:
+                plotter(self.forged_sequence, SR=self.sample_rate())
             if self.repetition_mode() == 'inf':
                 self.run()
 
@@ -144,7 +147,8 @@ class SimulatedAWGInterface(AWGInterface):
         self.sequence_mode._save_val('element')
         self.index = index
         sleep(self.sleep_time())
-        plotter(self.forged_sequence[index], SR=self.sample_rate())
+        if self.show_plot:
+            plotter(self.forged_sequence[index], SR=self.sample_rate())
         if self.repetition_mode() == 'inf':
             self.run()
 

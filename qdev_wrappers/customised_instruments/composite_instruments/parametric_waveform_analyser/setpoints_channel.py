@@ -41,6 +41,7 @@ class SetpointsChannel(InstrumentChannel):
                                                vals.Enum(None)),
                            docstring=f'Sets the number of {name} setpoint'
                            ' values; equivalent to setting the npts')
+       
 
     def _set_start_stop(self, start_stop, val):
         self._custom_setpoints = None

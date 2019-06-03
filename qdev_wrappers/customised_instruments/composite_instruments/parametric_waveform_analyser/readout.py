@@ -168,7 +168,7 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
         # alazar channel parameters
         self.add_parameter(name='demodulation_type',
                            set_cmd=partial(self._set_alazar_parm,
-                                           'demod_type'),
+                                           'demodulation_type'),
                            vals=vals.Enum('magphase', 'realimag'))
         self.add_parameter(name='single_shot',
                            set_cmd=partial(self._set_alazar_parm,
@@ -190,12 +190,12 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
                            label='Measurement Duration',
                            unit='s',
                            set_cmd=partial(self._set_alazar_parm,
-                                           'int_time'))
+                                           'measurement_duration'))
         self.add_parameter(name='measurement_delay',
                            label='Measurement Delay',
                            unit='s',
                            set_cmd=partial(self._set_alazar_parm,
-                                           'int_delay'))
+                                           'measurement_delay'))
 
         # pulse building parameters
         self.add_parameter(name='cycle_duration',
@@ -237,7 +237,8 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
             s._set_demod_frequency(demod)
 
     def _set_alazar_parm(self, paramname, val):
-        if paramname == 'demod_type':
+        self.parameters[paramname]._save_val(val)
+        if paramname == 'demodulation_type':
             for s in self.sidebanders:
                 if val == 'magphase':
                     s._alazar_channels[0].demod_type('magnitude')
@@ -251,8 +252,12 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
                     s._alazar_channels[1].data.label = f'{s.name} Imaginary'
         elif paramname in ['single_shot', 'num', 'average_time']:
             self.update_all_alazar()
-        elif paramname in ['int_time', 'int_delay']:
-            self.alazar_controller.parameters[paramname](val)
+        elif paramname in ['measurement_duration', 'measurement_delay']:
+            if paramname == 'measurement_duration':
+                param = self.alazar_controller.parameters['int_time']
+            else:
+                param = self.alazar_controller.parameters['int_delay']
+            param(val)
             if not self.average_time():
                 self.update_all_alazar()
 
