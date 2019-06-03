@@ -47,7 +47,10 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
         self.state._save_val(1)
         demod_freq = self.parent.carrier_frequency() + \
             self.parent.base_demodulation_frequency()
-        self._set_demod_frequency(demod_freq)
+        if 1e6 <= demod_freq <= 500e6:
+            self._set_demod_frequency(demod_freq)
+        else:
+            warn('Demod freq not set on sidebander initialisation')
 
 
     def _set_frequency(self, val):
@@ -83,6 +86,7 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
             if reinstate_needed:
                 self._alazar_channels.clear()
                 self._create_alazar_channels(settings=settings)
+                self._set_demod_frequency(self.demodulation_frequency())
                 for ch in self._alazar_channels:
                     ch.update(settings)
             self.data.update()
