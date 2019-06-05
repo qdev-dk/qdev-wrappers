@@ -24,6 +24,7 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
                          sequencer_name=sequencer.name,
                          carrier_if_name=carrier.name,
                          symbol_prepend=symbol_prepend)
+        self.short_name = name
         del self.parameters['I_offset']
         del self.parameters['Q_offset']
         del self.parameters['gain_offset']
@@ -120,14 +121,14 @@ class ReadoutSidebander(InstrumentChannel, Sidebander):
             integrate_samples=settings['integrate_time'])
         if pwa.readout.demodulation_type() == 'magphase':
             chan1.demod_type('magnitude')
-            chan1.data.label = f'{self.name} Magnitude'
+            chan1.data.label = f'{self.short_name} Magnitude'
             chan2.demod_type('phase')
-            chan2.data.label = f'{self.name} Phase'
+            chan2.data.label = f'{self.short_name} Phase'
         else:
             chan1.demod_type('real')
-            chan1.data.label = f'{self.name} Real'
+            chan1.data.label = f'{self.short_name} Real'
             chan2.demod_type('imag')
-            chan2.data.label = f'{self.name} Imaginary'
+            chan2.data.label = f'{self.short_name} Imaginary'
         for ch in [chan1, chan2]:
             self._alazar_channels.append(ch) 
             pwa.alazar_controller.channels.append(ch)
@@ -154,7 +155,7 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
         self.add_parameter(name='carrier_power',
                            source=carrier.power,
                            parameter_class=DelegateParameter)
-        self.add_parameter(name='state',
+        self.add_parameter(name='carrier_state',
                            source=carrier.state,
                            parameter_class=DelegateParameter)
         self.add_parameter(name='base_demodulation_frequency',
@@ -246,14 +247,14 @@ class ReadoutChannel(InstrumentChannel, Multiplexer):
             for s in self.sidebanders:
                 if val == 'magphase':
                     s._alazar_channels[0].demod_type('magnitude')
-                    s._alazar_channels[0].data.label = f'{s.name} Magnitude'
+                    s._alazar_channels[0].data.label = f'{s.short_name} Magnitude'
                     s._alazar_channels[1].demod_type('phase')
-                    s._alazar_channels[1].data.label = f'{s.name} Phase'
+                    s._alazar_channels[1].data.label = f'{s.short_name} Phase'
                 else:
                     s._alazar_channels[0].demod_type('real')
-                    s._alazar_channels[0].data.label = f'{s.name} Real'
+                    s._alazar_channels[0].data.label = f'{s.short_name} Real'
                     s._alazar_channels[1].demod_type('imag')
-                    s._alazar_channels[1].data.label = f'{s.name} Imaginary'
+                    s._alazar_channels[1].data.label = f'{s.short_name} Imaginary'
         elif paramname in ['single_shot', 'num', 'average_time']:
             self.update_all_alazar()
         elif paramname in ['measurement_duration', 'measurement_delay']:

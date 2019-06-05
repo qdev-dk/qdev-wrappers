@@ -130,18 +130,25 @@ class ParametricWaveformAnalyser(Instrument):
         if not single_shot:
             settings['average_buffers'] = True
             if (seq_mode and self.sequence.inner.symbol() is not None):
-                if self.sequence.outer_setpoints.setpoints is not None:
+                if self.sequence.outer.setpoints is not None:
                     warn('Averaging channel will average over '
                                 'outer setpoints of sequencer sequence')
                 record_symbol = self.sequence.inner.setpoints[0]
+                record_parameter = self.pulse_building_parameters.get(record_symbol, None)
+                if record_parameter is not None:
+                    record_label = record_parameter.label or record_symbol.title()
+                    record_unit = record_parameter.unit or ''
+                else:
+                    record_label = record_symbol.title()
+                    record_unit = ''
                 record_setpoints = self.sequence.inner.setpoints[1]
                 settings['records'] = len(record_setpoints)
                 settings['buffers'] = num
                 settings['average_records'] = False
                 settings['record_setpoints'] = record_setpoints
                 settings['record_setpoint_name'] = record_symbol
-                settings['record_setpoint_label'] = record_symbol  # TODO
-                settings['record_setpoint_unit'] =  '' # TODO
+                settings['record_setpoint_label'] = record_label
+                settings['record_setpoint_unit'] =  record_unit
             else:
                 settings['average_records'] = True
                 max_samples = self.alazar_controller.board_info['max_samples']
@@ -160,24 +167,38 @@ class ParametricWaveformAnalyser(Instrument):
             settings['average_buffers'] = False
             settings['average_records'] = False
             if seq_mode and self.sequence.inner.symbol() is not None:
-                if self.sequence.outer_setpoints is not None and num > 1:
+                if self.sequence.outer is not None and num > 1:
                     raise RuntimeError(
                         'Cannot have outer setpoints and multiple nreps')
                 record_symbol = self.sequence.inner.setpoints[0]
+                record_parameter = self.pulse_building_parameters.get(record_symbol, None)
+                if record_parameter is not None:
+                    record_label = record_parameter.label or record_symbol.title()
+                    record_unit = record_parameter.unit or ''
+                else:
+                    record_label = record_symbol.title()
+                    record_unit = ''
                 record_setpoints = self.sequence.inner.setpoints[1]
                 settings['records'] = len(record_setpoints)
                 settings['record_setpoints'] = record_setpoints
                 settings['record_setpoint_name'] = record_symbol
-                settings['record_setpoint_label'] = record_symbol  # TODO
-                settings['record_setpoint_unit'] = '' # TODO
-                if self.sequence.outer_setpoints.symbol() is not None:
+                settings['record_setpoint_label'] = record_label
+                settings['record_setpoint_unit'] = record_unit
+                if self.sequence.outer.symbol() is not None:
                     buffer_symbol = self.sequence.outer.setpoints[0]
+                    buffer_parameter = self.pulse_building_parameters.get(buffer_symbol, None)
+                    if buffer_parameter is not None:
+                        buffer_label = buffer_parameter.label or buffer_symbol.title()
+                        buffer_unit = record_parameter.unit or ''
+                    else:
+                        buffer_label = buffer_symbol.title()
+                        buffer_unit = ''
                     buffer_setpoints = self.sequence.outer.setpoints[1]
                     settings['buffers'] = len(buffer_setpoints)
                     settings['buffer_setpoints'] = buffer_setpoints
                     settings['buffer_setpoint_name'] = buffer_symbol
-                    settings['buffer_setpoint_label'] = buffer_symbol # TODO
-                    settings['buffer_setpoint_unit'] = '' # TODO
+                    settings['buffer_setpoint_label'] = buffer_label
+                    settings['buffer_setpoint_unit'] = buffer_unit
                 else:
                     settings['buffers'] = num
                     settings['buffer_setpoints'] = np.arange(num)
@@ -202,19 +223,25 @@ class ParametricWaveformAnalyser(Instrument):
                 settings['buffer_setpoints'] = np.arange(buffers)
                 settings['buffer_setpoint_name'] = 'buffer_repetitions'
                 settings['buffer_setpoint_label'] = 'Buffer Repetitions'
-                self._drive_setpoints_from_sideband_setpoints(settings)
+        settings.update(self._drive_setpoints_from_sideband_setpoints(settings))
         return settings
 
     def _drive_setpoints_from_sideband_setpoints(self, settings):
-        setpoint_types = ['record_setpoint', 'buffer_setpoint']
-        for setpoint_type in setpoint_types:
-            name = settings[setpoint_type + '_name']
-            if 'sideband' in name:
+        for setpoint_type in ['record_setpoint', 'buffer_setpoint']:
+            try:
+                name = settings[setpoint_type + '_name']
+            except KeyError:
+                return {}
+            if name.endswith('sideband_frequency'):
+                new_settings = {}
                 if 'drive' in name:
                     carrier_freq = self.drive.carrier_frequency()
-                else:
+                elif 'readout' in name:
                     carrier_freq = self.readout.carrier_frequency()
-                settings[setpoint_type + '_name'] = name[:8] + 'frequency'
-                settings[setpoint_type + '_label'] = settings[setpoint_type +
-                                                              '_label'][:8] + 'Frequency'
-                settings[setpoint_type + 's'] += carrier_freq
+                new_name = name.replace('sideband_frequency', 'frequency')
+                new_label = new_name.replace('_', ' ').title()
+                new_settings[setpoint_type + '_name'] = new_name
+                new_settings[setpoint_type + '_label'] = new_label
+                new_settings[setpoint_type + 's'] = settings[setpoint_type + 's'] + carrier_freq
+                print(new_settings)
+        return new_settings

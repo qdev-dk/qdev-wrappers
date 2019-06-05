@@ -2,6 +2,7 @@ from qcodes.instrument.channel import InstrumentChannel
 import numpy as np
 from functools import partial
 from qcodes.utils import validators as vals
+from warnings import warn
 from qdev_wrappers.customised_instruments.composite_instruments.parametric_sequencer.parametric_sequencer import Setpoints
 
 
@@ -45,9 +46,20 @@ class SetpointsChannel(InstrumentChannel):
 
     def _set_start_stop(self, start_stop, val):
         self._custom_setpoints = None
-        npts = int(
-            np.round(abs(self.stop() - self.start()) / self.step())) + 1
-        self.npts._save_val(npts)
+        step = self.step()
+        if start_stop == 'start':
+            start = val
+            stop = self.stop()
+        elif start_stop == 'stop':
+            start = self.start()
+            stop = val
+        try:
+            npts = int(
+                np.round(abs(stop - start) / step)) + 1
+            self.npts._save_val(npts)
+        except TypeError:
+            warn('Not all start, stop, step values are non None, must be set'
+                 ' before setpoints array can be generated')
         self.parent.set_sequencer_not_up_to_date()
 
     def _set_npts(self, npts):
