@@ -9,8 +9,8 @@ import warnings
 
 from qdev_wrappers.device_annotator.qcodes_device_annotator import DeviceImage
 from qdev_wrappers.configreader import Config
-from qdev_wrappers.logger import (
-    start_python_logger,
+from qcodes.logger import (
+    start_logger,
     start_command_history_logger)
 
 log = logging.getLogger(__name__)
@@ -19,28 +19,23 @@ CURRENT_EXPERIMENT["logging_enabled"] = False
 CURRENT_EXPERIMENT["init"] = False
 pdfdisplay = {}
 
+
 # aliases for keeping logging functions compatible
 def _set_up_ipython_logging():
-    warnings.warn("The function _set_up_ipython_logging is deprecated and " +
-                  "will be removed in the " +
-                  "future. For general logging simply import the wrappers " +
-                  "logging module via:\n" +
-                  ">>> from qdev_wrappers import logger\n" +
-                  "as the first line of your script.\n" +
-                  "For only command histroy logging call:\n"
-                  "start_command_history_logger")
+    warnings.warn("The function _set_up_ipython_logging is deprecated and "
+                  "will be removed in the "
+                  "future. Please use `start_command_history_logger` from"
+                  "`qcodes.logger` ")
     start_command_history_logger()
 
+
 def init_python_logger() -> None:
-    warnings.warn("This function init_python_logger is deprecated and will " +
-                  "be removed in the " +
-                  "future. For general logging simply import the wrappers " +
-                  "logging module via:\n" +
-                  ">>> from qdev_wrappers import logger\n" +
-                  "as the first line of your script.\n" +
-                  "For only python logging call:\n"
-                  "start_python_logger")
-    start_python_logger()
+    warnings.warn("This function init_python_logger is deprecated and will "
+                  "be removed in the "
+                  "future. Please use `start_logger` from"
+                  "`qcodes.logger`")
+    start_logger()
+
 
 def close_station(station):
     for comp in station.components:
