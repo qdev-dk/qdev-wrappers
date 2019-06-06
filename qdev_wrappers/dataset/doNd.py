@@ -9,7 +9,15 @@ import matplotlib.pyplot as plt
 from qcodes.dataset.measurements import Measurement
 from qcodes.instrument.base import _BaseParameter
 from qcodes.dataset.plotting import plot_by_id
+from qcodes.dataset.data_set import load_by_id
 from qcodes import config
+from export_functions import export_by_id, export_snapshot_by_id
+import datetime
+
+datapath='A:\\QCoDeS_Data\\Topo2DEG\\LoopQubit\\2019-06-05_M35.D3-CD4-LoopQubit\\DataExport\\'
+
+
+
 
 AxesTuple = Tuple[matplotlib.axes.Axes, matplotlib.colorbar.Colorbar]
 AxesTupleList = Tuple[List[matplotlib.axes.Axes],
@@ -17,6 +25,7 @@ AxesTupleList = Tuple[List[matplotlib.axes.Axes],
 AxesTupleListWithRunId = Tuple[int, List[matplotlib.axes.Axes],
                       List[Optional[matplotlib.colorbar.Colorbar]]]
 number = Union[float, int]
+
 
 
 def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
@@ -36,20 +45,33 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
     Returns:
         The run_id of the DataSet created
     """
+    now = datetime.datetime.now()
+    print (now.strftime("Acquisition started : %Y-%m-%d %H:%M:%S"))
+
     meas = Measurement()
     output = []
 
     for parameter in param_meas:
         meas.register_parameter(parameter)
         output.append([parameter, None])
+        inst=list(meas.parameters.values())
 
     with meas.run() as datasaver:
-
+        os.makedirs(datapath+'{}'.format(datasaver.run_id))
+#        npath=datapath+'{}'.format(datasaver.run_id)+'/{}_set.dat'.format(inst[0].name)
+#        npathh=datapath+'{}'.format(datasaver.run_id)+'/{}_setHEADER.dat'.format(inst[0].name)
+#        with open(npathh, "a") as new:
+#            new.write('#'+"\t"+inst.name+'\n')
+#            new.write('#'+"\t"+inst.label+'\n')
+#            new.write(f'#{num_points}'+'\n')
+        
+        start_time = time.perf_counter()
         for i, parameter in enumerate(param_meas):
             if isinstance(parameter, _BaseParameter):
                 output[i][1] = parameter.get()
             elif callable(parameter):
                 parameter()
+        stop_time = time.perf_counter()
         datasaver.add_result(*output)
     dataid = datasaver.run_id
 
@@ -59,7 +81,17 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
         ax = None,
         cbs = None
 
+#    npaths=datapath+'{}'.format(datasaver.run_id)+'/snapshot.dat'
+    export_by_id(dataid,npath)
+    export_snapshot_by_id(dataid,npaths)
+    
+    print("Acquisition took:  %s seconds " % (stop_time - start_time))
+
     return dataid, ax, cbs
+
+
+
+
 
 
 def do1d(param_set: _BaseParameter, start: number, stop: number,
@@ -94,10 +126,11 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
     Returns:
         The run_id of the DataSet created
     """
+    now = datetime.datetime.now()
+    print (now.strftime("Acquisition started : %Y-%m-%d %H:%M:%S"))
     meas = Measurement()
-    meas.register_parameter(
-        param_set)  # register the first independent parameter
-    output = []
+    meas.register_parameter(param_set)  # register the first independent parameter
+    output, mname, mlabel = ([] for i in range(3))
     param_set.post_delay = delay
     interrupted = False
 
@@ -116,22 +149,38 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
         if isinstance(parameter, _BaseParameter):
             meas.register_parameter(parameter, setpoints=(param_set,))
             output.append([parameter, None])
+    inst=list(meas.parameters.values())
+
 
     try:
+        
         with meas.run() as datasaver:
+            os.makedirs(datapath+'{}'.format(datasaver.run_id))
+            npath=datapath+'{}'.format(datasaver.run_id)+'/{}_set.dat'.format(inst[0].name)
+            npathh=datapath+'{}'.format(datasaver.run_id)+'/{}_setHEADER.dat'.format(inst[0].name)
+            with open(npathh, "a") as new:
+                for parameter in inst:
+                    mname.append(parameter.name)
+                    mlabel.append(parameter.label)
+                new.write('#'+"\t".join(mname)+'\n')
+                new.write('#'+"\t".join(mlabel)+'\n')
+                new.write(f'#{num_points}'+'\n')
+                start_time = time.perf_counter()
+                for set_point in np.linspace(start, stop, num_points):
+                    param_set.set(set_point)
+                    output = []
+                    for parameter in param_meas:
+                        if isinstance(parameter, _BaseParameter):
+                            output.append((parameter, parameter.get()))
+                        elif callable(parameter):
+                            parameter()
+                    datasaver.add_result((param_set, set_point), *output)
+                stop_time = time.perf_counter()
 
-            for set_point in np.linspace(start, stop, num_points):
-                param_set.set(set_point)
-                output = []
-                for parameter in param_meas:
-                    if isinstance(parameter, _BaseParameter):
-                        output.append((parameter, parameter.get()))
-                    elif callable(parameter):
-                        parameter()
-                datasaver.add_result((param_set, set_point),
-                                      *output)
+
     except KeyboardInterrupt:
         interrupted = True
+        
 
     dataid = datasaver.run_id  # convenient to have for plotting
 
@@ -143,6 +192,13 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
 
     if interrupted:
         raise KeyboardInterrupt
+        
+    npaths=datapath+'{}'.format(datasaver.run_id)+'/snapshot.dat'
+    export_by_id(dataid,npath)
+    export_snapshot_by_id(dataid,npaths)
+    
+    print("Acquisition took:  %s seconds " % (stop_time - start_time))
+
     return dataid, ax, cbs
 
 
@@ -189,12 +245,15 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     Returns:
         The run_id of the DataSet created
     """
+    now = datetime.datetime.now()
+    print (now.strftime("Acquisition started : %Y-%m-%d %H:%M:%S"))
 
     meas = Measurement()
     meas.register_parameter(param_set1)
     param_set1.post_delay = delay1
     meas.register_parameter(param_set2)
     param_set1.post_delay = delay2
+    output, mname, mlabel = ([] for i in range(3))
     interrupted = False
     for action in enter_actions:
         # this omits the possibility of passing
@@ -209,26 +268,39 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
         if isinstance(parameter, _BaseParameter):
             meas.register_parameter(parameter,
                                     setpoints=(param_set1, param_set2))
+    inst=list(meas.parameters.values())
+
     try:
         with meas.run() as datasaver:
-
-            for set_point1 in np.linspace(start1, stop1, num_points1):
-                param_set1.set(set_point1)
-                for action in before_inner_actions:
-                    action()
-                for set_point2 in np.linspace(start2, stop2, num_points2):
-                    param_set2.set(set_point2)
-                    output = []
-                    for parameter in param_meas:
-                        if isinstance(parameter, _BaseParameter):
-                            output.append((parameter, parameter.get()))
-                        elif callable(parameter):
-                            parameter()
-                    datasaver.add_result((param_set1, set_point1),
-                                         (param_set2, set_point2),
-                                         *output)
-                for action in after_inner_actions:
-                    action()
+            os.makedirs(datapath+'{}'.format(datasaver.run_id))
+            npath=datapath+'{}'.format(datasaver.run_id)+'/{}_set_{}_set.dat'.format(inst[0].name,inst[1].name)
+            npathh=datapath+'{}'.format(datasaver.run_id)+'/{}_setHEADER.dat'.format(inst[0].name,inst[1].name)
+            with open(npathh, "a") as new:
+                for parameter in inst:
+                    mname.append(parameter.name)
+                    mlabel.append(parameter.label)
+                new.write('#'+"\t".join(mname)+'\n')
+                new.write('#'+"\t".join(mlabel)+'\n')
+                new.write(f'#{num_points1}'+'\t'+f'{num_points2}'+'\n')
+                start_time = time.perf_counter()
+                for set_point1 in np.linspace(start1, stop1, num_points1):
+                    param_set1.set(set_point1)
+                    for action in before_inner_actions:
+                        action()
+                    for set_point2 in np.linspace(start2, stop2, num_points2):
+                        param_set2.set(set_point2)
+                        output = []
+                        for parameter in param_meas:
+                            if isinstance(parameter, _BaseParameter):
+                                output.append((parameter, parameter.get()))
+                            elif callable(parameter):
+                                parameter()
+                        datasaver.add_result((param_set1, set_point1),
+                                            (param_set2, set_point2),
+                                             *output)
+                    for action in after_inner_actions:
+                        action()
+                stop_time = time.perf_counter()
     except KeyboardInterrupt:
         interrupted = True
 
@@ -241,6 +313,12 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
         cbs = None
     if interrupted:
         raise KeyboardInterrupt
+        
+    npaths=datapath+'{}'.format(datasaver.run_id)+'/snapshot.dat'
+    export_by_id(dataid,npath)
+    export_snapshot_by_id(dataid,npaths)
+    
+    print("Acquisition took:  %s seconds " % (stop_time - start_time))
 
     return dataid, ax, cbs
 
