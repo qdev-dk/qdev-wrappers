@@ -265,7 +265,7 @@ def _save_image(datasaver) -> AxesTupleList:
     experiment_name = datasaver._dataset.exp_name
     sample_name = datasaver._dataset.sample_name
 
-    storage_dir = os.path.join(mainfolder, experiment_name, sample_name)
+    storage_dir = os.path.join(mainfolder, sample_name + '_' + experiment_name)
     os.makedirs(storage_dir, exist_ok=True)
 
     png_dir = os.path.join(storage_dir, 'png')
