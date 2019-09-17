@@ -2,6 +2,10 @@ import numpy as np
 import json
 
 
+def strip_none(arr, u):
+    arr = np.array(arr).flatten()[u].flatten()
+    return arr[arr != np.array(None)]
+
 def make_json_metadata(dataset, fitter, dependent_parameter_name,
                        *independent_parameter_names):
     """
@@ -223,30 +227,30 @@ def organize_fit_data(data, **setpoint_values):
                 'name': name,
                 'label': data.paramspecs[name].label,
                 'unit': data.paramspecs[name].unit,
-                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+                'data': strip_none(data.get_data(name), u)}
         elif name in metadata['fitter']['fit_parameters']:
             fit[name] = {
                 'name': name,
                 'label': data.paramspecs[name].label,
                 'unit': data.paramspecs[name].unit,
-                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+                'data': strip_none(data.get_data(name), u)}
         elif name in metadata['fitter'].get('variance_parameters', []):
             variance[name] = {
                 'name': name,
                 'label': data.paramspecs[name].label,
                 'unit': data.paramspecs[name].unit,
-                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+                'data': strip_none(data.get_data(name), u)}
         elif name in metadata['fitter'].get('initial_value_parameters', []):
             initial_values[name] = {
                 'name': name,
                 'label': data.paramspecs[name].label,
                 'unit': data.paramspecs[name].unit,
-                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+                'data': strip_none(data.get_data(name), u)}
         elif name in setpoints:
             setpoints[name] = {
                 'name': name,
                 'label': data.paramspecs[name].label,
                 'unit': data.paramspecs[name].unit,
-                'data': np.array(data.get_data(name)).flatten()[u].flatten()}
+                'data': strip_none(data.get_data(name), u)}
 
     return success, fit, variance, initial_values, setpoints, point_values
