@@ -33,6 +33,5 @@ install:
 
 script:
     - cd ..
-    - mypy qdev-wrappers
     # check that line endings are correct avoiding mixed windows/unix style line endings
     - pylint --reports=n --disable=all --enable=mixed-line-endings,unexpected-line-ending-format --expected-line-ending-format=LF qdev-wrappers
