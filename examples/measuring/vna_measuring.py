@@ -13,7 +13,7 @@ vna.channels.S21.power(-5)
 #%% Turn rf on
 vna.rf_on()
 
-#%% Do a measurement 
+#%% Do a measurement
 ### Define parameters for traces:
 
 vna.channels.S21.start(5.2e9)
@@ -39,7 +39,7 @@ do1d(dummy_time, 0, 60, 2, 1, vna.channels.S21.trace)
 
 #do1d(deca.rplg, 0, -1, 101, 1,v1.channels.S21.trace)
 
-#%% 
+#%%
 
 vna.add_spectroscopy_channel('192.168.15.104')
 

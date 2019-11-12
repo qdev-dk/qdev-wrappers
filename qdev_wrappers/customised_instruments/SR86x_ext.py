@@ -21,7 +21,7 @@ class SR86x_ext(SR86x):
                            unit='Ohm',
                            get_cmd=self._get_resistance,
                            get_parser=float)
-        
+
         self.add_parameter(name='g_X',
                            label='Conductance X',
                            unit='e$^2$/h',
