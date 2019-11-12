@@ -1,0 +1,11 @@
+coverage!=4.5.0
+pytest-cov
+pytest
+codacy-coverage
+hypothesis!=3.69.11 # due to bug in log capture
+mypy==0.720
+lxml
+codecov
+asv
+gitpython
+pylint
