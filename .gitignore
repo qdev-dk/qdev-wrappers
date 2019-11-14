@@ -41,3 +41,7 @@ tmp/
 
 # qcodes
 experiments.db
+
+# test outputs
+
+qdev_wrappers/tests/dataset/output
