@@ -43,5 +43,5 @@ tmp/
 experiments.db
 
 # test outputs
-
 qdev_wrappers/tests/dataset/output
+qdev_wrappers/tests/dataset/*.db
