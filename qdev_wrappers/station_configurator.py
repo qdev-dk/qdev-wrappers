@@ -29,6 +29,9 @@ enable_forced_reconnect = qcodes.config["station_configurator"]["enable_forced_r
 default_folder = qcodes.config["station_configurator"]["default_folder"]
 default_file = qcodes.config["station_configurator"]["default_file"]
 
+warnings.warn('The station_configurator.py of qdev-wrappers is deprecated and will be '
+              'removed soon. Please use station.py of QCoDeS instead.')
+
 
 class StationConfigurator:
     """

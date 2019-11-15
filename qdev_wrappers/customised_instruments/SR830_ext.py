@@ -120,7 +120,7 @@ class SR830_ext(SR830):
                             unit='',
                             set_cmd=lambda x: x,
                             get_parser=float,
-                            docstring='Gain of voltage preamplifer')        
+                            docstring='Gain of voltage preamplifer')
 
         self.add_parameter(name='g',
                             label='Conductance',
@@ -133,7 +133,7 @@ class SR830_ext(SR830):
                             unit='Ohm',
                             get_cmd=self._get_resistance,
                             get_parser=float)
-        
+
         self.add_parameter(name='g_X',
                             label='Conductance X',
                             unit='e$^2$/h',

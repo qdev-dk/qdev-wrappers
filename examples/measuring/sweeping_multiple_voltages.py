@@ -1,11 +1,11 @@
-# Example how to sweep multiple deca voltages at the same time 
+# Example how to sweep multiple deca voltages at the same time
 # There are two possible ways: Using a lambda function or qcodes' combined
 # parameter
 
 ## Using a lambda function
 
-### We need to create a qcodes task. It is a function like object which will be 
-### executed at each iteration. 
+### We need to create a qcodes task. It is a function like object which will be
+### executed at each iteration.
 ### If the task is to set another gate voltage, depending on whatever parameters
 ### we want, we have a compensated gate.
 
@@ -20,10 +20,10 @@ compensation_task = qc.Task(deca.rcut.set, set_lcut)
 plot, data = do1d(deca.lcut, 0, 1, 100, 0.1, compensation_task, lockin_2.g)
 
 
-### If we want to compensate the central cutter (jj) while sweeping for ex the 
-### left cutter we do the following. 
+### If we want to compensate the central cutter (jj) while sweeping for ex the
+### left cutter we do the following.
 ### (We choose to comensate as v_jj = 0.2 + 0.1*v_lcut)
- 
+
 compensation_relation = lambda: 0.2 + 0.1 * deca.lcut()
 compensation_task = qc.Task(deca.jj.set, compensation_relation)
 

@@ -20,6 +20,7 @@ number = Union[float, int]
 
 
 def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
+         write_period: Optional[float] = None,
          do_plot: bool = True) -> AxesTupleListWithRunId:
     """
     Perform a measurement of a single parameter. This is probably most
@@ -37,6 +38,8 @@ def do0d(*param_meas:  Union[_BaseParameter, Callable[[], None]],
         The run_id of the DataSet created
     """
     meas = Measurement()
+    if write_period is not None:
+        meas.write_period = write_period
     output = []
 
     for parameter in param_meas:
@@ -67,6 +70,7 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
          *param_meas: Union[_BaseParameter, Callable[[], None]],
          enter_actions: Sequence[Callable[[], None]] = (),
          exit_actions: Sequence[Callable[[], None]] = (),
+         write_period: Optional[float] = None,
          do_plot: bool = True) \
         -> AxesTupleListWithRunId:
     """
@@ -95,6 +99,8 @@ def do1d(param_set: _BaseParameter, start: number, stop: number,
         The run_id of the DataSet created
     """
     meas = Measurement()
+    if write_period is not None:
+        meas.write_period = write_period
     meas.register_parameter(
         param_set)  # register the first independent parameter
     output = []
@@ -151,10 +157,13 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
          param_set2: _BaseParameter, start2: number, stop2: number,
          num_points2: int, delay2: number,
          *param_meas: Union[_BaseParameter, Callable[[], None]],
+         set_before_sweep: Optional[bool] = False,
          enter_actions: Sequence[Callable[[], None]] = (),
          exit_actions: Sequence[Callable[[], None]] = (),
          before_inner_actions: Sequence[Callable[[], None]] = (),
          after_inner_actions: Sequence[Callable[[], None]] = (),
+         write_period: Optional[float] = None,
+         flush_columns: bool = False,
          do_plot: bool=True) -> AxesTupleListWithRunId:
 
     """
@@ -177,6 +186,8 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
           will be called at each step. The function should take no arguments.
           The parameters and functions are called in the order they are
           supplied.
+        set_before_sweep: if True the outer parameter is set to its first value
+            before the inner parameter is swept to its next value.
         enter_actions: A list of functions taking no arguments that will be
             called before the measurements start
         exit_actions: A list of functions taking no arguments that will be
@@ -191,10 +202,12 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
     """
 
     meas = Measurement()
+    if write_period is not None:
+        meas.write_period = write_period
     meas.register_parameter(param_set1)
     param_set1.post_delay = delay1
     meas.register_parameter(param_set2)
-    param_set1.post_delay = delay2
+    param_set2.post_delay = delay2
     interrupted = False
     for action in enter_actions:
         # this omits the possibility of passing
@@ -211,13 +224,19 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
                                     setpoints=(param_set1, param_set2))
     try:
         with meas.run() as datasaver:
-
             for set_point1 in np.linspace(start1, stop1, num_points1):
+                if set_before_sweep:
+                    param_set2.set(start2)
+
                 param_set1.set(set_point1)
                 for action in before_inner_actions:
                     action()
                 for set_point2 in np.linspace(start2, stop2, num_points2):
-                    param_set2.set(set_point2)
+                    # skip first inner set point if `set_before_sweep`
+                    if set_point2 == start2 and set_before_sweep:
+                        pass
+                    else:
+                        param_set2.set(set_point2)
                     output = []
                     for parameter in param_meas:
                         if isinstance(parameter, _BaseParameter):
@@ -229,6 +248,8 @@ def do2d(param_set1: _BaseParameter, start1: number, stop1: number,
                                          *output)
                 for action in after_inner_actions:
                     action()
+                if flush_columns:
+                    datasaver.flush_data_to_database()
     except KeyboardInterrupt:
         interrupted = True
 

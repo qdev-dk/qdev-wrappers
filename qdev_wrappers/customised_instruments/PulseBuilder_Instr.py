@@ -17,7 +17,7 @@ class MultiQ_PulseBuilder(Instrument):
         self.x_val = lambda: np.linspace(0,1,10)
         self.SR = 2.5e9
         self.number_read_freqs = number_read_freqs
-        
+
         self.add_parameter('cycle_time',
                       label='Pulse Cycle Time',
                       unit='s',
@@ -55,7 +55,7 @@ class MultiQ_PulseBuilder(Instrument):
                         set_cmd= lambda x : x,
                         vals=vals.Numbers(0,12.5e9))
 
-        
+
     def MultiQ_SSB_Spectroscopy(self, start, stop, npts):
         qubitf = np.mean([start,stop])
         self.qubit.frequency(qubitf)
@@ -64,16 +64,16 @@ class MultiQ_PulseBuilder(Instrument):
         # Clear AWG
         self.awg.clearSequenceList()
         self.awg.clearWaveformList()
-        
+
         N = int((self.cycle_time()*self.SR+64) - self.cycle_time()*self.SR%64)
         N_offset = int(self.marker_offset()*self.SR)
         time = np.linspace(N/self.SR-self.readout_dur(), N/self.SR, int(self.readout_dur()*self.SR), endpoint=False)
-        
+
         # Create triggers
         ZerosMarker = np.zeros(int(N))
         TriggerMarker = np.zeros(int(N))
         TriggerMarker[-int(self.readout_dur()*self.SR-N_offset):-int(self.readout_dur()*self.SR-N_offset-500e-9*self.SR)] = 1
-        
+
         # Create Drive tones
         wfms = [[], []]
         for i , f in enumerate(self.x_val()-qubitf):
@@ -91,8 +91,8 @@ class MultiQ_PulseBuilder(Instrument):
             wfms[0].append(wfm_ch1)
             wfms[1].append(wfm_ch2)
 
-        trig_waits = [0 for _ in range(npts)] 
-        nreps = [1 for _ in range(npts)] 
+        trig_waits = [0 for _ in range(npts)]
+        nreps = [1 for _ in range(npts)]
         event_jumps = [0 for _ in range(npts)]
         event_jump_to = [0 for _ in range(npts)]
         go_to = [0 for _ in range(npts)]
@@ -108,7 +108,7 @@ class MultiQ_PulseBuilder(Instrument):
                                 self.filename)
         self.awg.sendSEQXFile(seqx, self.filename + '.seqx')
         self.awg.loadSEQXFile(self.filename + '.seqx')
-        
+
         # Create Readout tones
         self.update_readout_freqs()
 
@@ -127,7 +127,7 @@ class MultiQ_PulseBuilder(Instrument):
         self.awg.ch4.setSequenceTrack('Readout_Seq', 2)
         self.awg.ch2.state(1)
         self.awg.play()
-        
+
         # ALazar labels
         self.alazar.seq_mode('on')
         for ala_chan in self.alazar_ctrl.channels[2:4]:
@@ -151,16 +151,16 @@ class MultiQ_PulseBuilder(Instrument):
         # Clear AWG
         self.awg.clearSequenceList()
         self.awg.clearWaveformList()
-        
+
         N = int((self.cycle_time()*self.SR+64) - self.cycle_time()*self.SR%64)
         N_offset = int(self.marker_offset()*self.SR)
         time = np.linspace(0, pulse_length, int(pulse_length*self.SR), endpoint=False)
-        
+
         # Create triggers
         ZerosMarker = np.zeros(int(N))
         TriggerMarker = np.zeros(int(N))
         TriggerMarker[-int(self.readout_dur()*self.SR-N_offset):-int(self.readout_dur()*self.SR-N_offset-500e-9*self.SR)] = 1
-        
+
         # Create Drive tones
         wfms = [[], []]
         for i , f in enumerate(self.x_val()-qubitf):
@@ -176,8 +176,8 @@ class MultiQ_PulseBuilder(Instrument):
             wfms[0].append(wfm_ch1)
             wfms[1].append(wfm_ch2)
 
-        trig_waits = [0 for _ in range(npts)] 
-        nreps = [1 for _ in range(npts)] 
+        trig_waits = [0 for _ in range(npts)]
+        nreps = [1 for _ in range(npts)]
         event_jumps = [0 for _ in range(npts)]
         event_jump_to = [0 for _ in range(npts)]
         go_to = [0 for _ in range(npts)]
@@ -193,7 +193,7 @@ class MultiQ_PulseBuilder(Instrument):
                                 self.filename)
         self.awg.sendSEQXFile(seqx, self.filename + '.seqx')
         self.awg.loadSEQXFile(self.filename + '.seqx')
-        
+
         # Create Readout tones
         self.update_readout_freqs()
 
@@ -212,7 +212,7 @@ class MultiQ_PulseBuilder(Instrument):
         self.awg.ch4.setSequenceTrack('Readout_Seq', 2)
         self.awg.ch2.state(1)
         self.awg.play()
-        
+
         # ALazar labels
         self.alazar.seq_mode('on')
         for ala_chan in self.alazar_ctrl.channels[2:4]:
@@ -236,15 +236,15 @@ class MultiQ_PulseBuilder(Instrument):
         self.awg.ch2.state(0)
         self.awg.clearSequenceList()
         self.awg.clearWaveformList()
-        
+
         N = int((self.cycle_time()*self.SR+64) - self.cycle_time()*self.SR%64)
         N_offset = int(self.marker_offset()*self.SR)
-        
+
         # Create triggers
         ZerosMarker = np.zeros(int(N))
         TriggerMarker = np.zeros(int(N))
         TriggerMarker[-int(self.readout_dur()*self.SR-N_offset):-int(self.readout_dur()*self.SR-N_offset-500e-9*self.SR)] = 1
-        
+
         # Create Drive tones
         wfms = [[]]
         for i , t in enumerate(self.x_val()):
@@ -256,9 +256,9 @@ class MultiQ_PulseBuilder(Instrument):
             else:
                 wfm_ch1 = np.array([drive,ZerosMarker,ZerosMarker])
             wfms[0].append(wfm_ch1)
-            
-        trig_waits = [0 for _ in range(npts)] 
-        nreps = [1 for _ in range(npts)] 
+
+        trig_waits = [0 for _ in range(npts)]
+        nreps = [1 for _ in range(npts)]
         event_jumps = [0 for _ in range(npts)]
         event_jump_to = [0 for _ in range(npts)]
         go_to = [0 for _ in range(npts)]
@@ -274,7 +274,7 @@ class MultiQ_PulseBuilder(Instrument):
                                 self.filename)
         self.awg.sendSEQXFile(seqx, self.filename + '.seqx')
         self.awg.loadSEQXFile(self.filename + '.seqx')
-        
+
         # Create Readout tones
         self.update_readout_freqs()
 
@@ -291,7 +291,7 @@ class MultiQ_PulseBuilder(Instrument):
         self.awg.ch3.setSequenceTrack('Readout_Seq', 1)
         self.awg.ch4.setSequenceTrack('Readout_Seq', 2)
         self.awg.play()
-        
+
         # ALazar labels
         self.alazar.seq_mode('on')
         for ala_chan in self.alazar_ctrl.channels[2:4]:
@@ -315,15 +315,15 @@ class MultiQ_PulseBuilder(Instrument):
         self.awg.ch2.state(0)
         self.awg.clearSequenceList()
         self.awg.clearWaveformList()
-        
+
         N = int((self.cycle_time()*self.SR+64) - self.cycle_time()*self.SR%64)
         N_offset = int(self.marker_offset()*self.SR)
-        
+
         # Create triggers
         ZerosMarker = np.zeros(int(N))
         TriggerMarker = np.zeros(int(N))
         TriggerMarker[-int(self.readout_dur()*self.SR-N_offset):-int(self.readout_dur()*self.SR-N_offset-500e-9*self.SR)] = 1
-        
+
         # Create Drive tones
         wfms = [[]]
         for i , t in enumerate(self.x_val()):
@@ -335,9 +335,9 @@ class MultiQ_PulseBuilder(Instrument):
             else:
                 wfm_ch1 = np.array([drive,ZerosMarker,ZerosMarker])
             wfms[0].append(wfm_ch1)
-            
-        trig_waits = [0 for _ in range(npts)] 
-        nreps = [1 for _ in range(npts)] 
+
+        trig_waits = [0 for _ in range(npts)]
+        nreps = [1 for _ in range(npts)]
         event_jumps = [0 for _ in range(npts)]
         event_jump_to = [0 for _ in range(npts)]
         go_to = [0 for _ in range(npts)]
@@ -353,7 +353,7 @@ class MultiQ_PulseBuilder(Instrument):
                                 self.filename)
         self.awg.sendSEQXFile(seqx, self.filename + '.seqx')
         self.awg.loadSEQXFile(self.filename + '.seqx')
-        
+
         # Create Readout tones
         self.update_readout_freqs()
 
@@ -370,7 +370,7 @@ class MultiQ_PulseBuilder(Instrument):
         self.awg.ch3.setSequenceTrack('Readout_Seq', 1)
         self.awg.ch4.setSequenceTrack('Readout_Seq', 2)
         self.awg.play()
-        
+
         # ALazar labels
         self.alazar.seq_mode('on')
         for ala_chan in self.alazar_ctrl.channels[2:4]:
@@ -394,15 +394,15 @@ class MultiQ_PulseBuilder(Instrument):
         self.awg.ch2.state(0)
         self.awg.clearSequenceList()
         self.awg.clearWaveformList()
-        
+
         N = int((self.cycle_time()*self.SR+64) - self.cycle_time()*self.SR%64)
         N_offset = int(self.marker_offset()*self.SR)
-        
+
         # Create triggers
         ZerosMarker = np.zeros(int(N))
         TriggerMarker = np.zeros(int(N))
         TriggerMarker[-int(self.readout_dur()*self.SR-N_offset):-int(self.readout_dur()*self.SR-N_offset-500e-9*self.SR)] = 1
-        
+
         # Create Drive tones
         wfms = [[]]
         for i , t in enumerate(self.x_val()):
@@ -415,9 +415,9 @@ class MultiQ_PulseBuilder(Instrument):
             else:
                 wfm_ch1 = np.array([drive,ZerosMarker,ZerosMarker])
             wfms[0].append(wfm_ch1)
-            
-        trig_waits = [0 for _ in range(npts)] 
-        nreps = [1 for _ in range(npts)] 
+
+        trig_waits = [0 for _ in range(npts)]
+        nreps = [1 for _ in range(npts)]
         event_jumps = [0 for _ in range(npts)]
         event_jump_to = [0 for _ in range(npts)]
         go_to = [0 for _ in range(npts)]
@@ -433,7 +433,7 @@ class MultiQ_PulseBuilder(Instrument):
                                 self.filename)
         self.awg.sendSEQXFile(seqx, self.filename + '.seqx')
         self.awg.loadSEQXFile(self.filename + '.seqx')
-        
+
         # Create Readout tones
         self.update_readout_freqs()
 
@@ -450,7 +450,7 @@ class MultiQ_PulseBuilder(Instrument):
         self.awg.ch3.setSequenceTrack('Readout_Seq', 1)
         self.awg.ch4.setSequenceTrack('Readout_Seq', 2)
         self.awg.play()
-        
+
         # ALazar labels
         self.alazar.seq_mode('on')
         for ala_chan in self.alazar_ctrl.channels[2:4]:
@@ -488,7 +488,7 @@ class MultiQ_PulseBuilder(Instrument):
         # Create trigger
         TriggerMarker = np.zeros(N)
         TriggerMarker[-int(self.readout_dur()*self.SR-N_offset):-int(self.readout_dur()*self.SR-N_offset-500e-9*self.SR)] = 1
-    
+
         # Readout tones
         time = np.linspace(0, self.readout_dur(), int(self.readout_dur()*self.SR), endpoint=False)
         cosine_readout = np.zeros(N)
@@ -499,7 +499,7 @@ class MultiQ_PulseBuilder(Instrument):
             sine_readout += (0.5/len(readout_freqs))*np.concatenate((np.zeros(N-len(time)),np.sin(fi*2*np.pi*time)))
         wfm_ch3 = np.array([cosine_readout,TriggerMarker,TriggerMarker])
         wfm_ch4 = np.array([sine_readout,TriggerMarker,TriggerMarker])
-        
+
         state = self.awg.run_state()
         self.awg.stop()
         wfm_ch3_file = self.awg.makeWFMXFile(wfm_ch3, 1)
@@ -511,11 +511,11 @@ class MultiQ_PulseBuilder(Instrument):
         # Only start play if running to begin with
         if state == 'Running':
             self.awg.play()
-        
+
         # Set demod frequencies
         for ala_chan in self.alazar_ctrl.channels[2:4]:
             ala_chan.demod_freq(abs(readout_freqs[0]-self.cavity.frequency()))
-            
+
         for n, ala_chan in enumerate(self.alazar_ctrl.channels[4:12]):
             try:
                 ala_chan.demod_freq(abs(readout_freqs[n//2]-self.cavity.frequency()))
@@ -535,11 +535,11 @@ class MultiQ_PulseBuilder(Instrument):
             ala_chan.num_averages(value)
             ala_chan.prepare_channel()
             ala_chan.data.setpoints = (tuple(self.x_val()),ala_chan.data.setpoints[1])
-            
+
         for ala_chan in self.alazar_ctrl.channels[4:12]:
             ala_chan.num_averages(value)
             ala_chan.prepare_channel()
-            
+
         for ala_chan in self.alazar_ctrl.channels[12:20]:
             ala_chan.num_averages(value)
             ala_chan.prepare_channel()
