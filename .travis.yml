@@ -29,6 +29,7 @@ python:
 
 install:
     - pip install -r test_requirements.txt --upgrade --upgrade-strategy only-if-needed
+    - pip install git+https://github.com/QCoDeS/Qcodes.git
     - pip install -e .
 
 script:
