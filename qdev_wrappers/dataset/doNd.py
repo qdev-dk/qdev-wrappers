@@ -7,8 +7,9 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
+from qcodes.instrument.parameter import (
+    _BaseParameter, ArrayParameter, MultiParameter)
 from qcodes.dataset.measurements import Measurement, res_type, DataSaver
-from qcodes.instrument.base import _BaseParameter
 from qcodes.dataset.plotting import plot_by_id
 from qcodes import config
 
@@ -39,9 +40,18 @@ def _register_parameters(
         setpoints: Optional[List[_BaseParameter]] = None
 ) -> None:
     for parameter in param_meas:
-        if isinstance(parameter, _BaseParameter):
-            meas.register_parameter(parameter,
-                                    setpoints=setpoints)
+        if not isinstance(parameter, _BaseParameter):
+            continue
+
+        if isinstance(parameter, (ArrayParameter, MultiParameter)):
+            paramtype = 'array'
+        else:
+            paramtype = 'numeric'
+
+        meas.register_parameter(
+            parameter,
+            paramtype=paramtype,
+            setpoints = setpoints)
 
 
 def _register_actions(
