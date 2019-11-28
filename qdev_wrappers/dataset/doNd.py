@@ -248,7 +248,7 @@ def do2d(
 
                     datasaver.add_result((param_set1, set_point1),
                                          (param_set2, set_point2),
-                                         *_process_params_meas(param_meas))
+                                         *_process_params_meas(params_to_measure))
                 for action in after_inner_actions:
                     action()
                 if flush_columns:
