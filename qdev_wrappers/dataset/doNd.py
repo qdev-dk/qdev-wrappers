@@ -120,6 +120,7 @@ def do1d(
     enter_actions: ActionsT = (),
     exit_actions: ActionsT = (),
     write_period: Optional[float] = None,
+    register_params=None,
     do_plot: bool = True
 ) -> AxesTupleListWithRunId:
     """
@@ -148,8 +149,10 @@ def do1d(
         The run_id of the DataSet created
     """
     meas = Measurement()
-    _register_parameters(meas, (param_set,))
-    _register_parameters(meas, param_meas, setpoints=(param_set,))
+    setpoint_params = (param_set,) + tuple(register_params)
+    _register_parameters(meas, setpoint_params)
+    _register_parameters(meas, param_meas, setpoints=setpoint_params)
+    params_to_measure = param_meas + tuple(register_params)
     _set_write_period(meas, write_period)
     _register_actions(meas, enter_actions, exit_actions)
     param_set.post_delay = delay
@@ -161,7 +164,7 @@ def do1d(
         for set_point in np.linspace(start, stop, num_points):
             param_set.set(set_point)
             datasaver.add_result((param_set, set_point),
-                                  *_process_params_meas(param_meas))
+                                  *_process_params_meas(params_to_measure))
     return _handle_plotting(datasaver, do_plot, interrupted())
 
 
@@ -178,6 +181,7 @@ def do2d(
     after_inner_actions: ActionsT = (),
     write_period: Optional[float] = None,
     flush_columns: bool = False,
+    register_params=None,
     do_plot: bool=True
 ) -> AxesTupleListWithRunId:
 
@@ -217,8 +221,10 @@ def do2d(
     """
 
     meas = Measurement()
-    _register_parameters(meas, (param_set1, param_set2))
-    _register_parameters(meas, param_meas, setpoints=(param_set1, param_set2))
+    setpoint_params = (param_set1, param_set2,) + tuple(register_params)
+    _register_parameters(meas, setpoint_params)
+    _register_parameters(meas, param_meas, setpoints=setpoint_params)
+    params_to_measure = param_meas + tuple(register_params)
     _set_write_period(meas, write_period)
     _register_actions(meas, enter_actions, exit_actions)
 
