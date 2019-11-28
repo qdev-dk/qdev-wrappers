@@ -120,7 +120,7 @@ def do1d(
     enter_actions: ActionsT = (),
     exit_actions: ActionsT = (),
     write_period: Optional[float] = None,
-    register_params=None,
+    register_params: Optional[_BaseParameter] = None,
     do_plot: bool = True
 ) -> AxesTupleListWithRunId:
     """
@@ -142,6 +142,8 @@ def do1d(
             called before the measurements start
         exit_actions: A list of functions taking no arguments that will be
             called after the measurements ends
+        register_params: A list of setpoint parameters to be registered in the
+            measurement but not scanned.
         do_plot: should png and pdf versions of the images be saved after the
             run.
 
@@ -149,6 +151,8 @@ def do1d(
         The run_id of the DataSet created
     """
     meas = Measurement()
+    if register_params is None:
+        register_params = tuple()
     setpoint_params = (param_set,) + tuple(register_params)
     _register_parameters(meas, setpoint_params)
     _register_parameters(meas, param_meas, setpoints=setpoint_params)
@@ -181,7 +185,7 @@ def do2d(
     after_inner_actions: ActionsT = (),
     write_period: Optional[float] = None,
     flush_columns: bool = False,
-    register_params=None,
+    register_params: Optional[_BaseParameter] = None,
     do_plot: bool=True
 ) -> AxesTupleListWithRunId:
 
@@ -213,6 +217,8 @@ def do2d(
             called after the measurements ends
         before_inner_actions: Actions executed before each run of the inner loop
         after_inner_actions: Actions executed after each run of the inner loop
+        register_params: A list of setpoint parameters to be registered in the
+            measurement but not scanned.
         do_plot: should png and pdf versions of the images be saved after the
             run.
 
@@ -221,6 +227,8 @@ def do2d(
     """
 
     meas = Measurement()
+    if register_params is None:
+        register_params = tuple()
     setpoint_params = (param_set1, param_set2,) + tuple(register_params)
     _register_parameters(meas, setpoint_params)
     _register_parameters(meas, param_meas, setpoints=setpoint_params)
