@@ -1,4 +1,3 @@
-from IPython import get_ipython
 import atexit
 import os
 from os.path import sep
