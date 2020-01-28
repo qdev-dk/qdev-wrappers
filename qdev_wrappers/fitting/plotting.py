@@ -199,6 +199,7 @@ def plot_fit_by_id(fit_run_id,
                    show_variance=True,
                    show_initial_values=False,
                    save_plots=True,
+                   source_conn=None,
                    **setpoint_values):
     """
     Plots the result of a fit (against the data where possible) and
@@ -234,7 +235,7 @@ def plot_fit_by_id(fit_run_id,
     dependent_parameter_name = metadata['inferred_from']['dept_var']
     independent_parameter_names = metadata['inferred_from']['indept_vars']
     exp_run_id = metadata['inferred_from']['run_id']
-    exp_data = load_by_id(exp_run_id)
+    exp_data = load_by_id(exp_run_id, source_conn)
 
     dept, independent, exp_setpoints = organize_exp_data(
         exp_data, dependent_parameter_name, *independent_parameter_names,

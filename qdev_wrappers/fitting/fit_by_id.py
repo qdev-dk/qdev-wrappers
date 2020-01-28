@@ -16,6 +16,7 @@ def fit_by_id(data_run_id, fitter,
               save_plots=True,
               show_variance=True,
               show_initial_values=True,
+              source_conn=None,
               **kwargs):
     """
     Given the run_id of a dataset, a fitter and the parameters to fit to
@@ -42,7 +43,7 @@ def fit_by_id(data_run_id, fitter,
         colorbar (matplotlib colorbar): colorbar of 2d heatmap plot if
             generated, otherwise None
     """
-    exp_data = load_by_id(data_run_id)
+    exp_data = load_by_id(data_run_id, conn=source_conn)
     dependent, independent, setpoints = organize_exp_data(
         exp_data, dependent_parameter_name, *independent_parameter_names)
     setpoint_paramnames = list(setpoints.keys())

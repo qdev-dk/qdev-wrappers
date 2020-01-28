@@ -2,7 +2,7 @@
     "core": {
         "default_fmt": "data/{date}/#{counter}_{name}_{time}",
         "register_magic": true,
-        "db_location": "../transmons_data/transmons.db",
+        "db_location": "../fitting.db",
         "db_debug": false,
         "loglevel": "WARNING",
         "file_loglevel": "INFO"
@@ -62,7 +62,9 @@
     },
     "user": {
         "scriptfolder": ".",
-        "mainfolder": "."
+        "mainfolder": ".",
+        "transmon_db_location": "../transmons_data/transmons.db",
+        "experiment_db_location": "../experiment_data/test_experiments.db"
     },
     "station_configurator": {
         "enable_forced_reconnect": false,
