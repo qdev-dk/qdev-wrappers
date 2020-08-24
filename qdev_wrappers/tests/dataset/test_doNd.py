@@ -164,7 +164,7 @@ def test_do1d_output_data(_param, _param_set):
     data = load_by_id(exp[0])
 
     assert data.parameters == f'{_param_set.name},{_param.name}'
-    assert np.allclose(data.get_parameter_data(_param.name)[_param.name][_param.name], np.array([1]*5))
+    assert np.allclose(data.get_parameter_data(_param.name)[_param.name][_param.name], np.ones(5))
     assert np.allclose(data.get_parameter_data(_param_set.name)[_param_set.name][_param_set.name], np.array([0, 0.25, 0.5, 0.75, 1]))
 
 
@@ -225,7 +225,7 @@ def test_do2d_output_data(_param, _paramComplex, _param_set):
     data = load_by_id(exp[0])
 
     assert data.parameters == f'{_param_set.name},{_param.name},{_paramComplex.name}'
-    assert np.allclose(data.get_parameter_data(_param.name)[_param.name][_param.name], np.array([1] * 25))
+    assert np.allclose(data.get_parameter_data(_param.name)[_param.name][_param.name], np.ones(25))
     assert np.allclose(data.get_parameter_data(_paramComplex.name)[_paramComplex.name][_paramComplex.name], np.array([(1+1j)] * 25))
     assert np.allclose(data.get_parameter_data(_param_set.name)[_param_set.name][_param_set.name], np.array([0.5, 0.5, 0.625, 0.625,
                                                 0.75, 0.75, 0.875, 0.875,
