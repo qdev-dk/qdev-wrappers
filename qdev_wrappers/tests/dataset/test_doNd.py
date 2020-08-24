@@ -9,7 +9,7 @@ from qcodes import config, new_experiment, load_by_id
 from qcodes.utils import validators
 
 import pytest
-
+import numpy as np
 config.user.mainfolder = "output"  # set ouput folder for doNd's
 new_experiment("doNd-tests", sample_name="no sample")
 
@@ -110,7 +110,7 @@ def test_do0d_output_data(_param):
     exp = do0d(_param)
     data = load_by_id(exp[0])
     assert data.parameters == _param.name
-    assert data.get_values(_param.name)[0][0] == _param.get()
+    assert data.get_parameter_data(_param.name)[_param.name][_param.name] == _param.get()
 
 
 @pytest.mark.parametrize('delay', [0, 0.1, 1])
@@ -121,7 +121,6 @@ def test_do1d_with_real_parameter(_param_set, _param, delay):
     num_points = 1
 
     do1d(_param_set, start, stop, num_points, delay, _param)
-
 
 @pytest.mark.parametrize('delay', [0, 0.1, 1])
 def test_do1d_with_complex_parameter(_param_set, _paramComplex, delay):
@@ -165,8 +164,8 @@ def test_do1d_output_data(_param, _param_set):
     data = load_by_id(exp[0])
 
     assert data.parameters == f'{_param_set.name},{_param.name}'
-    assert data.get_values(_param.name) == [[1]] * 5
-    assert data.get_values(_param_set.name) == [[0], [0.25], [0.5], [0.75], [1]]
+    assert np.allclose(data.get_parameter_data(_param.name)[_param.name][_param.name], np.array([1]*5))
+    assert np.allclose(data.get_parameter_data(_param_set.name)[_param_set.name][_param_set.name], np.array([0, 0.25, 0.5, 0.75, 1]))
 
 
 @pytest.mark.parametrize('sweep, columns', [(False, False), (False, True),
@@ -226,8 +225,8 @@ def test_do2d_output_data(_param, _paramComplex, _param_set):
     data = load_by_id(exp[0])
 
     assert data.parameters == f'{_param_set.name},{_param.name},{_paramComplex.name}'
-    assert data.get_values(_param.name) == [[1]] * 25
-    assert data.get_values(_paramComplex.name) == [[(1+1j)]] * 25
-    assert data.get_values(_param_set.name) == [[0.5], [0.5], [0.625], [0.625],
-                                                [0.75], [0.75], [0.875], [0.875],
-                                                [1], [1]] * 5
+    assert np.allclose(data.get_parameter_data(_param.name)[_param.name][_param.name], np.array([1] * 25))
+    assert np.allclose(data.get_parameter_data(_paramComplex.name)[_paramComplex.name][_paramComplex.name], np.array([(1+1j)] * 25))
+    assert np.allclose(data.get_parameter_data(_param_set.name)[_param_set.name][_param_set.name], np.array([0.5, 0.5, 0.625, 0.625,
+                                                0.75, 0.75, 0.875, 0.875,
+                                                1, 1] * 5))
