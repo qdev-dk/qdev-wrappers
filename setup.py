@@ -19,7 +19,7 @@ setup(
     install_requires=[
         'matplotlib>=2.0.2',
         'pyqtgraph>=0.10.0',
-        'qcodes>=0.9.0',
+        'qcodes>=0.15.0',
         'PyYAML>=3.12'
     ],
     python_requires='>=3'
