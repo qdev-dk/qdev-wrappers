@@ -130,9 +130,9 @@ class AlazarChannel(InstrumentChannel):
             else:
                 raise RuntimeError("You requested averaging but are neither averaging over buffers or records")
         if self._average_buffers and not self._average_records:
-            self.buffers_per_acquisition._save_val(value)
+            self.buffers_per_acquisition.cache.set(value)
         elif self._average_records and not self._average_buffers:
-            self.records_per_buffer._save_val(value)
+            self.records_per_buffer.cache.set(value)
         elif self._average_buffers and self._average_records:
             max_samples = self._parent.board_info['max_samples']
             samples_per_rec = self._parent.samples_per_record()
@@ -143,5 +143,5 @@ class AlazarChannel(InstrumentChannel):
             else:
                 records = value
                 buffers = 1
-            self.buffers_per_acquisition._save_val(buffers)
-            self.records_per_buffer._save_val(records)
+            self.buffers_per_acquisition.cache.set(buffers)
+            self.records_per_buffer.cache.set(records)

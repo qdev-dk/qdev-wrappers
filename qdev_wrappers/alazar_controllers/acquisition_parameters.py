@@ -21,9 +21,8 @@ class AcqVariablesParam(Parameter):
 
     def __init__(self, name, instrument, check_and_update_fn,
                  default_fn=None, initial_value=None):
-        super().__init__(name)
+        super().__init__(name, initial_cache_value=initial_value)
         self._instrument = instrument
-        self._save_val(initial_value)
         self._check_and_update_instr = check_and_update_fn
         if default_fn is not None:
             self._get_default = default_fn
@@ -37,10 +36,9 @@ class AcqVariablesParam(Parameter):
             value: value to set the parameter to
         """
         self._check_and_update_instr(value, param_name=self.name)
-        self._save_val(value)
 
     def get_raw(self):
-        return self._latest['value']
+         return self.cache.get(get_if_invalid=False)
 
     def to_default(self):
         """
@@ -63,7 +61,7 @@ class AcqVariablesParam(Parameter):
         Return:
             True (if no errors raised when check_and_update_fn executed)
         """
-        val = self._latest['value']
+        val = self.cache.get()
         self._check_and_update_instr(val, param_name=self.name)
         return True
 
@@ -98,7 +96,7 @@ class NonSettableDerivedParameter(Parameter):
                                   "set {}".format(self.name, self._alternative))
 
     def get_raw(self):
-        return self.get_latest()
+        return self.cache.get(get_if_invalid=False)
 
 
 class EffectiveSampleRateParameter(NonSettableDerivedParameter):
@@ -127,5 +125,4 @@ class EffectiveSampleRateParameter(NonSettableDerivedParameter):
         if decimation > 0:
             rate = rate / decimation
 
-        self._save_val(rate)
         return rate

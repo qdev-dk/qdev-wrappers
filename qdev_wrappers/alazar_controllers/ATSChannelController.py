@@ -114,7 +114,7 @@ class ATSChannelController(AcquisitionController):
         samples_per_record = helpers.roundup(
             samples_needed, self.samples_divisor)
         logger.info("need {} samples round up to {}".format(samples_needed, samples_per_record))
-        self.samples_per_record._save_val(samples_per_record)
+        self.samples_per_record.cache.set(samples_per_record)
 
     def _update_int_delay(self, value, **kwargs) -> None:
         """
