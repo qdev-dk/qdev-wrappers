@@ -333,6 +333,8 @@ class ATSChannelController(AcquisitionController):
                         mydata = Real_data
                     elif demodtype == 'imag':
                         mydata = Imag_data
+                    elif demodtype == 'phasor':
+                        mydata = Real_data + 1j*Imag_data
                     else:
                         raise RuntimeError(f"Unknown demodulator type {demodtype} supplied")
                     data.append(mydata)
