@@ -2,12 +2,14 @@ import numpy as np
 import logging
 import concurrent.futures
 import time
+from qcodes.dataset.data_set import DataSet
 # from tqdm import tqdm_notebook as tqdm
 from tqdm import tqdm
-from qcodes.instrument.parameter import _BaseParameter
+from qcodes.instrument.parameter import ParamDataType, _BaseParameter, Parameter, ParameterWithSetpoints
 from qcodes import Measurement
 from qcodes.instrument_drivers.stanford_research.SR830 import SR830
-from typing import List, Iterable
+from typing import List, Iterable, Tuple, Sequence
+from qcodes.dataset.data_set import DataSet
 from contextlib import ExitStack
 
 logger = logging.getLogger(__name__)
@@ -22,15 +24,15 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
                num_points_slow: int, delay_slow: float,
                param_fast: _BaseParameter, start_fast: float, stop_fast: float,
                num_points_fast: int, delay_fast: float,
-               lockins: Iterable[SR830],
-               devices_no_buffer=None,
+               lockins: Sequence[SR830],
+               devices_no_buffer: Iterable[Parameter] = None,
                write_period: float = 1.,
                threading: List[bool] = [True, True, True, True],
                label: str = None,
                channels: int = 0,
                attempts_to_get: int = 3,
                delay_fast_increase: float = 0.0
-               ):
+               ) -> Tuple[DataSet, ...]:
     """
     This is a do2d to be used for a collection of SR830.
 
@@ -45,12 +47,13 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
         stop_fast: End point of sweep in the inner loop
         num_points_fast: Number of points to measure in the inner loop
         delay_fast: Delay after setting parameter before measurement is performed
-        lockins: Tuple of lockins
+        lockins: Iterable of SR830 lockins
+        devices_no_buffer: Iterable of Parameters to be measured alongside the lockins
         write_period: The time after which the data is actually written to the
                       database.
         threading: For each element which are True, write_in_background, buffer_reset,
                    and send_trigger and get_trace will be threaded respectively
-        channels: channels to get from the buffer. "0" gets both channels
+        channels: Channels to get from the buffer. "0" gets both channels
         attempts_to_get: Maximum number of attempts to try to get the buffer if it fails
         delay_fast_increase: Amount to increase delay_fast if getting the buffer fails
     """
@@ -65,6 +68,7 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
             raise ValueError('Invalid instrument. Only SR830s are supported')
         lockin.buffer_SR("Trigger")
         lockin.buffer_trig_mode.set('ON')
+        assert isinstance(param_fast, Parameter)
         lockin.set_sweep_parameters(param_fast, start_fast, stop_fast, num_points_fast, label=label)
 
     interval_slow = tqdm(np.linspace(start_slow, stop_slow, num_points_slow), position=0)
@@ -83,6 +87,7 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
     traces = _datatrace_parameters(lockins, channels)
 
     for trace in traces:
+        assert isinstance(trace.root_instrument, SR830)
         if len(trace.label.split()) < 2:
             trace.label = trace.root_instrument.name + ' ' + trace.label
         meas.register_parameter(trace, setpoints=(param_slow, trace.root_instrument.sweep_setpoints))
@@ -204,14 +209,14 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
     if devices_no_buffer is not None:
         return (datasaver.dataset, datasaver_no_buffer.dataset)
     else:
-        return datasaver.dataset
+        return (datasaver.dataset,)
 
 
-def trace_tuble(trace):
+def trace_tuble(trace: _BaseParameter) -> Tuple[_BaseParameter, ParamDataType]:
     return (trace, trace.get())
 
 
-def _datatrace_parameters(lockins, channels: int):
+def _datatrace_parameters(lockins: Sequence[SR830], channels: int) -> List[ParameterWithSetpoints]:
     traces = []
     if channels in [0, 1]:
         traces += [lockin.ch1_datatrace for lockin in lockins]
