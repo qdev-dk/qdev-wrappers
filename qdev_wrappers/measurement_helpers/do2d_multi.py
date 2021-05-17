@@ -6,7 +6,8 @@ import time
 from tqdm import tqdm
 from qcodes.instrument.parameter import _BaseParameter
 from qcodes import Measurement
-from typing import List
+from qcodes.instrument_drivers.stanford_research.SR830 import SR830
+from typing import List, Iterable
 from contextlib import ExitStack
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
                num_points_slow: int, delay_slow: float,
                param_fast: _BaseParameter, start_fast: float, stop_fast: float,
                num_points_fast: int, delay_fast: float,
-               lockins,
+               lockins: Iterable[SR830],
                devices_no_buffer=None,
                write_period: float = 1.,
                threading: List[bool] = [True, True, True, True],
@@ -54,11 +55,14 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
         delay_fast_increase: Amount to increase delay_fast if getting the buffer fails
     """
 
+    
     logger.info('Starting do2d_multi with {}'.format(num_points_slow * num_points_fast))
     logger.info('write_in_background {},threading buffer_reset {},threading send_trigger {},threading  get trace {}'.format(*threading))
     begin_time = time.perf_counter()
 
     for lockin in lockins:
+        if not isinstance(lockin, SR830):
+            raise ValueError('Invalid instrument. Only SR830s are supported')
         lockin.buffer_SR("Trigger")
         lockin.buffer_trig_mode.set('ON')
         lockin.set_sweep_parameters(param_fast, start_fast, stop_fast, num_points_fast, label=label)
