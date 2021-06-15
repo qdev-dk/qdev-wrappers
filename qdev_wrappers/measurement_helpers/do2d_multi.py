@@ -31,7 +31,8 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
                label: str = None,
                channels: int = 0,
                attempts_to_get: int = 3,
-               delay_fast_increase: float = 0.0
+               delay_fast_increase: float = 0.0,
+               fast_progress_bar: bool = False
                ) -> Tuple[DataSet, ...]:
     """
     This is a do2d to be used for a collection of SR830.
@@ -138,8 +139,13 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
                     time_buffer_reset += time.perf_counter() - begin_time_temp_buffer
 
                     begin_time_temp_fast_loop = time.perf_counter()
-                    interval_fast = tqdm(set_points_fast.get(), position=1, leave=False)
-                    interval_fast.set_description("Fast parameter")
+                    
+                    if fast_progress_bar:
+                      interval_fast = tqdm(set_points_fast.get(), position=1, leave=False)
+                      interval_fast.set_description("Fast parameter")
+                     else:
+                      interval_fast = set_points_fast.get()
+                      
                     for point_fast in interval_fast:
                         begin_time_temp_set_fast = time.perf_counter()
                         param_fast.set(point_fast)
