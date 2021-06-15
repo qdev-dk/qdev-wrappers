@@ -141,10 +141,10 @@ def do2d_multi(param_slow: _BaseParameter, start_slow: float, stop_slow: float,
                     begin_time_temp_fast_loop = time.perf_counter()
                     
                     if fast_progress_bar:
-                      interval_fast = tqdm(set_points_fast.get(), position=1, leave=False)
-                      interval_fast.set_description("Fast parameter")
-                     else:
-                      interval_fast = set_points_fast.get()
+                        interval_fast = tqdm(set_points_fast.get(), position=1, leave=False)
+                        interval_fast.set_description("Fast parameter")
+                    else:
+                        interval_fast = set_points_fast.get()
                       
                     for point_fast in interval_fast:
                         begin_time_temp_set_fast = time.perf_counter()
