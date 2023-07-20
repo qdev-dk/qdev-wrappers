@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov  7 14:52:39 2019
+
+@author: andreasposchl
+"""
+
+instruments:
+
+  qdac:
+    driver: qcodes.instrument_drivers.QDev.QDac_channels # instrument class
+    type: QDac # name of the class
+    address: ASRL4::INSTR # visa address
+    enable_forced_reconnect: true # if true any connection will be closed
+    init: # constant arguments passed to the init function
+      terminator: \n
+      update_currents: false
+    add_parameters:  # new parameters, that get created and attached
+
+
+##    device one (upper left corner of qdac)
+      b1: # name of the new parameter eg myDac.Bx(0.1) to set the parameter
+        source: ch01.v # specifies which getter and setter should be used
+        label: Bias 1 # label and unit change these attributes of the parameter
+        unit: V # label and unit change these attributes of the parameter
+        scale: 1  # the scale in the right units
+        step: 0.1 # ramp step size
+        inter_delay: 0.002
+        limits: -10,10 # the limits specify the validator as Numbers(-1,1)
+        # initial_value: 0.0 # ramp to initial value on creation
+        monitor: true # track on monitor
+      b:
+        source: ch01.v
+        label: Bias
+        unit: V
+        scale: 1
+        step: 0.1
+        inter_delay: 0.002
+        limits: -10,10
+        # initial_value: 0.0
+        monitor: true
+      b2:
+        source: ch02.v
+        label: Bias 2
+        unit: V
+        scale: 1
+        step: 0.1
+        inter_delay: 0.002
+        limits: -10,10
+        # initial_value: 0.0
+        monitor: true
+      b3:
+        source: ch03.v
+        label: Bias 3
+        unit: V
+        scale: 1
+        step: 0.1
+        inter_delay: 0.002
+        limits: -10,10
+        # initial_value: 0.0
+        monitor: true
+      p1:
+        source: ch09.v
+        label: Plunger 1
+        unit: V
+        scale: 1
+        step: 0.1
+        inter_delay: 0.002
+        limits: -8,5
+        # initial_value: 0.0
+        monitor: true
+      p2:
+        source: ch10.v
+        label: Plunger 2
+        unit: V
+        scale: 1
+        step: 0.1
+        inter_delay: 0.002
+        limits: -8,5
+        # initial_value: 0.0
+        monitor: true
+      p3:
+        source: ch11.v
+        label: Plunger 3
+        unit: V
+        scale: 1
+        step: 0.1
+        inter_delay: 0.002
+        limits: -8,5
+        # initial_value: 0.0
+        monitor: true
+      c1:
+        source: ch17.v
+        label: Cutter 1
+        unit: V
+        scale: 1
+        step: 0.01
+        inter_delay: 0.002
+        limits: -5,5
+        # initial_value: 0.0
+        monitor: true
+      c2:
+        source: ch18.v
+        label: Cutter 2
+        unit: V
+        scale: 1
+        step: 0.01
+        inter_delay: 0.002
+        limits: -5,5
+        # initial_value: 0.0
+        monitor: true
+      c3:
+        source: ch19.v
+        label: Cutter 3
+        unit: V
+        scale: 1
+        step: 0.01
+        inter_delay: 0.002
+        limits: -5,5
+        # initial_value: 0.0
+        monitor: true
+     
+
+  basel_1:
+    driver: qcodes.instrument_drivers.basel.sp983c
+    type: SP983C
+    enable_forced_reconnect: true
+    parameters:
+      gain: {initial_value: 1.0e+8, monitor: true}
+      fcut: {initial_value: 1.0e+3, monitor: true}
+
+  basel_3:
+    driver: qcodes.instrument_drivers.basel.sp983c
+    type: SP983C
+    enable_forced_reconnect: true
+    parameters:
+      gain: {initial_value: 1.0e+8, monitor: true}
+      fcut: {initial_value: 1.0e+3, monitor: true}
+
+#stuff for the old school deca dac:
+#  dac2:
+#    driver: local_instruments.Decadac_ext
+#    type: Decadac_ext
+#    address: ASRL6::INSTR
+#    enable_forced_reconnect: true
+#    parameters:
+#      slots.Slot0.channels.Chan0.fine_volt: {alias: Q4FETC, label: Q4 FET cutter, monitor: true, step: 50e-3, inter_delay: 0.01}
+#      slots.Slot0.channels.Chan1.fine_volt: {alias: Q5P, label: Q5 plunger, monitor: true, step: 50e-3, inter_delay: 0.01}
+ 
+#      slots.Slot0.channels.Chan1.fine_volt: {alias: Q6FETC, label: Q6 FET cutter, monitor: true, step: 50e-3, inter_delay: 0.01}
+#      slots.Slot1.channels.Chan1.fine_volt: {alias: QBias, label: Q bias, monitor: true, scale: 1000, offset: 0} #6.83  voltage bias
+#     slots.Slot1.channels.Chan1.fine_volt: {alias: QBias, label: Q bias, monitor: true, scale: 1, offset: 0}
+#      slots.Slot1.channels.Chan1.fine_volt: {alias: QBias, label: I bias, monitor: true, scale: 1e-2, offset: 0, unit: 'nA'}   #current bias
+
+#      slots.Slot2.channels.Chan0.fine_volt: {alias: Q46C, label: Q46 cutter, monitor: true, step: 50e-3, inter_delay: 0.01}
+#      slots.Slot2.channels.Chan1.fine_volt: {alias: Q4FETC, label: Q4 FET cutter, monitor: true, step: 50e-3, inter_delay: 0.01}
+
+#no slot 3 channel0
+#      slots.Slot3.channels.Chan1.fine_volt: {alias: Bias, label: bias, monitor: true, scale: 1000, offset: 6.56}     
+
+#no slot 4 channel0
+#      slots.Slot4.channels.Chan1.fine_volt: {alias: Bias, label: bias, monitor: true, scale: 1000, offset: 6.56}     
+#    init:
+#      terminator: \n
+
+  mercury:
+    driver: qcodes.instrument_drivers.oxford.MercuryiPS_VISA
+    type: MercuryiPS
+    enable_forced_reconnect: true
+    init:
+      address: 'TCPIP0::172.20.10.148::7020::SOCKET'
+    parameters:
+      x_target: {monitor: true}
+      y_target: {monitor: true}
+      z_target: {monitor: true}
+      r_target: {monitor: true}
+      theta_target: {monitor: true}
+      phi_target: {monitor: true}
+      
+      
+
+  fridge:
+    driver: qcodes.instrument_drivers.oxford.triton
+    type: Triton
+    init:
+      address: '172.20.3.99'
+      port: 33576
+
+  dmm1:
+    driver: qcodes.instrument_drivers.agilent.Agilent_34400A
+    type: Agilent_34400A
+    enable_forced_reconnect: true
+    init:
+      address: GPIB0::10::INSTR
+  dmm2:
+    driver: qcodes.instrument_drivers.agilent.Agilent_34400A
+    type: Agilent_34400A
+    enable_forced_reconnect: true
+    init:
+      address: GPIB0::12::INSTR
+
+  dmm_3:
+    driver: qcodes.instrument_drivers.Keysight.Keysight_34465A
+    type: Keysight_34465A
+    address: TCPIP0::192.168.15.104::inst0::INSTR
+    enable_forced_reconnect: true
+    parameters:
+      aperture_mode: {initial_value: 'ON', monitor: True}
+      aperture_time: {initial_value: 0.3, monitor: True}
+      range: {initial_value: 10., monitor: True} 
+
+  lockin1:
+    driver: qdev_wrappers.sag.instruments.SR830_ext
+    type: SR830_ext
+    enable_forced_reconnect: true
+    init:
+      address: GPIB0::11::INSTR
+    parameters:
+      iv_gain: {initial_value: 1e6}
+      #amplitude: {scale: 0.9875e5, limits: '0,4e-5', monitor: true}
+      #v_gain: {initial_value: 1e3} # for current bias
+      #amplitude: {scale: 1e9, limits: '0,4e-9', monitor: true}
+
+  lockin2:
+    driver: qdev_wrappers.sag.instruments.SR830_ext
+    type: SR830_ext
+    enable_forced_reconnect: true
+    init:
+      address: GPIB0::5::INSTR
+    parameters:
+      iv_gain: {initial_value: 1e6}
+      #amplitude: {scale: 0.9875e5, limits: '0,4e-5', monitor: true}
+
+  lockin3:
+    driver: qdev_wrappers.sag.instruments.SR830_ext
+    type: SR830_ext
+    enable_forced_reconnect: true
+    init:
+      address: GPIB0::6::INSTR
+    parameters:
+      iv_gain: {initial_value: 1e6}
+      #amplitude: {scale: 0.9875e5, limits: '0,4e-5', monitor: true}
+
+  lockin4:
+    driver: qdev_wrappers.sag.instruments.SR830_ext
+    type: SR830_ext
+    enable_forced_reconnect: true
+    init:
+      address: GPIB0::4::INSTR
+    parameters:
+      iv_gain: {initial_value: 1e6}
+      #amplitude: {scale: 0.9875e5, limits: '0,4e-5', monitor: true}
+      
+  keith:
+    driver: qcodes.instrument_drivers.tektronix.Keithley_2400
+    type: Keithley_2400
+    enable_forced_reconnect: true
+    init:
+      address: GPIB0::8::INSTR
+
+  scope:
+    driver:qcodes.instrument_drivers.Keysight.Infiniium
+    enable_forced_reconnect: true
+    init:
+      address: TCPIP0::192.168.15.117::inst0::INSTR
+
+  yoko:
+    driver: qcodes.instrument_drivers.yokogawa.GS200
+    type: GS200
+    enable_forced_reconnect: true
+    init:
+      address: GPIB0::7::INSTR
+    parameters:
+      voltage: {label: Backgate, monitor: true, step: 50e-3, inter_delay: 0.005, limits: '-20,20'}
+      auto_range: {initial_value: true}
